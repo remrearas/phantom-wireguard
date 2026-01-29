@@ -1,0 +1,150 @@
+name: Development Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      session_id:
+        description: 'Session ID for test reports'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      session_id:
+        description: 'Session ID for test reports'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+    outputs:
+      test_result:
+        description: 'Test execution result'
+        value: ${{ jobs.test.outputs.result }}
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.test_runner.outputs.result }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Verify Docker
+        run: |
+          docker version
+          docker info
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            dnsutils \
+            bind9-dnsutils
+          which dig || echo "dig command not found"
+          which nslookup || echo "nslookup command not found"
+
+      - name: Install Python Development Dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Setup Test Virtual Environment
+        run: |
+          sudo python -m venv /opt/phantom-test-venv
+          sudo /opt/phantom-test-venv/bin/python -m pip install --upgrade pip
+          sudo /opt/phantom-test-venv/bin/pip install -r requirements-dev.txt
+
+      - name: Run Integration Tests
+        id: test_runner
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          
+          if [ -n "${{ inputs.session_id }}" ]; then
+            SESSION_ID="${{ inputs.session_id }}"
+          else
+            SESSION_ID="integration_$(echo ${{ github.sha }} | cut -c1-8)_$(date +%Y%m%d_%H%M%S)"
+          fi
+          
+          echo "Session ID: $SESSION_ID"
+          echo "SESSION_ID=$SESSION_ID" >> $GITHUB_ENV
+          
+          sudo -E /opt/phantom-test-venv/bin/python phantom/run_tests_coverage.py --session-id "$SESSION_ID"
+          
+          TEST_EXIT_CODE=$?
+          echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_ENV
+          
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            echo "All integration tests passed successfully"
+            echo "result=success" >> $GITHUB_OUTPUT
+          else
+            echo "Some integration tests failed"
+            echo "result=failure" >> $GITHUB_OUTPUT
+          fi
+          
+          exit $TEST_EXIT_CODE
+
+      - name: Upload Integration Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: development-integration-coverage-${{ env.SESSION_ID }}
+          path: phantom/reports/coverage/${{ env.SESSION_ID }}/
+          retention-days: 90
+
+      - name: Prepare Deployment Directory
+        if: always()
+        run: |
+          # Create deployment directory
+          mkdir -p deployment/development-integration
+          
+          # Copy reports to deployment directory
+          cp -r phantom/reports/coverage/${{ env.SESSION_ID }}/* deployment/development-integration/
+          
+          # Generate directory indexes for web browsing
+          echo "Generating directory indexes for Cloudflare Pages..."
+          python .github/scripts/generate_directory_indexes.py deployment/development-integration/
+          
+          DEPLOY_BRANCH="development-integration-${{ env.SESSION_ID }}"
+          
+          echo "----------------------------------------"
+          echo "Development Integration Test Deployment Information:"
+          echo "  Branch: $DEPLOY_BRANCH"
+          echo "  Session ID: ${{ env.SESSION_ID }}"
+          echo "----------------------------------------"
+          
+          echo "Development Integration deployment directory prepared successfully"
+
+      - name: Deploy Integration Tests to Cloudflare Pages
+        if: always()
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: phantom-tests
+          directory: deployment/development-integration
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: development-integration-${{ env.SESSION_ID }}
+          wranglerVersion: '3'
+
+      - name: Set Exit Code
+        if: always()
+        run: |
+          exit ${{ env.TEST_EXIT_CODE }}

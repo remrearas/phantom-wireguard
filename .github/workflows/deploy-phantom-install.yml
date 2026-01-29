@@ -1,0 +1,58 @@
+name: Deploy Phantom Install Worker
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/phantom-install/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Create .env file
+        working-directory: tools/phantom-install
+        run: |
+          cat > .env << EOF
+          # ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+          # ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+          # ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+          # ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+          # ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+          # ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+          # Cloudflare Authentication for Wrangler CLI
+          # These variables are used by wrangler for deploy commands
+          # Do NOT put worker runtime secrets here
+
+          # Cloudflare API Token
+          # Create at: https://dash.cloudflare.com/profile/api-tokens
+          # Required permissions: Edit Cloudflare Workers
+          CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+          # Cloudflare Account ID
+          CLOUDFLARE_ACCOUNT_ID=${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EOF
+
+      - name: Install dependencies
+        working-directory: tools/phantom-install
+        run: npm install
+
+      - name: Deploy to Cloudflare Workers
+        working-directory: tools/phantom-install
+        run: npm run deploy

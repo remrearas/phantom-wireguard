@@ -1,0 +1,35 @@
+name: Integration Workflow
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'tools/**'
+      - '.github/**'
+      - '.gitignore'
+      - '**.md'
+      - 'LICENSE'
+      - 'THIRD_PARTY_LICENSES'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  test-development-integration:
+    uses: ./.github/workflows/test-development-integration.yml
+    with:
+      session_id: "${{ github.run_id }}"
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  test-production-integration:
+    uses: ./.github/workflows/test-production-integration.yml
+    with:
+      session_id: "${{ github.run_id }}"
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

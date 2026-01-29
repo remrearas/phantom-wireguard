@@ -1,0 +1,215 @@
+name: Release Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_id:
+        description: 'Version ID for the release (e.g., 1.0.0)'
+        required: true
+        type: string
+
+env:
+  PYTHON_VERSION: '3.9'
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  test-development-integration:
+    uses: ./.github/workflows/test-development-integration.yml
+    with:
+      session_id: "${{ github.run_id }}"
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  test-production-integration:
+    uses: ./.github/workflows/test-production-integration.yml
+    with:
+      session_id: "${{ github.run_id }}"
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # Create release after all tests pass
+  create-release:
+    needs: [test-development-integration, test-production-integration]
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set version from input
+        id: get_version
+        run: echo "VERSION=core-v${{ inputs.version_id }}" >> $GITHUB_OUTPUT
+
+      - name: Create release archive
+        run: |
+          set -e  # Exit on error
+
+          # Get repository name from GitHub context
+          REPO_NAME=$(basename $GITHUB_REPOSITORY)
+
+          # Create archive name based on repo name
+          ARCHIVE_NAME="${REPO_NAME}-${{ steps.get_version.outputs.VERSION }}"
+
+          echo "Creating archive: ${ARCHIVE_NAME}.zip"
+
+          # Check if required files exist
+          echo "Checking required files..."
+          for file in phantom requirements.txt phantom-install.sh; do
+            if [ ! -e "$file" ]; then
+              echo "ERROR: Required file/directory not found: $file"
+              exit 1
+            fi
+            echo "✓ Found: $file"
+          done
+
+          # Create temporary directory for release
+          mkdir -p release_temp
+
+          # Copy required files to temporary directory
+          cp -r phantom release_temp/
+          cp requirements.txt release_temp/
+          cp phantom-install.sh release_temp/
+
+          # Remove test directories and files from phantom directory
+          rm -rf release_temp/phantom/reports 2>/dev/null || true
+          rm -rf release_temp/phantom/api/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/bin/tests 2>/dev/null || true
+          rm -f release_temp/phantom/bin/docs 2>/dev/null || true
+          rm -rf release_temp/phantom/models/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/README.md 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/README_TR.md 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/core/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/dns/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/multihop/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/ghost/tests 2>/dev/null || true
+          rm -f release_temp/phantom/run_tests_coverage.py 2>/dev/null || true      
+          
+          # Clean up Python cache files
+          find release_temp -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find release_temp -type f -name "*.pyc" -delete 2>/dev/null || true
+          find release_temp -type f -name "*.pyo" -delete 2>/dev/null || true
+          find release_temp -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+
+          # Create ZIP archive from temporary directory
+          cd release_temp
+          zip -r "../${ARCHIVE_NAME}.zip" .
+          cd ..
+
+          # Verify archive was created
+          if [ ! -f "${ARCHIVE_NAME}.zip" ]; then
+            echo "ERROR: Failed to create ${ARCHIVE_NAME}.zip"
+            exit 1
+          fi
+
+          # Clean up temporary directory
+          rm -rf release_temp
+
+          # Display file size
+          echo "Archive created successfully:"
+          ls -lh ${ARCHIVE_NAME}.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Phantom WireGuard ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## Phantom WireGuard ${{ steps.get_version.outputs.VERSION }}
+
+            🇬🇧
+
+            ### 📦 Package Contents
+
+            This release archive includes:
+            - `phantom/` - Phantom WireGuard Core Package
+            - `requirements.txt` - Python dependencies
+            - `phantom-install.sh` - Installation script
+
+            ### 🔧 Installation
+
+            #### Local Installation:
+            1. Download and extract the archive:
+            ```bash
+            unzip ${{ github.event.repository.name }}-${{ steps.get_version.outputs.VERSION }}.zip
+            ```
+
+            2. Run the installation script:
+            ```bash
+            chmod +x phantom-install.sh
+            sudo ./phantom-install.sh
+            ```
+
+            3. Installation Complete:
+            ```
+
+            Commands:
+              phantom-wireguard - Interactive UI
+              phantom-api - API Access
+
+            Quick Start:
+              1. Run: phantom-wireguard
+              2. Select 'Core Management'
+              3. Add your first client
+              4. Then export your client configuration via the interactive UI
+
+            API Command Example:
+              phantom-api core list_clients
+
+            Python Environment: /opt/phantom-wireguard/.phantom-venv
+            ```
+
+            ---
+
+            🇹🇷
+
+            ### 📦 Paket İçeriği
+
+            Bu sürüm arşivi şunları içerir:
+            - `phantom/` - Phantom Wireguard Çekirdek Paketi
+            - `requirements.txt` - Python Bağımlılıkları
+            - `phantom-install.sh` - Kurulum Betiği
+
+            ### 🔧 Kurulum
+
+            #### Yerel Kurulum:
+            1. Arşivi indirin ve çıkartın:
+            ```bash
+            unzip ${{ github.event.repository.name }}-${{ steps.get_version.outputs.VERSION }}.zip
+            ```
+
+            2. Kurulum betiğini çalıştırın:
+            ```bash
+            chmod +x phantom-install.sh
+            sudo ./phantom-install.sh
+            ```
+
+            3. Kurulum Tamamlandı:
+            ```
+
+            Komutlar:
+              phantom-wireguard - Etkileşimli UI
+              phantom-api - API Erişimi
+
+            Hızlı Başlangıç:
+              1. Çalıştır: phantom-wireguard
+              2. 'Core Management' seçin
+              3. İlk istemcinizi ekleyin
+              4. Ardından istemci konfigürasyonunuzu etkileşimli UI üzerinden dışarı aktarın
+
+            API Komut Örneği:
+              phantom-api core list_clients
+
+            Python Ortamı: /opt/phantom-wireguard/.phantom-venv
+            ```
+
+          files: |
+            ${{ github.event.repository.name }}-${{ steps.get_version.outputs.VERSION }}.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: false

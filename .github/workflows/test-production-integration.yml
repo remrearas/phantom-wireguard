@@ -1,0 +1,144 @@
+name: Production Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      session_id:
+        description: 'Session ID for test reports'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      session_id:
+        description: 'Session ID for test reports'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+    outputs:
+      test_result:
+        description: 'Test execution result'
+        value: ${{ jobs.test.outputs.result }}
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.test_runner.outputs.result }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Phantom Wireguard
+        run: |
+          chmod +x phantom-install.sh
+          sudo ./phantom-install.sh
+
+      - name: Verify Phantom Wireguard Installation
+        run: |
+          echo "Verifying Phantom WireGuard installation..."
+          if [ ! -d "/opt/phantom-wireguard" ]; then
+            echo "Error: Installation directory not found"
+            exit 1
+          fi
+          if [ ! -f "/opt/phantom-wireguard/.phantom-venv/bin/python" ]; then
+            echo "Error: Virtual environment not found"
+            exit 1
+          fi
+          echo "Installation verified successfully"
+
+      - name: Install Python Development Dependencies
+        run: |
+          sudo /opt/phantom-wireguard/.phantom-venv/bin/pip install -r requirements-dev.txt
+
+      - name: Run Tests with Coverage
+        id: test_runner
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+
+          if [ -n "${{ inputs.session_id }}" ]; then
+            SESSION_ID="${{ inputs.session_id }}"
+          else
+            SESSION_ID="fast_e2e_$(echo ${{ github.sha }} | cut -c1-8)_$(date +%Y%m%d_%H%M%S)"
+          fi
+
+          echo "Session ID: $SESSION_ID"
+          echo "SESSION_ID=$SESSION_ID" >> $GITHUB_ENV
+
+          sudo /opt/phantom-wireguard/.phantom-venv/bin/python /opt/phantom-wireguard/phantom/bin/tests/run_tests_coverage.py
+
+          TEST_EXIT_CODE=$?
+          echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_ENV
+
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            echo "All Production Integration tests passed successfully"
+            echo "result=success" >> $GITHUB_OUTPUT
+          else
+            echo "Some Production Integration tests failed"
+            echo "result=failure" >> $GITHUB_OUTPUT
+          fi
+
+          exit $TEST_EXIT_CODE
+
+      - name: Upload Coverage Reports
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-integration-coverage-${{ env.SESSION_ID }}
+          path: /opt/phantom-wireguard/phantom/bin/tests/reports/
+          retention-days: 90
+
+      - name: Prepare Deployment Directory
+        if: success()
+        run: |
+          # Create deployment directory
+          mkdir -p deployment/production-integration
+
+          # Copy reports to deployment directory
+          cp -r /opt/phantom-wireguard/phantom/bin/tests/reports/* deployment/production-integration/
+
+          ls -l deployment/production-integration/
+
+          # Generate directory indexes for web browsing
+          echo "Generating directory indexes for Cloudflare Pages..."
+          python .github/scripts/generate_directory_indexes.py deployment/production-integration/
+
+          # Determine branch name for deployment
+          DEPLOY_BRANCH="production-integration-${{ env.SESSION_ID }}"
+
+          echo "----------------------------------------"
+          echo "Production Integration Test Deployment Information:"
+          echo "  Branch: $DEPLOY_BRANCH"
+          echo "  Session ID: ${{ env.SESSION_ID }}"
+          echo "----------------------------------------"
+
+          echo "Production Integration deployment directory prepared successfully"
+
+      - name: Deploy to Cloudflare Pages
+        if: success()
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: phantom-tests
+          directory: deployment/production-integration
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: production-integration-${{ env.SESSION_ID }}
+          wranglerVersion: '3'
+
+      - name: Set Exit Code
+        if: always()
+        run: |
+          exit ${{ env.TEST_EXIT_CODE }}

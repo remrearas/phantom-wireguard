@@ -1,0 +1,106 @@
+name: Phantom Asset Generator Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      session_id:
+        description: 'Session ID for asset generation'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      session_id:
+        description: 'Session ID for asset generation'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      generation_result:
+        description: 'Asset generation result'
+        value: ${{ jobs.generate-assets.outputs.result }}
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  generate-assets:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.asset_generator.outputs.result }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Phantom Asset Generator Dependencies
+        working-directory: ./tools/phantom-asset-generator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libvips42 \
+            libvips-dev \
+            libjpeg-dev \
+            libpng-dev \
+            libwebp-dev \
+            libgif-dev \
+            libtiff-dev 
+          npm install
+
+      - name: Generate Assets with Phantom Asset Generator
+        id: asset_generator
+        working-directory: ./tools/phantom-asset-generator
+        run: |
+          # Generate or use SESSION_ID
+          if [ -n "${{ inputs.session_id }}" ]; then
+            SESSION_ID="${{ inputs.session_id }}"
+          else
+            SESSION_ID="assets_$(echo ${{ github.sha }} | cut -c1-8)_$(date +%Y%m%d_%H%M%S)"
+          fi
+
+          echo "Session ID: $SESSION_ID"
+          echo "SESSION_ID=$SESSION_ID" >> $GITHUB_ENV
+
+          # Run asset generation
+          npm run generate
+
+          # Check if generation was successful
+          GENERATION_EXIT_CODE=$?
+          echo "GENERATION_EXIT_CODE=$GENERATION_EXIT_CODE" >> $GITHUB_ENV
+
+          if [ $GENERATION_EXIT_CODE -eq 0 ]; then
+            echo "Asset generation completed successfully"
+            echo "result=success" >> $GITHUB_OUTPUT
+
+            # Check if assets were generated
+            if [ -d "output" ]; then
+              echo "Generated assets found in output directory"
+              ls -la output/
+            else
+              echo "Warning: Output directory not found"
+            fi
+          else
+            echo "Asset generation failed"
+            echo "result=failure" >> $GITHUB_OUTPUT
+          fi
+
+          exit $GENERATION_EXIT_CODE
+
+      - name: Upload Asset Outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phantom-assets-${{ env.SESSION_ID }}
+          path: tools/phantom-asset-generator/output
+          retention-days: 90
+
+      - name: Set Exit Code
+        if: always()
+        run: |
+          exit ${{ env.GENERATION_EXIT_CODE }}

@@ -1,0 +1,51 @@
+name: Phantom Hidden Service Deployment
+
+on:
+  push:
+    paths:
+      - 'tools/phantom-deployment-wizard/wizard/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install paramiko python-gnupg
+
+      - name: Create deployment package
+        working-directory: tools/phantom-deployment-wizard/deployments/hidden-service
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.DEPLOYMENT_WIZARD_GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | python3 package.py
+
+      - name: Deploy to server
+        working-directory: tools/phantom-deployment-wizard/deployments/hidden-service
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOYMENT_WIZARD_SSH_KEY }}
+          SERVER_IP: ${{ secrets.DEPLOYMENT_WIZARD_IP }}
+          SSH_USER: deployment-user
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deployment_key
+          chmod 600 ~/.ssh/deployment_key
+
+          # Run deployment
+          python3 deploy.py \
+            --server-ip "$SERVER_IP" \
+            --ssh-user "$SSH_USER" \
+            --ssh-key ~/.ssh/deployment_key \
+            --package build/deployment_signed.zip
+
+          rm -f ~/.ssh/deployment_key
