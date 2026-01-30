@@ -28,7 +28,7 @@ censorship-resistant connections, multi-layer encryption, and advanced privacy s
 ### Requirements
 
 **Server:**
-- A server with internet access, a public IP address, and a supported operating system
+- A server with internet access, a public IPv4 address, and a supported operating system
 - Root access
 
 **Operating System:**

@@ -28,7 +28,7 @@ modüler bir araçtır. Temel VPN yönetiminin ötesinde; sansüre dayanıklı b
 ### Gereksinimler
 
 **Sunucu:**
-- İnternet erişimi ve genel (public) IP adresine sahip, desteklenen işletim sistemlerinden birine sahip sunucu
+- İnternet erişimi ve genel (public) IPv4 adresine sahip, desteklenen işletim sistemlerinden birine sahip sunucu
 - Root erişimi
 
 **İşletim Sistemi:**
