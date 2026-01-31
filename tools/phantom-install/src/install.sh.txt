@@ -10,7 +10,7 @@ set -euo pipefail
 # =============================================================================
 # CONFIGURATION - Update this URL for each release
 # =============================================================================
-LATEST_RELEASE_URL="https://github.com/remrearas/phantom-wireguard/releases/download/core-v1.0.1/phantom-wireguard-core-v1.0.1.zip"
+LATEST_RELEASE_URL="https://github.com/ARAS-Workspace/phantom-wireguard/releases/download/core-v1.0.1/phantom-wireguard-core-v1.0.1.zip"
 # =============================================================================
 
 # Supported OS versions

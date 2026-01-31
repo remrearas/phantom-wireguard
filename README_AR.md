@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Phantom-WireGuard
 
-[![Release Workflow](https://github.com/remrearas/phantom-wireguard/actions/workflows/release-workflow.yml/badge.svg)](https://github.com/remrearas/phantom-wireguard/actions/workflows/release-workflow.yml)
+[![Release Workflow](https://github.com/ARAS-Workspace/phantom-wireguard/actions/workflows/release-workflow.yml/badge.svg)](https://github.com/ARAS-Workspace/phantom-wireguard/actions/workflows/release-workflow.yml)
 
 ```bash
 ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗

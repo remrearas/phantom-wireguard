@@ -45,7 +45,7 @@ pagination.pagerSize = 5
       [[languages.tr.menu.main]]
         identifier = "github"
         name = "GitHub"
-        url = "https://github.com/remrearas/phantom-wireguard"
+        url = "https://github.com/ARAS-Workspace/phantom-wireguard"
         weight = 3
 
   [languages.en]
@@ -77,5 +77,5 @@ pagination.pagerSize = 5
       [[languages.en.menu.main]]
         identifier = "github"
         name = "GitHub"
-        url = "https://github.com/remrearas/phantom-wireguard"
+        url = "https://github.com/ARAS-Workspace/phantom-wireguard"
         weight = 3

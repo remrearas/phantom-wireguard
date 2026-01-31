@@ -2,11 +2,11 @@
 section: footer
 links:
   - text: Github
-    url: https://github.com/remrearas/phantom-wireguard
+    url: https://github.com/ARAS-Workspace/phantom-wireguard
   - text: Blog
     url: https://blog.phantom.tc
   - text: Documentation
-    url: https://github.com/remrearas/phantom-wireguard/blob/main/README.md
+    url: https://github.com/ARAS-Workspace/phantom-wireguard/blob/main/README.md
   - text: Support Phantom
     url: "#"
     id: supportMeLink
