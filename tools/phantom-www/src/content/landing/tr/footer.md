@@ -4,7 +4,7 @@ links:
   - text: Github
     url: https://github.com/ARAS-Workspace/phantom-wireguard
   - text: Dökümantasyon
-    url: https://github.com/ARAS-Workspace/phantom-wireguard/blob/main/README_TR.md
+    url: https://docs.phantom.tc
   - text: Destek Ol
     url: "#"
     id: supportMeLink
