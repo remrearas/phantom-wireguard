@@ -6,7 +6,7 @@ extra_javascript:
 <div class="asciinema-player-container">
     <div class="asciinema-player-header">
         <h3>Phantom-WG</h3>
-        <span class="asciinema-player-info">Video Showcase</span>
+        <span class="asciinema-player-info">Video Vitrin</span>
     </div>
     <div class="asciinema-player-wrapper">
         <div class="asciinema-player"
