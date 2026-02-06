@@ -29,6 +29,9 @@ jobs:
         with:
           token: ${{ secrets.DO_TOKEN }}
 
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
       - name: Generate Session ID
         id: session
         run: |
@@ -45,12 +48,13 @@ jobs:
         run: |
           SESSION_ID="${{ steps.session.outputs.SESSION_ID }}"
 
-          PROJECT_ID=$(doctl projects create \
+          PROJECT_JSON=$(doctl projects create \
             --name "$SESSION_ID" \
             --purpose "Recording session" \
             --environment "Development" \
-            --format ID \
-            --no-header)
+            --output json)
+
+          PROJECT_ID=$(echo "$PROJECT_JSON" | jq -r '.[0].id')
 
           echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_OUTPUT
           echo "Created project: $SESSION_ID ($PROJECT_ID)"
@@ -63,12 +67,13 @@ jobs:
         run: |
           SESSION_ID="${{ steps.session.outputs.SESSION_ID }}"
 
-          VPC_ID=$(doctl vpcs create \
+          VPC_JSON=$(doctl vpcs create \
             --name "${SESSION_ID}-vpc" \
             --region ${{ env.DO_REGION }} \
             --ip-range ${{ env.VPC_SUBNET }} \
-            --format ID \
-            --no-header)
+            --output json)
+
+          VPC_ID=$(echo "$VPC_JSON" | jq -r '.[0].id')
 
           echo "VPC_ID=$VPC_ID" >> $GITHUB_OUTPUT
           echo "Created VPC: ${SESSION_ID}-vpc ($VPC_ID)"
@@ -86,50 +91,50 @@ jobs:
           echo ""
 
           # Create master
-          MASTER_ID=$(doctl compute droplet create "${SESSION_ID}-master" \
+          MASTER_JSON=$(doctl compute droplet create "${SESSION_ID}-master" \
             --image ${{ env.SNAPSHOT_MASTER }} \
             --size ${{ env.DO_SIZE }} \
             --region ${{ env.DO_REGION }} \
             --vpc-uuid $VPC_ID \
             --wait \
-            --format ID \
-            --no-header)
+            --output json)
+          MASTER_ID=$(echo "$MASTER_JSON" | jq -r '.[0].id')
           echo "MASTER_ID=$MASTER_ID" >> $GITHUB_OUTPUT
           echo "Created: master ($MASTER_ID)"
 
           # Create server
-          SERVER_ID=$(doctl compute droplet create "${SESSION_ID}-server" \
+          SERVER_JSON=$(doctl compute droplet create "${SESSION_ID}-server" \
             --image ${{ env.SNAPSHOT_SERVER }} \
             --size ${{ env.DO_SIZE }} \
             --region ${{ env.DO_REGION }} \
             --vpc-uuid $VPC_ID \
             --wait \
-            --format ID \
-            --no-header)
+            --output json)
+          SERVER_ID=$(echo "$SERVER_JSON" | jq -r '.[0].id')
           echo "SERVER_ID=$SERVER_ID" >> $GITHUB_OUTPUT
           echo "Created: server ($SERVER_ID)"
 
           # Create client
-          CLIENT_ID=$(doctl compute droplet create "${SESSION_ID}-client" \
+          CLIENT_JSON=$(doctl compute droplet create "${SESSION_ID}-client" \
             --image ${{ env.SNAPSHOT_CLIENT }} \
             --size ${{ env.DO_SIZE }} \
             --region ${{ env.DO_REGION }} \
             --vpc-uuid $VPC_ID \
             --wait \
-            --format ID \
-            --no-header)
+            --output json)
+          CLIENT_ID=$(echo "$CLIENT_JSON" | jq -r '.[0].id')
           echo "CLIENT_ID=$CLIENT_ID" >> $GITHUB_OUTPUT
           echo "Created: client ($CLIENT_ID)"
 
           # Create exit
-          EXIT_ID=$(doctl compute droplet create "${SESSION_ID}-exit" \
+          EXIT_JSON=$(doctl compute droplet create "${SESSION_ID}-exit" \
             --image ${{ env.SNAPSHOT_EXIT }} \
             --size ${{ env.DO_SIZE }} \
             --region ${{ env.DO_REGION }} \
             --vpc-uuid $VPC_ID \
             --wait \
-            --format ID \
-            --no-header)
+            --output json)
+          EXIT_ID=$(echo "$EXIT_JSON" | jq -r '.[0].id')
           echo "EXIT_ID=$EXIT_ID" >> $GITHUB_OUTPUT
           echo "Created: exit ($EXIT_ID)"
 
@@ -156,13 +161,20 @@ jobs:
           SESSION_ID="${{ steps.session.outputs.SESSION_ID }}"
 
           # Get private IPs
-          MASTER_IP=$(doctl compute droplet get ${{ steps.droplets.outputs.MASTER_ID }} --format PrivateIPv4 --no-header)
-          SERVER_IP=$(doctl compute droplet get ${{ steps.droplets.outputs.SERVER_ID }} --format PrivateIPv4 --no-header)
-          CLIENT_IP=$(doctl compute droplet get ${{ steps.droplets.outputs.CLIENT_ID }} --format PrivateIPv4 --no-header)
-          EXIT_IP=$(doctl compute droplet get ${{ steps.droplets.outputs.EXIT_ID }} --format PrivateIPv4 --no-header)
+          MASTER_INFO=$(doctl compute droplet get ${{ steps.droplets.outputs.MASTER_ID }} --output json)
+          SERVER_INFO=$(doctl compute droplet get ${{ steps.droplets.outputs.SERVER_ID }} --output json)
+          CLIENT_INFO=$(doctl compute droplet get ${{ steps.droplets.outputs.CLIENT_ID }} --output json)
+          EXIT_INFO=$(doctl compute droplet get ${{ steps.droplets.outputs.EXIT_ID }} --output json)
 
-          # Get public IPs for SSH
-          MASTER_PUBLIC=$(doctl compute droplet get ${{ steps.droplets.outputs.MASTER_ID }} --format PublicIPv4 --no-header)
+          MASTER_IP=$(echo "$MASTER_INFO" | jq -r '.[0].networks.v4[] | select(.type=="private") | .ip_address')
+          SERVER_IP=$(echo "$SERVER_INFO" | jq -r '.[0].networks.v4[] | select(.type=="private") | .ip_address')
+          CLIENT_IP=$(echo "$CLIENT_INFO" | jq -r '.[0].networks.v4[] | select(.type=="private") | .ip_address')
+          EXIT_IP=$(echo "$EXIT_INFO" | jq -r '.[0].networks.v4[] | select(.type=="private") | .ip_address')
+
+          MASTER_PUBLIC=$(echo "$MASTER_INFO" | jq -r '.[0].networks.v4[] | select(.type=="public") | .ip_address')
+          SERVER_PUBLIC=$(echo "$SERVER_INFO" | jq -r '.[0].networks.v4[] | select(.type=="public") | .ip_address')
+          CLIENT_PUBLIC=$(echo "$CLIENT_INFO" | jq -r '.[0].networks.v4[] | select(.type=="public") | .ip_address')
+          EXIT_PUBLIC=$(echo "$EXIT_INFO" | jq -r '.[0].networks.v4[] | select(.type=="public") | .ip_address')
 
           echo ""
           echo "════════════════════════════════════════════════════════════"
@@ -177,11 +189,12 @@ jobs:
           echo "────────────────────────────────────────────────────────────"
           echo "  DROPLET IP ADDRESSES"
           echo "────────────────────────────────────────────────────────────"
-
-          doctl compute droplet list \
-            --format Name,PublicIPv4,PrivateIPv4,Status \
-            --no-header | grep "$SESSION_ID"
-
+          echo ""
+          printf "%-10s %-16s %-16s\n" "NAME" "PUBLIC" "PRIVATE"
+          printf "%-10s %-16s %-16s\n" "master" "$MASTER_PUBLIC" "$MASTER_IP"
+          printf "%-10s %-16s %-16s\n" "server" "$SERVER_PUBLIC" "$SERVER_IP"
+          printf "%-10s %-16s %-16s\n" "client" "$CLIENT_PUBLIC" "$CLIENT_IP"
+          printf "%-10s %-16s %-16s\n" "exit" "$EXIT_PUBLIC" "$EXIT_IP"
           echo ""
           echo "────────────────────────────────────────────────────────────"
           echo "  MASTER SETUP COMMAND"
