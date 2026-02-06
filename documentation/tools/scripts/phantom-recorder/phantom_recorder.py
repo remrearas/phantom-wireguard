@@ -22,6 +22,9 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
+# End marker for post-processing
+END_MARKER = "___PHANTOM_END___"
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -198,6 +201,10 @@ class PhantomRecorder:
             logger.info("Ending recording")
             time.sleep(0.5)
 
+            # Send end marker for post-processing
+            shell.sendline(f'echo "{END_MARKER}"')
+            time.sleep(0.3)
+
             # Try multiple methods to end the recording
             try:
                 # First try exit command
@@ -213,6 +220,9 @@ class PhantomRecorder:
                 shell.terminate(force=True)
             except pexpect.EOF:
                 logger.debug("Recording ended with EOF")
+
+            # Post-process to remove end marker and everything after
+            self.post_process()
 
             logger.info("Recording completed successfully")
             logger.info(f"Saved to: {self.output_file}")
@@ -241,6 +251,33 @@ class PhantomRecorder:
                     pass
 
             return False
+
+    def post_process(self):
+        """Remove end marker and everything after it from the recording"""
+        try:
+            with open(self.output_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+
+            # Find the line containing the end marker
+            marker_index = None
+            for i, line in enumerate(lines):
+                if END_MARKER in line:
+                    marker_index = i
+                    break
+
+            if marker_index is not None:
+                # Keep only lines before the marker
+                lines = lines[:marker_index]
+
+                with open(self.output_file, 'w', encoding='utf-8') as f:
+                    f.writelines(lines)
+
+                logger.info(f"Post-process: Removed {END_MARKER} and trailing content")
+            else:
+                logger.debug("Post-process: End marker not found, skipping")
+
+        except Exception as e:
+            logger.warning(f"Post-process failed: {e}")
 
 
 def main():
