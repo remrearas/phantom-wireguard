@@ -96,7 +96,6 @@ jobs:
               ${{ env.AGG_IMAGE }} \
               "/data/${filename}.cast" \
               "/data/${filename}.gif" \
-              --font-family "Noto Color Emoji" \
               --font-dir "/fonts" \
               --font-size 14 \
               --cols 120 \
