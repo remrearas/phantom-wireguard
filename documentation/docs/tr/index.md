@@ -59,7 +59,7 @@ curl -sSL https://install.phantom.tc | bash
              data-autoplay="false"
              data-loop="false"
              data-speed="1.5"
-             data-poster=npt:00:05
+             data-poster="text"
              data-font-size="small">
         </div>
     </div>
