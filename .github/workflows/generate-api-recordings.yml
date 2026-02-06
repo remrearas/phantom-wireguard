@@ -142,7 +142,3 @@ jobs:
             echo "Recordings committed and pushed"
           fi
 
-      - name: Trigger Docs Deployment
-        run: gh workflow run deploy-phantom-docs.yml
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
