@@ -38,8 +38,11 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y asciinema
+          sudo apt-get install -y asciinema fonts-noto-color-emoji
           pip install -r ${{ env.RECORDER_SRC }}/requirements.txt
+
+          # Refresh font cache
+          fc-cache -fv
 
       - name: Setup Recorder Directory
         run: |
@@ -85,9 +88,11 @@ jobs:
 
             docker run --rm \
               -v "$(pwd)/recordings:/data" \
+              -v "/usr/share/fonts:/usr/share/fonts:ro" \
               ${{ env.AGG_IMAGE }} \
               "/data/${filename}.cast" \
               "/data/${filename}.gif" \
+              --font-family "Noto Color Emoji" \
               --font-size 14 \
               --cols 120 \
               --rows 48
