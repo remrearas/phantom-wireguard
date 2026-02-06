@@ -37,9 +37,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y asciinema jq
 
-      - name: Setup Live Terminal Stream
+      - name: Install Live Stream Tools
         run: |
-          # ttyd - web terminal
+          # ttyd - web terminal (read-only)
           sudo wget -q https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 -O /usr/local/bin/ttyd
           sudo chmod +x /usr/local/bin/ttyd
 
@@ -47,36 +47,29 @@ jobs:
           sudo wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared
           sudo chmod +x /usr/local/bin/cloudflared
 
-      - name: Start Live Stream
-        run: |
-          # Start ttyd on port 7681
-          ttyd -W -p 7681 bash &
-          sleep 2
-
-          # Start cloudflare tunnel
-          cloudflared tunnel --url http://localhost:7681 > tunnel.log 2>&1 &
-          sleep 5
-
-          # Extract and display the public URL
-          echo "════════════════════════════════════════════════════════════"
-          echo "  LIVE TERMINAL STREAM"
-          echo "════════════════════════════════════════════════════════════"
-          TUNNEL_URL=$(grep -o 'https://[^[:space:]]*\.trycloudflare\.com' tunnel.log | head -1)
-          echo "  URL: $TUNNEL_URL"
-          echo "════════════════════════════════════════════════════════════"
-          echo ""
-
-          # Save URL for later steps
-          echo "TUNNEL_URL=$TUNNEL_URL" >> $GITHUB_ENV
-
-      - name: Generate API Recordings
+      - name: Generate API Recordings with Live Stream
         working-directory: documentation/tools/scripts/recording_automations_api
         env:
           TERM: xterm-256color
         run: |
           chmod +x automate.sh
           chmod +x api/*.sh
-          sudo -E ./automate.sh
+
+          # Start cloudflare tunnel first
+          cloudflared tunnel --url http://localhost:7681 > /tmp/tunnel.log 2>&1 &
+          sleep 5
+
+          # Extract and display the public URL
+          echo "════════════════════════════════════════════════════════════"
+          echo "  LIVE TERMINAL STREAM (Read-Only)"
+          echo "════════════════════════════════════════════════════════════"
+          TUNNEL_URL=$(grep -o 'https://[^[:space:]]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
+          echo "  URL: $TUNNEL_URL"
+          echo "════════════════════════════════════════════════════════════"
+          echo ""
+
+          # Run automate.sh inside ttyd (read-only viewers can watch)
+          ttyd -R -p 7681 sudo -E ./automate.sh
 
       - name: Upload Recordings Artifact
         uses: actions/upload-artifact@v4
