@@ -1,0 +1,19 @@
+ ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+ ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+ ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+ ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+ ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+ ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+ Copyright (c) 2025 Rıza Emre ARAS
+ Licensed under AGPL-3.0 - see LICENSE file for details
+ Third-party licenses - see THIRD_PARTY_LICENSES file for details
+ WireGuard® is a registered trademark of Jason A. Donenfeld.
+
+ ═══════════════════════════════════════════════════════════════
+                       Welcome to Server
+ ═══════════════════════════════════════════════════════════════
+  Environment : Demo / Test Environment for Video Recording
+  OS          : Debian 13 (Trixie)
+  Provider    : Github Actions Runner
+ ═══════════════════════════════════════════════════════════════

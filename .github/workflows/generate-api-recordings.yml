@@ -1,0 +1,52 @@
+name: Generate API Recordings
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Phantom-WG
+        run: |
+          chmod +x phantom-install.sh
+          sudo ./phantom-install.sh
+
+      - name: Verify Phantom-WG Installation
+        run: |
+          echo "Verifying Phantom-WG installation..."
+          if [ ! -d "/opt/phantom-wg" ]; then
+            echo "Error: Installation directory not found"
+            exit 1
+          fi
+          if [ ! -f "/opt/phantom-wg/.phantom-venv/bin/python" ]; then
+            echo "Error: Virtual environment not found"
+            exit 1
+          fi
+          echo "Installation verified successfully"
+
+      - name: Install Recording Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y asciinema jq
+
+      - name: Generate API Recordings
+        working-directory: documentation/tools/scripts/recording_automations_api
+        run: |
+          chmod +x automate.sh
+          chmod +x api/*.sh
+          sudo ./automate.sh
+
+      - name: Upload Recordings Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-recordings-${{ github.run_id }}
+          path: documentation/tools/scripts/recording_automations_api/recordings/api/
+          retention-days: 90
