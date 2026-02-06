@@ -2,7 +2,8 @@
 # ═══════════════════════════════════════════════════════════════
 # automate.sh - API Recording Automation
 # ═══════════════════════════════════════════════════════════════
-# Records all API scripts. Output: ./recordings/api/<script>.cast
+# Records all API scripts in logical order.
+# Output: ./recordings/api/<script>.cast
 # ═══════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -13,14 +14,32 @@ COLS=120
 ROWS=48
 IDLE_LIMIT=2
 
+# ─── Script Order (logical flow) ────────────────────────────────
+SCRIPTS=(
+    "server_status"
+    "add_client"
+    "list_clients"
+    "export_client"
+    "latest_clients"
+    "tweak_settings"
+    "change_subnet"
+    "get_firewall_status"
+    "service_logs"
+    "restart_service"
+    "remove_client"
+)
+
 mkdir -p "$CAST_DIR"
 
-for script in "$SCRIPT_DIR/api/"*.sh; do
-    [[ -f "$script" ]] || continue
+for name in "${SCRIPTS[@]}"; do
+    script="$SCRIPT_DIR/api/${name}.sh"
 
-    name=$(basename "$script" .sh)
+    if [[ ! -f "$script" ]]; then
+        echo "Warning: $script not found, skipping"
+        continue
+    fi
+
     cast_file="${CAST_DIR}/${name}.cast"
-
     echo "Recording: $name"
 
     asciinema rec \

@@ -37,6 +37,38 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y asciinema jq
 
+      - name: Setup Live Terminal Stream
+        run: |
+          # ttyd - web terminal
+          sudo wget -q https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 -O /usr/local/bin/ttyd
+          sudo chmod +x /usr/local/bin/ttyd
+
+          # cloudflared tunnel
+          sudo wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared
+          sudo chmod +x /usr/local/bin/cloudflared
+
+      - name: Start Live Stream
+        run: |
+          # Start ttyd on port 7681
+          ttyd -W -p 7681 bash &
+          sleep 2
+
+          # Start cloudflare tunnel
+          cloudflared tunnel --url http://localhost:7681 > tunnel.log 2>&1 &
+          sleep 5
+
+          # Extract and display the public URL
+          echo "════════════════════════════════════════════════════════════"
+          echo "  LIVE TERMINAL STREAM"
+          echo "════════════════════════════════════════════════════════════"
+          TUNNEL_URL=$(grep -o 'https://[^[:space:]]*\.trycloudflare\.com' tunnel.log | head -1)
+          echo "  URL: $TUNNEL_URL"
+          echo "════════════════════════════════════════════════════════════"
+          echo ""
+
+          # Save URL for later steps
+          echo "TUNNEL_URL=$TUNNEL_URL" >> $GITHUB_ENV
+
       - name: Generate API Recordings
         working-directory: documentation/tools/scripts/recording_automations_api
         env:
