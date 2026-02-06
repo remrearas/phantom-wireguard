@@ -130,15 +130,11 @@ jobs:
           echo "RECORD_LIMIT=$RECORD_LIMIT"
           echo "TUNNEL_URL=$TUNNEL_URL"
 
-          # Start ttyd in background for live streaming
-          ttyd -p 7681 bash -c "tail -f /tmp/recording.log" &
-          TTYD_PID=$!
-
-          # Run automate.sh directly (output goes to log for ttyd viewers)
-          sudo -E bash -c "export RECORD_LIMIT=$RECORD_LIMIT && ./automate.sh" 2>&1 | tee /tmp/recording.log
+          # Run automate.sh inside ttyd - viewers see the actual terminal session
+          # asciinema records inside each script, ttyd streams the live view
+          ttyd -p 7681 sudo -E bash -c "export RECORD_LIMIT=$RECORD_LIMIT UNVEIL_DELAY=$UNVEIL_DELAY TERM=$TERM && ./automate.sh"
 
           # Cleanup
-          kill $TTYD_PID 2>/dev/null || true
           kill $CLOUDFLARED_PID 2>/dev/null || true
 
       # ─────────────────────────────────────────────────────────────
