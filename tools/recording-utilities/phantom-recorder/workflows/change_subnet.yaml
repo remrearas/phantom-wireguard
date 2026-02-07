@@ -24,5 +24,6 @@ commands:
   - text: "y"
   - text: "192.168.100.0/24"
   - text: "y"
+    delay: 5.0
   - *enter_key
   - *enter_key
