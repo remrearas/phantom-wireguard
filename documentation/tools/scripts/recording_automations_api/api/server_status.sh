@@ -24,7 +24,5 @@ ssh_connect
 # ─── Step 2: Get full server status ─────────────────────────
 run_command 'phantom-api core server_status' "$PAUSE_AFTER_EXEC_LONG"
 
-do_clear
-
 # ─── End ────────────────────────────────────────────────────
 sleep 1.0
