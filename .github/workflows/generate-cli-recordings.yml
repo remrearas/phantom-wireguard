@@ -99,7 +99,7 @@ jobs:
               continue
             fi
             echo "Recording: $name"
-            python3 phantom_recorder.py "$workflow"
+            sudo -E python3 phantom_recorder.py "$workflow"
             echo ""
           done
 
