@@ -77,9 +77,28 @@ jobs:
         env:
           TERM: xterm-256color
         run: |
-          for workflow in workflows/*.yaml; do
-            [ -f "$workflow" ] || continue
-            echo "Recording: $workflow"
+          # ─── Workflow Order (logical flow) ────────────────────────
+          WORKFLOWS=(
+            "add-client"
+            "remove-client"
+            "list-clients"
+            "export-client"
+            "latest-clients"
+            "tweak_settings"
+            "change_subnet"
+            "get-firewall-status"
+            "service-logs"
+            "restart-service"
+            "dns-compact"
+          )
+
+          for name in "${WORKFLOWS[@]}"; do
+            workflow="workflows/${name}.yaml"
+            if [ ! -f "$workflow" ]; then
+              echo "Warning: $workflow not found, skipping"
+              continue
+            fi
+            echo "Recording: $name"
             python3 phantom_recorder.py "$workflow"
             echo ""
           done
@@ -136,20 +155,30 @@ jobs:
         run: |
           TARGET_BASE="$GITHUB_WORKSPACE/documentation/docs/assets/static/recordings/feature-showcase"
 
-          # ── Manual Mapping: source_pattern -> target_dir/target_name ──
-          # interactive-cli workflow -> cli/interactive_cli
-          if ls recordings/interactive-cli_*.cast 1>/dev/null 2>&1; then
-            mkdir -p "$TARGET_BASE/cli"
-            cp recordings/interactive-cli_*.cast "$TARGET_BASE/cli/interactive_cli"
-            echo "Copied: interactive-cli -> cli/interactive_cli"
-          fi
+          # ── Mapping: workflow recordings -> documentation assets ──
+          mkdir -p "$TARGET_BASE/cli"
 
-          # ── Add future mappings here ──
-          # if ls recordings/another-workflow_*.cast 1>/dev/null 2>&1; then
-          #   mkdir -p "$TARGET_BASE/cli"
-          #   cp recordings/another-workflow_*.cast "$TARGET_BASE/cli/another_name"
-          #   echo "Copied: another-workflow -> cli/another_name"
-          # fi
+          declare -A MAPPINGS=(
+            ["add-client"]="add_client"
+            ["remove-client"]="remove_client"
+            ["list-clients"]="list_clients"
+            ["export-client"]="export_client"
+            ["latest-clients"]="latest_clients"
+            ["tweak_settings"]="tweak_settings"
+            ["change_subnet"]="change_subnet"
+            ["get-firewall-status"]="get_firewall_status"
+            ["service-logs"]="service_logs"
+            ["restart-service"]="restart_service"
+            ["dns-compact"]="dns_compact"
+          )
+
+          for src in "${!MAPPINGS[@]}"; do
+            dst="${MAPPINGS[$src]}"
+            if ls recordings/${src}_*.cast 1>/dev/null 2>&1; then
+              cp recordings/${src}_*.cast "$TARGET_BASE/cli/${dst}"
+              echo "Copied: ${src} -> cli/${dst}"
+            fi
+          done
 
           echo ""
           echo "Files ready for commit:"
