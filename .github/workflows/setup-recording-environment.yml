@@ -324,6 +324,9 @@ jobs:
           $SCP tools/recording-utilities/recording_environment/server/etc/motd root@${{ steps.ips.outputs.SERVER_PUBLIC }}:/etc/motd
           $SCP tools/recording-utilities/recording_environment/server/root/.bashrc root@${{ steps.ips.outputs.SERVER_PUBLIC }}:/root/.bashrc
 
+          # Remove dynamic motd so our static motd is displayed
+          $SSH "rm -rf /etc/update-motd.d/* /run/motd.dynamic 2>/dev/null; chmod -x /etc/update-motd.d/* 2>/dev/null || true"
+
           echo "Server configured"
 
       # ─────────────────────────────────────────────────────────────
@@ -357,6 +360,9 @@ jobs:
           $SSH "rm -f /etc/motd && mkdir -p /etc/motd"
           $SCP tools/recording-utilities/recording_environment/client/etc/motd/motd root@${{ steps.ips.outputs.CLIENT_PUBLIC }}:/etc/motd/motd
 
+          # Remove dynamic motd so our static motd is displayed
+          $SSH "rm -rf /etc/update-motd.d/* /run/motd.dynamic 2>/dev/null; chmod -x /etc/update-motd.d/* 2>/dev/null || true"
+
           echo "Client configured"
 
       # ─────────────────────────────────────────────────────────────
@@ -379,30 +385,67 @@ jobs:
           $SSH "rm -f /etc/motd && mkdir -p /etc/motd"
           $SCP tools/recording-utilities/recording_environment/exit/etc/motd/motd root@${{ steps.ips.outputs.EXIT_PUBLIC }}:/etc/motd/motd
 
+          # Remove dynamic motd so our static motd is displayed
+          $SSH "rm -rf /etc/update-motd.d/* /run/motd.dynamic 2>/dev/null; chmod -x /etc/update-motd.d/* 2>/dev/null || true"
+
           echo "Exit configured"
 
       # ─────────────────────────────────────────────────────────────
-      # Distribute User SSH Key & Cleanup Provisioning Keys
+      # Test Connections from Master
       # ─────────────────────────────────────────────────────────────
-      - name: Distribute User SSH Key to All Droplets
+      - name: Test Connections from Master
+        run: |
+          SSH="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/provision_key root@${{ steps.ips.outputs.MASTER_PUBLIC }}"
+
+          echo "Testing SSH connections from master via VPC..."
+          echo ""
+
+          # Initial connections - accepts host keys and verifies connectivity
+          echo "Testing master → server (root)..."
+          $SSH "ssh -o StrictHostKeyChecking=accept-new server 'hostname && echo OK'" || { echo "FAIL: master → server"; exit 1; }
+
+          echo "Testing master → client (client user)..."
+          $SSH "ssh -o StrictHostKeyChecking=accept-new client 'whoami && echo OK'" || { echo "FAIL: master → client"; exit 1; }
+
+          echo "Testing master → exit (root)..."
+          $SSH "ssh -o StrictHostKeyChecking=accept-new exit 'hostname && echo OK'" || { echo "FAIL: master → exit"; exit 1; }
+
+          echo ""
+          echo "All connections verified successfully"
+
+      # ─────────────────────────────────────────────────────────────
+      # Finalize Authorized Keys & Cleanup
+      # ─────────────────────────────────────────────────────────────
+      - name: Finalize Authorized Keys
         run: |
           SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/provision_key"
           USER_PUB_KEY="${{ inputs.ssh_public_key }}"
+          MASTER_PUB_KEY="${{ steps.master_config.outputs.MASTER_PUB_KEY }}"
 
-          # Add user's SSH key to all droplets
-          for HOST in "${{ steps.ips.outputs.MASTER_PUBLIC }}" "${{ steps.ips.outputs.SERVER_PUBLIC }}" "${{ steps.ips.outputs.EXIT_PUBLIC }}"; do
-            ssh $SSH_OPTS root@$HOST "echo '$USER_PUB_KEY' >> /root/.ssh/authorized_keys"
-          done
+          # Master: only user key (master doesn't need its own key in authorized_keys)
+          ssh $SSH_OPTS root@${{ steps.ips.outputs.MASTER_PUBLIC }} "echo '$USER_PUB_KEY' > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys"
+          echo "master authorized_keys finalized"
 
-          # Client: add to both root and client user
-          ssh $SSH_OPTS root@${{ steps.ips.outputs.CLIENT_PUBLIC }} "echo '$USER_PUB_KEY' >> /root/.ssh/authorized_keys"
-          ssh $SSH_OPTS root@${{ steps.ips.outputs.CLIENT_PUBLIC }} "echo '$USER_PUB_KEY' >> /home/client/.ssh/authorized_keys && chown client:client /home/client/.ssh/authorized_keys"
+          # Server: user key + master key
+          ssh $SSH_OPTS root@${{ steps.ips.outputs.SERVER_PUBLIC }} "printf '%s\n' '$USER_PUB_KEY' '$MASTER_PUB_KEY' > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys"
+          echo "server authorized_keys finalized"
 
-          echo "User SSH key distributed to all droplets"
+          # Exit: user key + master key
+          ssh $SSH_OPTS root@${{ steps.ips.outputs.EXIT_PUBLIC }} "printf '%s\n' '$USER_PUB_KEY' '$MASTER_PUB_KEY' > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys"
+          echo "exit authorized_keys finalized"
 
-      - name: Cleanup Provisioning Keys
+          # Client root: user key + master key
+          ssh $SSH_OPTS root@${{ steps.ips.outputs.CLIENT_PUBLIC }} "printf '%s\n' '$USER_PUB_KEY' '$MASTER_PUB_KEY' > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys"
+          # Client user: user key + master key
+          ssh $SSH_OPTS root@${{ steps.ips.outputs.CLIENT_PUBLIC }} "printf '%s\n' '$USER_PUB_KEY' '$MASTER_PUB_KEY' > /home/client/.ssh/authorized_keys && chmod 600 /home/client/.ssh/authorized_keys && chown client:client /home/client/.ssh/authorized_keys"
+          echo "client authorized_keys finalized"
+
+          echo ""
+          echo "All authorized_keys finalized - provisioning key removed from all servers"
+
+      - name: Cleanup Provisioning Keys from DigitalOcean
         run: |
-          # Remove provisioning SSH key from DigitalOcean
+          # Remove provisioning SSH key record from DigitalOcean
           doctl compute ssh-key delete ${{ steps.provision_key.outputs.PROVISION_KEY_ID }} --force || true
 
           # Remove user SSH key record from DigitalOcean (keys remain in authorized_keys on droplets)
