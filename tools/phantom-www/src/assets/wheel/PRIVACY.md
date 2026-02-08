@@ -60,7 +60,20 @@ This tool collects, transmits, and stores **absolutely no data**. Specifically:
 
 ## External Connections
 
-**This tool makes no external connections whatsoever.** All assets — including fonts, stylesheets, scripts, and provider data — are bundled within the project and loaded locally. No external CDNs, APIs, or third-party services are contacted.
+**This tool makes no external connections whatsoever.** All assets — including fonts, stylesheets, scripts, and provider data — are bundled within the project and loaded locally. No external CDNs, APIs, or third-party services are contacted by the application code.
+
+## Hosting & Infrastructure
+
+When accessed via [phantom.tc](https://www.phantom.tc), this tool is served through **Cloudflare Pages**. As a result, standard web infrastructure applies:
+
+- Cloudflare may process standard HTTP metadata (IP address, User-Agent, request headers) as part of serving the page
+- This is inherent to any website served through a CDN and is not specific to this tool
+- Phantom-WG does not configure, access, or control any Cloudflare analytics, logging, or tracking features
+- No additional telemetry, cookies, or tracking scripts are added by Phantom-WG
+
+For details on how Cloudflare handles data, see the [Cloudflare Privacy Policy](https://www.cloudflare.com/privacypolicy/).
+
+If you prefer to avoid any CDN-level processing, you can run this tool locally by cloning the repository and opening the HTML files directly in your browser.
 
 ## Open Source and Transparency
 

@@ -60,7 +60,20 @@ Bu araç kesinlikle **hiçbir veri toplamaz, iletmez veya saklamaz**. Ayrıntıl
 
 ## Harici Bağlantılar
 
-**Bu araç hiçbir harici bağlantı kurmaz.** Fontlar, stil dosyaları, betikler ve sağlayıcı verileri dâhil tüm varlıklar proje içinde paketlenmiştir ve yerel olarak yüklenir. Hiçbir harici CDN, API veya üçüncü taraf hizmetine bağlantı kurulmaz.
+**Bu araç hiçbir harici bağlantı kurmaz.** Fontlar, stil dosyaları, betikler ve sağlayıcı verileri dâhil tüm varlıklar proje içinde paketlenmiştir ve yerel olarak yüklenir. Uygulama kodu tarafından hiçbir harici CDN, API veya üçüncü taraf hizmetine bağlantı kurulmaz.
+
+## Barındırma ve Altyapı
+
+[phantom.tc](https://www.phantom.tc) üzerinden erişildiğinde, bu araç **Cloudflare Pages** aracılığıyla sunulmaktadır. Bu nedenle standart web altyapısı geçerlidir:
+
+- Cloudflare, sayfayı sunarken standart HTTP meta verilerini (IP adresi, User-Agent, istek başlıkları) işleyebilir
+- Bu, bir CDN üzerinden sunulan herhangi bir web sitesi için geçerli olup bu araca özgü değildir
+- Phantom-WG, herhangi bir Cloudflare analitik, günlük kaydı veya izleme özelliğini yapılandırmaz, bunlara erişmez veya kontrol etmez
+- Phantom-WG tarafından ek telemetri, çerez veya izleme betiği eklenmez
+
+Cloudflare'ın verileri nasıl işlediğine dair ayrıntılar için [Cloudflare Gizlilik Politikası](https://www.cloudflare.com/privacypolicy/) sayfasına bakınız.
+
+CDN düzeyindeki herhangi bir işlemden kaçınmayı tercih ediyorsanız, depoyu klonlayarak HTML dosyalarını doğrudan tarayıcınızda açabilirsiniz.
 
 ## Açık Kaynak ve Şeffaflık
 
