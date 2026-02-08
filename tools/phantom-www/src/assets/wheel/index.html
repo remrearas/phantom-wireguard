@@ -29,14 +29,14 @@
     <!-- Canonical URL -->
     <link rel="canonical" href="https://www.phantom.tc/wheel/">
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
     <!-- Theme -->
     <meta name="theme-color" content="#10B981">
     <!-- Wheel Styles -->
     <link rel="stylesheet" href="assets/css/wheel.css">
   </head>
   <body>
-    <a href="#app" class="skip-link">Skip to wheel</a>
+    <a href="#app" class="skip-link" data-i18n="skipLink">Skip to wheel</a>
     <main class="container" id="app">
       <div class="title-area">
         <h1 class="phantom-logo">PHANTOM <span>-WG</span></h1>
@@ -46,102 +46,63 @@
       <div class="lang-switcher">
         <a href="index-tr.html" class="lang-btn">
           <span class="lang-flag">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
-              <rect width="1200" height="800" fill="#E30A17" />
-              <circle cx="480" cy="400" r="200" fill="#fff" />
-              <circle cx="520" cy="400" r="160" fill="#E30A17" />
-              <polygon fill="#fff" points="583,400 631,340 609,390 666,366 618,400 666,434 609,410 631,460 583,400 541,434 568,410 530,434 568,400 530,366 568,390 541,340" />
-            </svg>
+            <svg viewBox="0 0 1200 800"><use href="assets/icons/sprite.svg#flag-tr"></use></svg>
           </span> TR </a>
         <a href="index.html" class="lang-btn active">
           <span class="lang-flag">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7410 3900">
-              <rect width="7410" height="3900" fill="#B22234" />
-              <path d="M0,450H7410m0,600H0m0,600H7410m0,600H0m0,600H7410m0,600H0" stroke="#fff" stroke-width="300" />
-              <rect width="2964" height="2100" fill="#3C3B6E" />
-              <g fill="#fff">
-                <g id="s18">
-                  <g id="s9">
-                    <g id="s5">
-                      <g id="s4">
-                        <path id="s" d="M247,90 317.534230,307.082039 132.873218,172.917961H361.126782L176.465770,307.082039z" />
-                        <use href="#s" y="420" />
-                        <use href="#s" y="840" />
-                        <use href="#s" y="1260" />
-                      </g>
-                      <use href="#s" y="1680" />
-                    </g>
-                    <use href="#s4" x="247" y="210" />
-                  </g>
-                  <use href="#s9" x="494" />
-                </g>
-                <use href="#s18" x="988" />
-              </g>
-            </svg>
+            <svg viewBox="0 0 7410 3900"><use href="assets/icons/sprite.svg#flag-us"></use></svg>
           </span> EN </a>
       </div>
       <div class="step-indicator" id="stepIndicator">
-        <span class="step-label" id="stepLabel1">Server</span>
+        <span class="step-label" id="stepLabel1" data-i18n="stepLabel1">Server</span>
         <div class="step-dot" id="stepDot1"></div>
         <div class="step-line" id="stepLine1"></div>
         <div class="step-dot" id="stepDot2"></div>
-        <span class="step-label" id="stepLabel2">Exit</span>
+        <span class="step-label" id="stepLabel2" data-i18n="stepLabel2">Exit</span>
       </div>
       <div class="current-step-title" id="currentStepTitle"></div>
       <div class="start-screen" id="startScreen">
-        <button class="phantom-btn" onclick="startFlow()">START</button>
-        <a href="../" class="back-home">&larr; BACK TO HOME</a>
-        <a href="https://github.com/ARAS-Workspace/phantom-wg/blob/main/tools/phantom-www/src/assets/wheel/PRIVACY.md" target="_blank" class="privacy-notice">Privacy Notice</a>
+        <button class="phantom-btn" onclick="startFlow()" data-i18n="start">START</button>
+        <a href="../" class="back-home"><span>&larr;</span> <span data-i18n="backHome">BACK TO HOME</span></a>
+        <a href="#" target="_blank" class="privacy-notice" data-i18n="privacyNotice" data-i18n-href="privacyHref">Privacy Notice</a>
       </div>
       <div class="wheel-wrapper" id="wheelWrapper">
         <div class="pointer"></div>
         <canvas id="wheel" width="840" height="840"></canvas>
         <div class="center-hub">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-          </svg>
+          <svg viewBox="0 0 24 24"><use href="assets/icons/sprite.svg#icon-checkmark"></use></svg>
         </div>
         <div class="tick-flash" id="tickFlash"></div>
       </div>
       <div class="spin-area" id="spinArea">
-        <button class="phantom-btn" id="spinBtn" onclick="spinWheel()">SPIN</button>
+        <button class="phantom-btn" id="spinBtn" onclick="spinWheel()" data-i18n="spin">SPIN</button>
         <div class="step-result">
           <div class="step-result-name" id="stepResultName"></div>
           <div class="step-result-meta" id="stepResultMeta"></div>
         </div>
       </div>
       <div class="final-panel" id="finalPanel">
-        <div class="final-title">Configuration Ready</div>
+        <div class="final-title" data-i18n="finalTitle">Configuration Ready</div>
         <div class="final-cards">
           <div class="final-card" id="finalCardServer">
-            <div class="final-card-role">Server</div>
+            <div class="final-card-role" data-i18n="serverRole">Server</div>
             <div class="final-card-name" id="finalServerName">&mdash;</div>
             <div class="final-card-crypto" id="finalServerCrypto"></div>
             <div class="final-card-url" id="finalServerUrl"></div>
           </div>
           <div class="route-arrow" id="routeArrow">&rarr;</div>
           <div class="final-card" id="finalCardExit">
-            <div class="final-card-role">Exit Node</div>
+            <div class="final-card-role" data-i18n="exitNode">Exit Node</div>
             <div class="final-card-name" id="finalExitName">&mdash;</div>
             <div class="final-card-crypto" id="finalExitCrypto"></div>
             <div class="final-card-url" id="finalExitUrl"></div>
           </div>
         </div>
-        <button class="phantom-btn" onclick="resetFlow()">RESET</button>
+        <button class="phantom-btn" onclick="resetFlow()" data-i18n="reset">RESET</button>
       </div>
     </main>
-    <script>
-      window.WHEEL_LANG = {
-        start: 'START',
-        spin: 'SPIN',
-        spinning: '...',
-        reset: 'RESET',
-        stepServer: 'Select Server Provider',
-        stepExit: 'Select Exit Provider',
-        finalTitle: 'Configuration Ready'
-      };
-    </script>
     <script src="assets/js/console-branding.js"></script>
+    <script src="assets/js/i18n.js"></script>
     <script src="assets/js/wheel.js"></script>
   </body>
 </html>

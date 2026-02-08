@@ -27,8 +27,26 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-// ==== Language (injected per-page via window.WHEEL_LANG) ====
-const LANG = window.WHEEL_LANG;
+// ==== Language (loaded by i18n.js from languages.json) ====
+/**
+ * @typedef {Object} WheelLang
+ * @property {string} skipLink
+ * @property {string} start
+ * @property {string} spin
+ * @property {string} spinning
+ * @property {string} reset
+ * @property {string} backHome
+ * @property {string} privacyNotice
+ * @property {string} privacyHref
+ * @property {string} stepLabel1
+ * @property {string} stepLabel2
+ * @property {string} stepServer
+ * @property {string} stepExit
+ * @property {string} finalTitle
+ * @property {string} serverRole
+ * @property {string} exitNode
+ */
+const LANG = /** @type {WheelLang} */ (window.WHEEL_LANG);
 
 // ==== State ====
 let PROVIDERS = [];
@@ -363,7 +381,7 @@ function resetFlow() {
 })();
 
 // ==== Init ====
-fetch('providers.json')
+fetch('data/providers.json')
   .then(res => res.json())
   .then(data => {
     PROVIDERS = data;

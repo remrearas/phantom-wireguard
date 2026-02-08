@@ -1,0 +1,36 @@
+{
+  "en": {
+    "skipLink": "Skip to wheel",
+    "start": "START",
+    "spin": "SPIN",
+    "spinning": "...",
+    "reset": "RESET",
+    "backHome": "BACK TO HOME",
+    "privacyNotice": "Privacy Notice",
+    "privacyHref": "https://github.com/ARAS-Workspace/phantom-wg/blob/main/tools/phantom-www/src/assets/wheel/docs/PRIVACY.md",
+    "stepLabel1": "Server",
+    "stepLabel2": "Exit",
+    "stepServer": "Select Server Provider",
+    "stepExit": "Select Exit Provider",
+    "finalTitle": "Configuration Ready",
+    "serverRole": "Server",
+    "exitNode": "Exit Node"
+  },
+  "tr": {
+    "skipLink": "Çarka atla",
+    "start": "BAŞLAT",
+    "spin": "ÇEVİR",
+    "spinning": "...",
+    "reset": "SIFIRLA",
+    "backHome": "ANA SAYFAYA DÖN",
+    "privacyNotice": "Gizlilik Bildirimi",
+    "privacyHref": "https://github.com/ARAS-Workspace/phantom-wg/blob/main/tools/phantom-www/src/assets/wheel/docs/PRIVACY_TR.md",
+    "stepLabel1": "Server",
+    "stepLabel2": "Exit",
+    "stepServer": "Sunucu Sağlayıcı Seç",
+    "stepExit": "Çıkış Sağlayıcı Seç",
+    "finalTitle": "Yapılandırma Hazır",
+    "serverRole": "Server",
+    "exitNode": "Çıkış Düğümü"
+  }
+}
