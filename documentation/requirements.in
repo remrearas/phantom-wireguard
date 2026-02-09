@@ -13,12 +13,12 @@ mkdocs-material==9.5.3                 # Material Design theme for MkDocs
 
 # MkDocs Extensions
 mkdocs-material-extensions==1.3.1      # Additional Material theme extensions
-mkdocs-minify-plugin==0.7.2            # Minifies HTML, CSS & JS for production
-mkdocs-static-i18n==1.2.0              # Multi-language support (EN/TR)
+mkdocs-minify-plugin==0.8.0            # Minifies HTML, CSS & JS for production
+mkdocs-static-i18n==1.3.0              # Multi-language support (EN/TR)
 
 # Markdown Extensions
-pymdown-extensions==10.5               # Python Markdown extensions
-pygments==2.17.2                       # Syntax highlighting for code blocks
+pymdown-extensions==10.16.1            # Python Markdown extensions (CVE-2025-68142 fix)
+pygments==2.19.2                       # Syntax highlighting for code blocks
 
 # Docker SDK
 docker==7.1.0                          # Docker SDK for Python - containerized serve & build

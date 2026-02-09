@@ -8,16 +8,16 @@ phantom-api dns status
 
 **Yanıt Modeli:** [`DNSStatusResult`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/dns/models/dns_models.py#L161)
 
-| Alan                                | Tip     | Açıklama                         |
-|-------------------------------------|---------|----------------------------------|
-| `configuration.primary`             | string  | Birincil DNS sunucusu            |
-| `configuration.secondary`           | string  | İkincil DNS sunucusu             |
-| `health.status`                     | string  | Genel sağlık durumu              |
-| `health.test_results[].server`      | string  | Test edilen DNS sunucusu         |
-| `health.test_results[].tests[].domain`   | string | Test edilen alan adı        |
-| `health.test_results[].tests[].success`  | any    | Test sonucu (IP veya boolean)|
-| `health.test_results[].tests[].response` | string | DNS yanıtı                  |
-| `health.test_results[].tests[].error`    | string | Başarısızsa hata mesajı     |
+| Alan                                     | Tip    | Açıklama                      |
+|------------------------------------------|--------|-------------------------------|
+| `configuration.primary`                  | string | Birincil DNS sunucusu         |
+| `configuration.secondary`                | string | İkincil DNS sunucusu          |
+| `health.status`                          | string | Genel sağlık durumu           |
+| `health.test_results[].server`           | string | Test edilen DNS sunucusu      |
+| `health.test_results[].tests[].domain`   | string | Test edilen alan adı          |
+| `health.test_results[].tests[].success`  | any    | Test sonucu (IP veya boolean) |
+| `health.test_results[].tests[].response` | string | DNS yanıtı                    |
+| `health.test_results[].tests[].error`    | string | Başarısızsa hata mesajı       |
 
 ??? example "Örnek Yanıt"
     ```json

@@ -8,18 +8,18 @@ phantom-api multihop status
 
 **Yanıt Modeli:** [`MultihopStatusResult`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/multihop/models/multihop_models.py#L216)
 
-| Alan                       | Tip     | Açıklama                                 |
-|----------------------------|---------|------------------------------------------|
-| `enabled`                  | boolean | Multihop şu anda etkin                   |
-| `active_exit`              | string  | Şu anda aktif çıkış adı                  |
-| `available_configs`        | integer | Mevcut yapılandırma sayısı               |
-| `vpn_interface.active`     | boolean | VPN arayüzü aktif                        |
-| `vpn_interface.error`      | string  | Hata mesajı (pasifse)                    |
-| `monitor_status.monitoring`| boolean | Bağlantı izleme aktif                    |
-| `monitor_status.type`      | string  | İzleyici türü                            |
-| `monitor_status.pid`       | integer | İzleyici süreç ID'si                     |
-| `traffic_routing`          | string  | Yönlendirme modu (Direct/Multihop)       |
-| `traffic_flow`             | string  | Trafik akışı açıklaması                  |
+| Alan                        | Tip     | Açıklama                           |
+|-----------------------------|---------|------------------------------------|
+| `enabled`                   | boolean | Multihop şu anda etkin             |
+| `active_exit`               | string  | Şu anda aktif çıkış adı            |
+| `available_configs`         | integer | Mevcut yapılandırma sayısı         |
+| `vpn_interface.active`      | boolean | VPN arayüzü aktif                  |
+| `vpn_interface.error`       | string  | Hata mesajı (pasifse)              |
+| `monitor_status.monitoring` | boolean | Bağlantı izleme aktif              |
+| `monitor_status.type`       | string  | İzleyici türü                      |
+| `monitor_status.pid`        | integer | İzleyici süreç ID'si               |
+| `traffic_routing`           | string  | Yönlendirme modu (Direct/Multihop) |
+| `traffic_flow`              | string  | Trafik akışı açıklaması            |
 
 ??? example "Örnek Yanıt (Pasif)"
     ```json

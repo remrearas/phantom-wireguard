@@ -12,22 +12,22 @@ phantom-api ghost enable domain="157-230-114-231.sslip.io"
 
 **Parametreler:**
 
-| Parametre | Zorunlu | Açıklama                                                    |
-|-----------|---------|-------------------------------------------------------------|
+| Parametre | Zorunlu | Açıklama                                                                  |
+|-----------|---------|---------------------------------------------------------------------------|
 | `domain`  | Evet    | Sunucuya işaret eden A kaydına sahip alan adı (sslip.io/nip.io destekler) |
 
 **Yanıt Modeli:** [`EnableGhostResult`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/ghost/models/ghost_models.py#L22)
 
-| Alan                 | Tip      | Açıklama                                  |
-|----------------------|----------|-------------------------------------------|
-| `status`             | string   | Ghost Mode durumu (active)                |
-| `server_ip`          | string   | Sunucunun genel IP adresi                 |
-| `domain`             | string   | Tünelleme için kullanılan alan adı        |
+| Alan                 | Tip      | Açıklama                                          |
+|----------------------|----------|---------------------------------------------------|
+| `status`             | string   | Ghost Mode durumu (active)                        |
+| `server_ip`          | string   | Sunucunun genel IP adresi                         |
+| `domain`             | string   | Tünelleme için kullanılan alan adı                |
 | `secret`             | string   | WebSocket kimlik doğrulaması için benzersiz token |
-| `protocol`           | string   | Tünel protokolü (wss)                     |
-| `port`               | integer  | HTTPS portu (443)                         |
-| `activated_at`       | datetime | Etkinleştirme zamanı                      |
-| `connection_command` | string   | İstemciler için tam wstunnel komutu       |
+| `protocol`           | string   | Tünel protokolü (wss)                             |
+| `port`               | integer  | HTTPS portu (443)                                 |
+| `activated_at`       | datetime | Etkinleştirme zamanı                              |
+| `connection_command` | string   | İstemciler için tam wstunnel komutu               |
 
 !!! info "Notlar"
     - `secret` güvenli WebSocket tünelleme için oluşturulan benzersiz bir token'dır

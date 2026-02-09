@@ -18,12 +18,12 @@ phantom-api core service_logs lines=100
 
 **Yanıt Modeli:** [`ServiceLogs`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/core/models/service_models.py#L140)
 
-| Alan              | Tip     | Açıklama                     |
-|-------------------|---------|------------------------------|
-| `logs`            | array   | Günlük kayıtları             |
-| `count`           | integer | Döndürülen satır sayısı      |
-| `service`         | string  | Servis adı                   |
-| `lines_requested` | integer | İstenen satır sayısı         |
+| Alan              | Tip     | Açıklama                        |
+|-------------------|---------|---------------------------------|
+| `logs`            | array   | Günlük kayıtları                |
+| `count`           | integer | Döndürülen satır sayısı         |
+| `service`         | string  | Servis adı                      |
+| `lines_requested` | integer | İstenen satır sayısı            |
 | `source`          | string  | Günlük kaynağı (journald/dosya) |
 
 ??? example "Örnek Yanıt"

@@ -14,11 +14,11 @@ phantom-api core remove_client client_name="john-laptop"
 
 **Yanıt Modeli:** [`ClientRemoveResult`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/core/models/client_models.py#L133)
 
-| Alan          | Tip     | Açıklama                        |
-|---------------|---------|---------------------------------|
-| `removed`     | boolean | Kaldırma işleminin başarı durumu|
-| `client_name` | string  | Kaldırılan istemcinin adı       |
-| `client_ip`   | string  | Kaldırılan istemcinin IP adresi |
+| Alan          | Tip     | Açıklama                         |
+|---------------|---------|----------------------------------|
+| `removed`     | boolean | Kaldırma işleminin başarı durumu |
+| `client_name` | string  | Kaldırılan istemcinin adı        |
+| `client_ip`   | string  | Kaldırılan istemcinin IP adresi  |
 
 ??? example "Örnek Yanıt"
     ```json

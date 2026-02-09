@@ -14,11 +14,11 @@ phantom-api multihop remove_vpn_config exit_name="xeovo-uk"
 
 **Yanıt Modeli:** [`RemoveConfigResult`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/multihop/models/multihop_models.py#L116)
 
-| Alan         | Tip     | Açıklama                                 |
-|--------------|---------|------------------------------------------|
-| `removed`    | string  | Kaldırılan yapılandırmanın adı           |
-| `was_active` | boolean | Kaldırmadan önce yapılandırma aktif miydi|
-| `message`    | string  | Sonuç mesajı                             |
+| Alan         | Tip     | Açıklama                                  |
+|--------------|---------|-------------------------------------------|
+| `removed`    | string  | Kaldırılan yapılandırmanın adı            |
+| `was_active` | boolean | Kaldırmadan önce yapılandırma aktif miydi |
+| `message`    | string  | Sonuç mesajı                              |
 
 ??? example "Örnek Yanıt"
     ```json

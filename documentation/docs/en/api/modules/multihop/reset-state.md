@@ -8,12 +8,12 @@ phantom-api multihop reset_state
 
 **Response Model:** [`ResetStateResult`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/multihop/models/multihop_models.py#L166)
 
-| Field               | Type    | Description                              |
-|---------------------|---------|------------------------------------------|
-| `reset_complete`    | boolean | Reset completed successfully             |
-| `cleanup_successful`| boolean | Cleanup operations successful            |
-| `cleaned_up`        | array   | List of cleaned up items                 |
-| `message`           | string  | Result message                           |
+| Field                | Type    | Description                   |
+|----------------------|---------|-------------------------------|
+| `reset_complete`     | boolean | Reset completed successfully  |
+| `cleanup_successful` | boolean | Cleanup operations successful |
+| `cleaned_up`         | array   | List of cleaned up items      |
+| `message`            | string  | Result message                |
 
 ??? example "Example Response"
     ```json

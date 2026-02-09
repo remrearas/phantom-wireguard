@@ -8,12 +8,12 @@ phantom-api multihop reset_state
 
 **Yanıt Modeli:** [`ResetStateResult`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/multihop/models/multihop_models.py#L166)
 
-| Alan                | Tip     | Açıklama                                 |
-|---------------------|---------|------------------------------------------|
-| `reset_complete`    | boolean | Sıfırlama başarıyla tamamlandı           |
-| `cleanup_successful`| boolean | Temizleme işlemleri başarılı             |
-| `cleaned_up`        | array   | Temizlenen öğelerin listesi              |
-| `message`           | string  | Sonuç mesajı                             |
+| Alan                 | Tip     | Açıklama                       |
+|----------------------|---------|--------------------------------|
+| `reset_complete`     | boolean | Sıfırlama başarıyla tamamlandı |
+| `cleanup_successful` | boolean | Temizleme işlemleri başarılı   |
+| `cleaned_up`         | array   | Temizlenen öğelerin listesi    |
+| `message`            | string  | Sonuç mesajı                   |
 
 ??? example "Örnek Yanıt"
     ```json

@@ -27,10 +27,10 @@ phantom-api multihop import_vpn_config config_path="/home/user/vpn.conf" custom_
 
 **Parametreler:**
 
-| Parametre     | Zorunlu | Açıklama                              |
-|---------------|---------|---------------------------------------|
-| `config_path` | Evet    | WireGuard yapılandırma dosyasının yolu|
-| `custom_name` | Hayır   | Yapılandırma için özel isim           |
+| Parametre     | Zorunlu | Açıklama                               |
+|---------------|---------|----------------------------------------|
+| `config_path` | Evet    | WireGuard yapılandırma dosyasının yolu |
+| `custom_name` | Hayır   | Yapılandırma için özel isim            |
 
 **Yanıt Modeli:** [`ImportResult`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/multihop/models/multihop_models.py#L58)
 

@@ -23,16 +23,16 @@ phantom-api dns test_dns_servers domain="example.com"
 
 **Yanıt Modeli:** [`TestDNSResult`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/dns/models/dns_models.py#L92)
 
-| Alan                         | Tip     | Açıklama                         |
-|------------------------------|---------|----------------------------------|
-| `all_passed`                 | boolean | Tüm sunucular testi geçti        |
-| `servers_tested`             | integer | Test edilen sunucu sayısı        |
-| `results[].server`           | string  | DNS sunucu adresi                |
-| `results[].success`          | boolean | Test başarılı                    |
-| `results[].status`           | string  | Durum mesajı                     |
-| `results[].response_time_ms` | float   | Milisaniye cinsinden yanıt süresi|
-| `results[].test_domain`      | string  | Test için kullanılan alan adı    |
-| `results[].error`            | string  | Başarısızsa hata mesajı          |
+| Alan                         | Tip     | Açıklama                          |
+|------------------------------|---------|-----------------------------------|
+| `all_passed`                 | boolean | Tüm sunucular testi geçti         |
+| `servers_tested`             | integer | Test edilen sunucu sayısı         |
+| `results[].server`           | string  | DNS sunucu adresi                 |
+| `results[].success`          | boolean | Test başarılı                     |
+| `results[].status`           | string  | Durum mesajı                      |
+| `results[].response_time_ms` | float   | Milisaniye cinsinden yanıt süresi |
+| `results[].test_domain`      | string  | Test için kullanılan alan adı     |
+| `results[].error`            | string  | Başarısızsa hata mesajı           |
 
 ??? example "Örnek Yanıt"
     ```json

@@ -8,18 +8,18 @@ phantom-api core get_firewall_status
 
 **Yanıt Modeli:** [`FirewallConfiguration`](https://github.com/ARAS-Workspace/phantom-wg/blob/main/phantom/modules/core/models/service_models.py#L95)
 
-| Alan                   | Tip     | Açıklama                     |
-|------------------------|---------|------------------------------|
-| `ufw.enabled`          | boolean | UFW durumu                   |
-| `ufw.rules`            | array   | UFW kuralları listesi        |
-| `iptables.has_rules`   | boolean | iptables kuralları mevcut    |
-| `iptables.nat_rules`   | array   | NAT kuralları                |
-| `iptables.filter_rules`| array   | Filtre kuralları             |
-| `nat.enabled`          | boolean | NAT etkin                    |
-| `nat.rules`            | array   | MASQUERADE kuralları         |
-| `ports.wireguard_port` | integer | WireGuard dinleme portu      |
-| `ports.listening`      | boolean | Port dinleniyor              |
-| `status`               | string  | Genel güvenlik duvarı durumu |
+| Alan                    | Tip     | Açıklama                     |
+|-------------------------|---------|------------------------------|
+| `ufw.enabled`           | boolean | UFW durumu                   |
+| `ufw.rules`             | array   | UFW kuralları listesi        |
+| `iptables.has_rules`    | boolean | iptables kuralları mevcut    |
+| `iptables.nat_rules`    | array   | NAT kuralları                |
+| `iptables.filter_rules` | array   | Filtre kuralları             |
+| `nat.enabled`           | boolean | NAT etkin                    |
+| `nat.rules`             | array   | MASQUERADE kuralları         |
+| `ports.wireguard_port`  | integer | WireGuard dinleme portu      |
+| `ports.listening`       | boolean | Port dinleniyor              |
+| `status`                | string  | Genel güvenlik duvarı durumu |
 
 ??? example "Örnek Yanıt"
     ```json

@@ -12,15 +12,15 @@ phantom-api core update_tweak_setting setting_name="restart_service_after_client
 
 **update_tweak_setting için parametreler:**
 
-| Parametre      | Zorunlu | Açıklama                                      |
-|----------------|---------|-----------------------------------------------|
-| `setting_name` | Evet    | Güncellenecek ayarın adı                      |
+| Parametre      | Zorunlu | Açıklama                                           |
+|----------------|---------|----------------------------------------------------|
+| `setting_name` | Evet    | Güncellenecek ayarın adı                           |
 | `value`        | Evet    | Yeni değer (string olarak boolean: "true"/"false") |
 
 **Mevcut Ayarlar:**
 
-| Ayar                                    | Varsayılan | Açıklama                                        |
-|-----------------------------------------|------------|-------------------------------------------------|
+| Ayar                                    | Varsayılan | Açıklama                                                    |
+|-----------------------------------------|------------|-------------------------------------------------------------|
 | `restart_service_after_client_creation` | false      | İstemci ekledikten sonra WireGuard servisini yeniden başlat |
 
 !!! info

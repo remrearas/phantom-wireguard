@@ -12,16 +12,16 @@ phantom-api core update_tweak_setting setting_name="restart_service_after_client
 
 **Parameters for update_tweak_setting:**
 
-| Parameter      | Required | Description                                |
-|----------------|----------|--------------------------------------------|
-| `setting_name` | Yes      | Name of the setting to update              |
+| Parameter      | Required | Description                                   |
+|----------------|----------|-----------------------------------------------|
+| `setting_name` | Yes      | Name of the setting to update                 |
 | `value`        | Yes      | New value (boolean as string: "true"/"false") |
 
 **Available Settings:**
 
-| Setting                               | Default | Description                                    |
-|---------------------------------------|---------|------------------------------------------------|
-| `restart_service_after_client_creation` | false | Restart WireGuard service after adding clients |
+| Setting                                 | Default | Description                                    |
+|-----------------------------------------|---------|------------------------------------------------|
+| `restart_service_after_client_creation` | false   | Restart WireGuard service after adding clients |
 
 !!! info
     When `false`: Uses `wg set` command to dynamically add clients (no service restart).
