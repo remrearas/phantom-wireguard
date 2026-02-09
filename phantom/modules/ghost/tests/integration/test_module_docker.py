@@ -224,7 +224,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency()
-    def test_enable_ghost_mode(self, docker_executor, shared_docker_container, ghost_module):
+    def test_enable_ghost_mode(self, docker_executor, ghost_module):
 
         # noinspection PyArgumentList
         with self._test_environment():
@@ -272,7 +272,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_enable_ghost_mode"])
-    def test_get_status_enabled(self, docker_executor, shared_docker_container, ghost_module):
+    def test_get_status_enabled(self, docker_executor, ghost_module):
         status_result = ghost_module.get_status()
         assert status_result is not None, "get_status returned None"
         assert isinstance(status_result, dict), "Result should be a dictionary"
@@ -307,7 +307,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_get_status_enabled"])
-    def test_disable_ghost_mode(self, docker_executor, shared_docker_container, ghost_module):
+    def test_disable_ghost_mode(self, docker_executor, ghost_module):
 
         ip_result = docker_executor(["curl", "-s", "https://checkip.amazonaws.com"])
         server_ip = ip_result["stdout"].strip()
@@ -353,7 +353,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_disable_ghost_mode"])
-    def test_get_status_disabled(self, docker_executor, shared_docker_container, ghost_module):
+    def test_get_status_disabled(self, docker_executor, ghost_module):
 
         status_result = ghost_module.get_status()
         assert status_result is not None

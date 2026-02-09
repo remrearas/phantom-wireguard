@@ -314,7 +314,7 @@ class TestModule:
         assert result["secondary"] == "1.1.1.1"
 
     @pytest.mark.dependency(depends=["TestModule::test_dns_config_defaults"])
-    def test_change_dns_servers_config_error(self, dns_module, test_environment, monkeypatch):
+    def test_change_dns_servers_config_error(self, dns_module, monkeypatch):
         from phantom.api.exceptions import ConfigurationError
 
         def mock_save_config():

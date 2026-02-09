@@ -349,7 +349,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_import_vpn_config"])
-    def test_list_exits(self, docker_executor, shared_docker_container, multihop_module):
+    def test_list_exits(self, docker_executor, multihop_module):
         """Test listing VPN exits after import."""
         # Assumes test_import_vpn_config already ran
         result = multihop_module.list_exits()
@@ -380,7 +380,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_list_exits"])
-    def test_enable_multihop(self, docker_executor, shared_docker_container, multihop_module):
+    def test_enable_multihop(self, docker_executor, multihop_module):
         """Test enabling multihop routing."""
         # Assumes test_import_vpn_config already ran
         result = multihop_module.enable_multihop('test-exit')
@@ -413,7 +413,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_enable_multihop"])
-    def test_get_status(self, docker_executor, shared_docker_container, multihop_module):
+    def test_get_status(self, docker_executor, multihop_module):
         """Test getting multihop status after enablement."""
         # Assumes test_enable_multihop already ran
         result = multihop_module.get_status()
@@ -448,7 +448,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_get_status"])
-    def test_vpn(self, docker_executor, shared_docker_container, multihop_module):
+    def test_vpn(self, docker_executor, multihop_module):
         """Test VPN connectivity after multihop is enabled."""
         # Assumes test_enable_multihop already ran
         result = multihop_module.test_vpn()
@@ -480,7 +480,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_vpn"])
-    def test_get_session_log(self, docker_executor, shared_docker_container, multihop_module):
+    def test_get_session_log(self, docker_executor, multihop_module):
         """Test getting session log after multihop is enabled."""
         # Assumes test_enable_multihop already ran
         result = multihop_module.get_session_log()
@@ -523,7 +523,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_get_session_log"])
-    def test_disable_multihop(self, docker_executor, shared_docker_container, multihop_module):
+    def test_disable_multihop(self, docker_executor, multihop_module):
         """Test disabling multihop routing."""
         # Assumes test_enable_multihop already ran
         result = multihop_module.disable_multihop()
@@ -564,7 +564,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_disable_multihop"])
-    def test_reset_state(self, docker_executor, shared_docker_container, multihop_module):
+    def test_reset_state(self, docker_executor, multihop_module):
         """Test reset_state functionality to clean all multihop components."""
         # Assumes test_import_vpn_config already ran
         enable_result = multihop_module.enable_multihop('test-exit')
@@ -637,7 +637,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_reset_state"])
-    def test_cleanup_verification_and_force_cleanup(self, docker_executor, shared_docker_container, multihop_module):
+    def test_cleanup_verification_and_force_cleanup(self, docker_executor, multihop_module):
         """Test cleanup verification mechanism and forced cleanup retry logic."""
 
         # Step 1: Enable multihop
@@ -678,7 +678,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_cleanup_verification_and_force_cleanup"])
-    def test_silent_disable_on_handshake_failure(self, docker_executor, shared_docker_container, multihop_module):
+    def test_silent_disable_on_handshake_failure(self, docker_executor, multihop_module):
         """Test _disable_multihop_silently auto-rollback when VPN handshake fails."""
 
         exit_ns = "wg-test-exit"
@@ -719,7 +719,7 @@ class TestModuleDocker:
 
     @pytest.mark.docker
     @pytest.mark.dependency(depends=["TestModuleDocker::test_silent_disable_on_handshake_failure"])
-    def test_remove_vpn_config(self, docker_executor, shared_docker_container, multihop_module):
+    def test_remove_vpn_config(self, docker_executor, multihop_module):
         """Test removing VPN configuration."""
         # Assumes all previous tests ran (config imported, enabled, then disabled)
         result = multihop_module.remove_vpn_config('test-exit')
