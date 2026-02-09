@@ -29,7 +29,7 @@ jobs:
         working-directory: tools/phantom-deployment-wizard
         run: |
           pytest deployments/hidden-service/secure-deployment-user/tests/integration/ \
-            -m docker \
+            --docker \
             -v \
             --tb=short
 
