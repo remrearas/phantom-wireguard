@@ -445,6 +445,13 @@ create_commands() {
         chmod +x "$INSTALL_DIR/phantom/bin/phantom-casper.py"
         log "Command created: phantom-casper" "$GREEN"
     fi
+
+    # phantom-casper-ios command
+    if [[ -f "$INSTALL_DIR/phantom/bin/phantom-casper-ios.py" ]]; then
+        ln -sf "$INSTALL_DIR/phantom/bin/phantom-casper-ios.py" /usr/local/bin/phantom-casper
+        chmod +x "$INSTALL_DIR/phantom/bin/phantom-casper-ios.py"
+        log "Command created: phantom-casper" "$GREEN"
+    fi
     
 }
 
