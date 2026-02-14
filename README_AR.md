@@ -29,6 +29,8 @@ Phantom-WG هي أداة معيارية لإعداد وإدارة بنية WireG
 
 📰 **https://docs.phantom.tc**
 
+[![TestFlight](https://img.shields.io/badge/TestFlight-Join_Beta-blue?logo=apple)](https://testflight.apple.com/join/5Kt55AXd)
+
 ---
 
 ## البداية السريعة
@@ -100,7 +102,7 @@ API Example:
 - إدارة جدار الحماية (Firewall)
 - تغيير الشبكة الفرعية (Subnet) وإعادة تعيين عناوين IP
 
-> **الاستخدام التفصيلي:** [API Documentation - Core Module](https://docs.phantom.tc/api/#core-module)
+> **الاستخدام التفصيلي:** [Feature Showcase - Core Module](https://docs.phantom.tc/feature-showcase/modules/core/add-client/)
 
 ---
 
@@ -117,7 +119,7 @@ API Example:
 - مراقبة الاتصال وإعادة الاتصال التلقائي
 - اختبارات اتصال VPN
 
-> **الاستخدام التفصيلي:** [API Documentation - Multihop Module](https://docs.phantom.tc/api/#multihop-module)
+> **الاستخدام التفصيلي:** [Feature Showcase - Multihop Module](https://docs.phantom.tc/feature-showcase/modules/multihop/compact)
 
 ---
 
@@ -133,7 +135,9 @@ API Example:
 - شهادات SSL تلقائية من Let's Encrypt
 - تصدير إعدادات العميل عبر `phantom-casper`
 
-> **الاستخدام التفصيلي:** [API Documentation - Ghost Module](https://docs.phantom.tc/api/#ghost-module)
+> **الاستخدام التفصيلي:** [Feature Showcase - Ghost Module](https://docs.phantom.tc/feature-showcase/modules/ghost/compact)
+
+> **iOS (بيتا):** [Phantom-WG iOS](FEATURE_IOS_APP.md) — Ghost Mode على iOS عبر TestFlight.
 
 ---
 
@@ -156,17 +160,18 @@ phantom-api multihop import_vpn_config config_path="/path/to/vpn.conf"
 phantom-api multihop enable_multihop exit_name="vpn-exit"
 ```
 
-> **الاستخدام التفصيلي:** [API Documentation - Full Censorship Resistance](https://docs.phantom.tc/api/#enable-full-censorship-resistance)
+> **الاستخدام التفصيلي:** [API Documentation - Full Censorship Resistance](https://docs.phantom.tc/api/common-operations/#enable-full-censorship-resistance)
 
 ---
 
 ## طرق الوصول
 
-| الطريقة             | الأمر                           | الوصف                                  |
-|---------------------|---------------------------------|----------------------------------------|
-| **CLI التفاعلي**    | `phantom-wg`                    | واجهة مستخدم غنية قائمة على TUI        |
-| **API**             | `phantom-api <module> <action>` | وصول برمجي، خرج بصيغة JSON             |
-| **Ghost Export**    | `phantom-casper <client>`       | إعدادات عميل Ghost Mode                |
+| الطريقة                  | الأمر                           | الوصف                                |
+|--------------------------|---------------------------------|--------------------------------------|
+| **CLI التفاعلي**         | `phantom-wg`                    | واجهة مستخدم غنية قائمة على TUI      |
+| **API**                  | `phantom-api <module> <action>` | وصول برمجي، خرج بصيغة JSON           |
+| **Ghost Export**         | `phantom-casper <client>`       | إعدادات عميل Ghost Mode              |
+| **Ghost Export for iOS** | `phantom-casper-ios <client>`   | إعدادات Ghost Mode بصيغة JSON لـ iOS |
 
 ---
 

@@ -23,6 +23,8 @@ modüler bir araçtır. Temel VPN yönetiminin ötesinde; sansüre dayanıklı b
 
 📰 **https://docs.phantom.tc**
 
+[![TestFlight](https://img.shields.io/badge/TestFlight-Betaya_Katıl-blue?logo=apple)](https://testflight.apple.com/join/5Kt55AXd)
+
 ---
 
 ## Hızlı Kurulum
@@ -94,7 +96,7 @@ tek merkezden yönetilir.
 - Güvenlik duvarı yönetimi
 - Subnet değişikliği ve IP yeniden haritalama
 
-> **Detaylı Kullanım:** [API Dökümanı - Core Modülü](https://docs.phantom.tc/tr/api/#core-modulu)
+> **Detaylı Kullanım:** [Özellik Tanıtımı - Core Modülü](https://docs.phantom.tc/tr/feature-showcase/modules/core/add-client/)
 
 ---
 
@@ -111,7 +113,7 @@ ticari VPN sağlayıcılarını kullanarak çift şifreleme katmanı oluşturun.
 - Bağlantı izleme ve otomatik yeniden bağlanma
 - VPN bağlantı testleri
 
-> **Detaylı Kullanım:** [API Dökümanı - Multihop Modülü](https://docs.phantom.tc/tr/api/#multihop-modulu)
+> **Detaylı Kullanım:** [Özellik Tanıtımı - Multihop Modülü](https://docs.phantom.tc/tr/feature-showcase/modules/multihop/compact)
 
 ---
 
@@ -127,7 +129,9 @@ sistemlerini ve güvenlik duvarı engellemelerini atlayarak sansüre dirençli b
 - Otomatik Let's Encrypt SSL sertifikası
 - `phantom-casper` ile istemci yapılandırma dışa aktarımı
 
-> **Detaylı Kullanım:** [API Dökümanı - Ghost Modülü](https://docs.phantom.tc/tr/api/#ghost-modulu)
+> **Detaylı Kullanım:** [Özellik Tanıtımı - Ghost Modülü](https://docs.phantom.tc/tr/feature-showcase/modules/ghost/compact)
+
+> **iOS Client (Beta):** [Phantom-WG iOS Uygulaması](FEATURE_IOS_APP_TR.md) — iOS'ta Ghost Mode, TestFlight ile.
 
 ---
 
@@ -151,17 +155,18 @@ phantom-api multihop import_vpn_config config_path="/path/to/vpn.conf"
 phantom-api multihop enable_multihop exit_name="vpn-exit"
 ```
 
-> **Detaylı Kullanım:** [API Dökümanı - Tam Sansür Dayanıklılığı](https://docs.phantom.tc/tr/api/#tam-sansur-dayankllgn-etkinlestir)
+> **Detaylı Kullanım:** [API Dökümanı - Tam Sansür Dayanıklılığı](https://docs.phantom.tc/tr/api/common-operations/#tam-sansur-dayankllgn-etkinlestir)
 
 ---
 
 ## Erişim Yöntemleri
 
-| Yöntem             | Komut                         | Açıklama                            |
-|--------------------|-------------------------------|-------------------------------------|
-| **İnteraktif CLI** | `phantom-wg`                  | Rich TUI tabanlı kullanıcı arayüzü  |
-| **API**            | `phantom-api <modül> <eylem>` | Programatik erişim, JSON çıktı      |
-| **Ghost Export**   | `phantom-casper <istemci>`    | Ghost Mode istemci yapılandırması   |
+| Yöntem                   | Komut                          | Açıklama                           |
+|--------------------------|--------------------------------|------------------------------------|
+| **İnteraktif CLI**       | `phantom-wg`                   | Rich TUI tabanlı kullanıcı arayüzü |
+| **API**                  | `phantom-api <modül> <eylem>`  | Programatik erişim, JSON çıktı     |
+| **Ghost Export**         | `phantom-casper <istemci>`     | Ghost Mode istemci yapılandırması  |
+| **Ghost Export for iOS** | `phantom-casper-ios <istemci>` | Ghost Mode iOS JSON yapılandırması |
 
 ---
 

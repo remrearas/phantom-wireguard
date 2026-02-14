@@ -23,6 +23,8 @@ censorship-resistant connections, multi-layer encryption, and advanced privacy s
 
 📰 **https://docs.phantom.tc**
 
+[![TestFlight](https://img.shields.io/badge/TestFlight-Join_Beta-blue?logo=apple)](https://testflight.apple.com/join/5Kt55AXd)
+
 ---
 
 ## Quick Start
@@ -94,7 +96,7 @@ control are managed from a single interface.
 - Firewall management
 - Subnet changes and IP remapping
 
-> **Detailed Usage:** [API Documentation - Core Module](https://docs.phantom.tc/api/#core-module)
+> **Detailed Usage:** [Feature Showcase - Core Module](https://docs.phantom.tc/feature-showcase/modules/core/add-client/)
 
 ---
 
@@ -111,7 +113,7 @@ layer using your own servers or commercial VPN providers.
 - Connection monitoring and automatic reconnection
 - VPN connection tests
 
-> **Detailed Usage:** [API Documentation - Multihop Module](https://docs.phantom.tc/api/#multihop-module)
+> **Detailed Usage:** [Feature Showcase - Multihop Module](https://docs.phantom.tc/feature-showcase/modules/multihop/compact)
 
 ---
 
@@ -127,7 +129,9 @@ Inspection) systems and firewall blocks for censorship-resistant connectivity.
 - Automatic Let's Encrypt SSL certificates
 - Client configuration export via `phantom-casper`
 
-> **Detailed Usage:** [API Documentation - Ghost Module](https://docs.phantom.tc/api/#ghost-module)
+> **Detailed Usage:** [Feature Showcase - Ghost Module](https://docs.phantom.tc/feature-showcase/modules/ghost/compact)
+
+> **iOS Client (Beta):** [Phantom-WG iOS App](FEATURE_IOS_APP.md) — Ghost Mode on iOS via TestFlight.
 
 ---
 
@@ -150,17 +154,18 @@ phantom-api multihop import_vpn_config config_path="/path/to/vpn.conf"
 phantom-api multihop enable_multihop exit_name="vpn-exit"
 ```
 
-> **Detailed Usage:** [API Documentation - Full Censorship Resistance](https://docs.phantom.tc/api/#enable-full-censorship-resistance)
+> **Detailed Usage:** [API Documentation - Full Censorship Resistance](https://docs.phantom.tc/api/common-operations/#enable-full-censorship-resistance)
 
 ---
 
 ## Access Methods
 
-| Method              | Command                         | Description                      |
-|---------------------|---------------------------------|----------------------------------|
-| **Interactive CLI** | `phantom-wg`                    | Rich TUI-based user interface    |
-| **API**             | `phantom-api <module> <action>` | Programmatic access, JSON output |
-| **Ghost Export**    | `phantom-casper <client>`       | Ghost Mode client configuration  |
+| Method                   | Command                         | Description                       |
+|--------------------------|---------------------------------|-----------------------------------|
+| **Interactive CLI**      | `phantom-wg`                    | Rich TUI-based user interface     |
+| **API**                  | `phantom-api <module> <action>` | Programmatic access, JSON output  |
+| **Ghost Export**         | `phantom-casper <client>`       | Ghost Mode client configuration   |
+| **Ghost Export for iOS** | `phantom-casper-ios <client>`   | Ghost Mode iOS JSON configuration |
 
 ---
 
