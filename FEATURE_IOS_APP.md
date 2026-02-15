@@ -69,7 +69,7 @@ no manual builds, no unverified binaries.
 
 The WireGuard integration on iOS is based on a minimal fork of the upstream
 [wireguard-apple](https://github.com/WireGuard/wireguard-apple) project, adapted
-for Phantom-WG's Ghost Mode requirements.
+for Phantom-WG's development environment requirements.
 
 | Resource    | Link                                                                                                         |
 |-------------|--------------------------------------------------------------------------------------------------------------|

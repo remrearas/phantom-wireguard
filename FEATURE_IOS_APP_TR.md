@@ -45,7 +45,7 @@ Uygulama GitHub Actions üzerinden derlenir ve Apple'a iletilir.
 | Build       | `20260213.1313`                                                          |
 | Kaynak kodu | [`ios/main`](https://github.com/ARAS-Workspace/phantom-wg/tree/ios/main) |
 
-**Build Action:** [phantom-wg /actions/runs/21983006116](https://github.com/ARAS-Workspace/phantom-wg/actions/runs/21983006116)
+**Build Action:** [phantom-wg/actions/runs/21983006116](https://github.com/ARAS-Workspace/phantom-wg/actions/runs/21983006116)
 
 ### wstunnel — iOS için FFI
 
@@ -60,20 +60,20 @@ dizini altında üretir. Ortaya çıkan artifact **checksum doğrulaması** içe
 iOS projesi, bağladığı binary'nin CI'ın ürettiğiyle birebir aynı olduğunu
 doğrulayabilir — elle derleme yok, doğrulanmamış binary yok.
 
-| Kaynak               | Link                                                                                                       |
-|----------------------|------------------------------------------------------------------------------------------------------------|
-| Kaynak (ios etiketi) | [wstunnel/tree/ios/v10.5.2](https://github.com/ARAS-Workspace/wstunnel/tree/ios/v10.5.2)                   |
-| Build Action         | [wstunnel /actions/runs/ 21937285430](https://github.com/ARAS-Workspace/wstunnel/actions/runs/21937285430) |
+| Kaynak               | Link                                                                                                     |
+|----------------------|----------------------------------------------------------------------------------------------------------|
+| Kaynak (ios etiketi) | [wstunnel/tree/ios/v10.5.2](https://github.com/ARAS-Workspace/wstunnel/tree/ios/v10.5.2)                 |
+| Build Action         | [wstunnel/actions/runs/21937285430](https://github.com/ARAS-Workspace/wstunnel/actions/runs/21937285430) |
 
 ### WireGuard — iOS Fork'u
 
 iOS üzerindeki WireGuard entegrasyonu, upstream [wireguard-apple](https://github.com/WireGuard/wireguard-apple)
-projesinin minimal bir fork'una dayanır ve Phantom-WG'nin Ghost Mode gereksinimleri
-doğrultusunda uyarlanmıştır.
+projesinin minimal bir fork'una dayanır ve Phantom-WG'nin geliştirme ortamı 
+gereksinimleri doğrultusunda uyarlanmıştır.
 
-| Kaynak    | Link                                                                                                              |
-|-----------|-------------------------------------------------------------------------------------------------------------------|
-| Fork dalı | [wireguard-apple / tree / ios/ phantom-wg](https://github.com/ARAS-Workspace/wireguard-apple/tree/ios/phantom-wg) |
+| Kaynak    | Link                                                                                                         |
+|-----------|--------------------------------------------------------------------------------------------------------------|
+| Fork dalı | [wireguard-apple/tree/ios/phantom-wg](https://github.com/ARAS-Workspace/wireguard-apple/tree/ios/phantom-wg) |
 
 ---
 
