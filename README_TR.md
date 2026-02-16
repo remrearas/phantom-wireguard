@@ -23,6 +23,10 @@ modüler bir araçtır. Temel VPN yönetiminin ötesinde; sansüre dayanıklı b
 
 📰 **https://docs.phantom.tc**
 
+**İstemci (Client) Uygulamaları:**
+
+[![macOS](https://img.shields.io/badge/macOS-DMG_İndir-black?logo=apple)](https://github.com/ARAS-Workspace/phantom-wg/releases/download/mac-v1.0.0/Phantom-WG-MacOS-1.0.0.dmg)
+
 [![TestFlight](https://img.shields.io/badge/TestFlight-Betaya_Katıl-blue?logo=apple)](https://testflight.apple.com/join/5Kt55AXd)
 
 ---

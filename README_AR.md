@@ -29,6 +29,10 @@ Phantom-WG هي أداة معيارية لإعداد وإدارة بنية WireG
 
 📰 **https://docs.phantom.tc**
 
+**تطبيقات العميل:**
+
+[![macOS](https://img.shields.io/badge/macOS-Download_DMG-black?logo=apple)](https://github.com/ARAS-Workspace/phantom-wg/releases/download/mac-v1.0.0/Phantom-WG-MacOS-1.0.0.dmg)
+
 [![TestFlight](https://img.shields.io/badge/TestFlight-Join_Beta-blue?logo=apple)](https://testflight.apple.com/join/5Kt55AXd)
 
 ---
