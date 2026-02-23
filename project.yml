@@ -10,6 +10,16 @@ packages:
   WireGuardKit:
     path: Libraries/WireGuardKit
 
+schemes:
+  Phantom-WG:
+    build:
+      targets:
+        Phantom-WG: all
+        PhantomTests: [test]
+    test:
+      targets:
+        - PhantomTests
+
 targets:
 
   # ── Main App ──────────────────────────────────────────────
@@ -82,6 +92,27 @@ targets:
           - group.com.remrearas.phantom-wg
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider
+
+  # ── Tests ───────────────────────────────────────────────
+
+  PhantomTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PhantomTests
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - target: Phantom-WG
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.remrearas.Phantom-WG.Tests
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: true
+        HEADER_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/Libraries/WstunnelKit/include"
+        LIBRARY_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/Libraries/WstunnelKit"
 
   # ── Network Extension ────────────────────────────────────
 
