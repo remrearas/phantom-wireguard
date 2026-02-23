@@ -66,7 +66,7 @@ struct TunnelImportView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(loc.t("import_button")) { importConfig() }
                         .fontWeight(.semibold)
-                        .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(!PhantomUIEngine.canSubmitImport(text: inputText))
                 }
             }
             .sheet(isPresented: $showingQRScanner) {

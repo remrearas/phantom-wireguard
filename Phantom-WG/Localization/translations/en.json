@@ -74,13 +74,11 @@
   "import_invalid_input": "Invalid input.",
   "import_invalid_format": "Invalid configuration format.",
 
-  "error_tunnel_inactive": "The tunnel is inactive.",
   "error_starting_failed": "Could not activate tunnel. %@",
   "error_saving_failed": "Could not save tunnel configuration. %@",
   "error_loading_failed": "Could not load tunnel configuration. %@",
   "error_retry_limit": "Activation attempt limit exceeded. %@",
   "error_activation_failed": "Activation failed. %@",
-  "error_waiting_failed": "Activation failed while waiting for another tunnel to deactivate. %@",
   "error_duplicate_name": "A tunnel with that name already exists.",
   "error_invalid_name": "The tunnel name is invalid.",
   "error_add_tunnel": "Unable to create the tunnel. %@",

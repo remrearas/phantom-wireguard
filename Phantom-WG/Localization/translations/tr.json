@@ -74,13 +74,11 @@
   "import_invalid_input": "Geçersiz girdi.",
   "import_invalid_format": "Geçersiz yapılandırma formatı.",
 
-  "error_tunnel_inactive": "Tünel pasif durumda.",
   "error_starting_failed": "Tünel etkinleştirilemedi. %@",
   "error_saving_failed": "Tünel yapılandırması kaydedilemedi. %@",
   "error_loading_failed": "Tünel yapılandırması yüklenemedi. %@",
   "error_retry_limit": "Etkinleştirme deneme sınırı aşıldı. %@",
   "error_activation_failed": "Etkinleştirme başarısız oldu. %@",
-  "error_waiting_failed": "Başka bir tünelin devre dışı kalması beklenirken etkinleştirme başarısız oldu. %@",
   "error_duplicate_name": "Bu adla zaten bir tünel mevcut.",
   "error_invalid_name": "Tünel adı geçersiz.",
   "error_add_tunnel": "Tünel oluşturulamadı. %@",

@@ -7,8 +7,10 @@ struct TunnelListView: View {
     @State private var errorMessage: String?
     @State private var showingError = false
 
-    private var hasActiveTunnel: Bool {
-        tunnelsManager.tunnels.contains { $0.status != .inactive }
+    private var canModifyList: Bool {
+        PhantomUIEngine.canModifyTunnelList(
+            statuses: tunnelsManager.tunnels.map(\.status)
+        )
     }
 
     var body: some View {
@@ -24,7 +26,7 @@ struct TunnelListView: View {
                             }
                         }
                         .onDelete { offsets in deleteTunnels(at: offsets) }
-                        .deleteDisabled(hasActiveTunnel)
+                        .deleteDisabled(!canModifyList)
 
                         aboutSection
                     }
@@ -47,7 +49,7 @@ struct TunnelListView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
-                    .disabled(hasActiveTunnel)
+                    .disabled(!canModifyList)
                 }
             }
             .sheet(isPresented: $showingImport) {
@@ -93,7 +95,7 @@ struct TunnelListView: View {
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
-            .disabled(hasActiveTunnel)
+            .disabled(!canModifyList)
 
             Spacer()
 
@@ -167,55 +169,22 @@ struct TunnelRow: View {
 
             Spacer()
 
-            Toggle("", isOn: tunnelBinding)
+            Toggle("", isOn: PhantomUIEngine.tunnelToggleBinding(
+                for: tunnel, manager: tunnelsManager))
                 .labelsHidden()
         }
         .padding(.vertical, 2)
     }
 
     private var statusIndicator: some View {
-        ZStack {
+        let color = PhantomUIEngine.statusColor(for: tunnel.status)
+        return ZStack {
             Circle()
-                .fill(statusColor.opacity(0.15))
+                .fill(color.opacity(0.15))
                 .frame(width: 32, height: 32)
-            Image(systemName: statusIcon)
+            Image(systemName: PhantomUIEngine.statusIcon(for: tunnel.status))
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(statusColor)
-        }
-    }
-
-    private var tunnelBinding: Binding<Bool> {
-        Binding(
-            get: {
-                tunnel.status == .active || tunnel.status == .activating ||
-                tunnel.status == .waiting || tunnel.status == .reasserting ||
-                tunnel.status == .restarting
-            },
-            set: { isOn in
-                if isOn {
-                    tunnelsManager.startActivation(of: tunnel)
-                } else {
-                    tunnelsManager.startDeactivation(of: tunnel)
-                }
-            }
-        )
-    }
-
-    private var statusColor: Color {
-        switch tunnel.status {
-        case .active: return .green
-        case .activating, .waiting, .reasserting, .restarting: return .orange
-        case .deactivating: return .orange
-        case .inactive: return .secondary
-        }
-    }
-
-    private var statusIcon: String {
-        switch tunnel.status {
-        case .active: return "shield.checkered"
-        case .activating, .waiting, .reasserting, .restarting: return "arrow.triangle.2.circlepath"
-        case .deactivating: return "arrow.down.circle"
-        case .inactive: return "shield.slash"
+                .foregroundStyle(color)
         }
     }
 }

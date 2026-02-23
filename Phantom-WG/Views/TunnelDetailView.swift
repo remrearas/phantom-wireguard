@@ -21,7 +21,7 @@ struct TunnelDetailView: View {
     @State private var statsPollingTask: Task<Void, Never>?
 
     private var hasChanges: Bool { editConfig != originalConfig }
-    private var isActive: Bool { tunnel.status != .inactive }
+    private var isEditable: Bool { PhantomUIEngine.canEditConfig(status: tunnel.status) }
 
     init(tunnel: TunnelContainer) {
         self.tunnel = tunnel
@@ -31,7 +31,7 @@ struct TunnelDetailView: View {
     var body: some View {
         List {
             statusSection
-            if isActive { statsSection }
+            if PhantomUIEngine.shouldShowStats(status: tunnel.status) { statsSection }
             onDemandSection
             nameSection
             wstunnelSection
@@ -43,7 +43,7 @@ struct TunnelDetailView: View {
         .navigationTitle(editConfig.name.isEmpty ? loc.t("detail_tunnel") : editConfig.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if hasChanges && !isActive {
+            if hasChanges && isEditable {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(loc.t("save")) { saveConfig() }
                         .fontWeight(.semibold)
@@ -89,17 +89,17 @@ struct TunnelDetailView: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(statusBadgeColor.opacity(0.12))
+                        .fill(PhantomUIEngine.statusColor(for: tunnel.status).opacity(0.12))
                         .frame(width: 36, height: 36)
-                    Image(systemName: statusBadgeIcon)
+                    Image(systemName: PhantomUIEngine.statusIcon(for: tunnel.status))
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(statusBadgeColor)
+                        .foregroundStyle(PhantomUIEngine.statusColor(for: tunnel.status))
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tunnel.status.localizedDescription)
                         .font(.body.weight(.medium))
-                        .foregroundStyle(statusTextColor)
+                        .foregroundStyle(PhantomUIEngine.statusColor(for: tunnel.status))
                     if let error = tunnel.lastActivationError {
                         Text(error.alertText)
                             .font(.caption)
@@ -109,7 +109,8 @@ struct TunnelDetailView: View {
 
                 Spacer()
 
-                Toggle("", isOn: tunnelBinding)
+                Toggle("", isOn: PhantomUIEngine.tunnelToggleBinding(
+                    for: tunnel, manager: tunnelsManager))
                     .labelsHidden()
             }
         } header: {
@@ -218,7 +219,7 @@ struct TunnelDetailView: View {
             } label: {
                 Label(loc.t("detail_delete_tunnel"), systemImage: "trash")
             }
-            .disabled(isActive)
+            .disabled(!PhantomUIEngine.canDeleteTunnel(status: tunnel.status))
         } header: {
             Label(loc.t("detail_actions"), systemImage: "ellipsis.circle")
         }
@@ -227,54 +228,16 @@ struct TunnelDetailView: View {
     // MARK: - Field Builders
 
     private func textField(_ label: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            TextField(label, text: text)
-                .font(.system(.body, design: .monospaced))
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .disabled(isActive)
-                .foregroundStyle(isActive ? .secondary : .primary)
-        }
-        .padding(.vertical, 2)
+        PhantomTextField(label: label, text: text, isDisabled: !isEditable)
+            .textInputAutocapitalization(.never)
     }
 
     private func portField(_ label: String, value: Binding<UInt16>) -> some View {
-        let stringBinding = Binding<String>(
-            get: { "\(value.wrappedValue)" },
-            set: { if let v = UInt16($0) { value.wrappedValue = v } }
-        )
-        return VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            TextField(label, text: stringBinding)
-                .font(.system(.body, design: .monospaced))
-                .keyboardType(.numberPad)
-                .disabled(isActive)
-                .foregroundStyle(isActive ? .secondary : .primary)
-        }
-        .padding(.vertical, 2)
+        PhantomNumericField(label: label, value: value, isDisabled: !isEditable)
     }
 
     private func intField(_ label: String, value: Binding<Int>) -> some View {
-        let stringBinding = Binding<String>(
-            get: { "\(value.wrappedValue)" },
-            set: { if let v = Int($0) { value.wrappedValue = v } }
-        )
-        return VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            TextField(label, text: stringBinding)
-                .font(.system(.body, design: .monospaced))
-                .keyboardType(.numberPad)
-                .disabled(isActive)
-                .foregroundStyle(isActive ? .secondary : .primary)
-        }
-        .padding(.vertical, 2)
+        PhantomNumericField(label: label, value: value, isDisabled: !isEditable)
     }
 
     private func copyButton(_ title: String, icon: String, id: String, action: @escaping () -> Void) -> some View {
@@ -293,19 +256,6 @@ struct TunnelDetailView: View {
     }
 
     // MARK: - Bindings
-
-    private var tunnelBinding: Binding<Bool> {
-        Binding(
-            get: {
-                tunnel.status == .active || tunnel.status == .activating ||
-                tunnel.status == .waiting || tunnel.status == .reasserting ||
-                tunnel.status == .restarting
-            },
-            set: { isOn in
-                if isOn { tunnelsManager.startActivation(of: tunnel) } else { tunnelsManager.startDeactivation(of: tunnel) }
-            }
-        )
-    }
 
     private var onDemandBinding: Binding<Bool> {
         Binding(
