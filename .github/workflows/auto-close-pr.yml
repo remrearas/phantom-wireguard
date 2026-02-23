@@ -16,14 +16,41 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check if PR is from external contributor
+      - name: Check if PR is from external contributor or bot
         id: check
         run: |
-          if [ "${{ github.event.pull_request.user.login }}" != "remrearas" ]; then
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          PR_AUTHOR_TYPE="${{ github.event.pull_request.user.type }}"
+
+          ALLOWED_USERS="remrearas"
+          BLOCKED_BOTS="copilot-swe-agent copilot"
+
+          # Block known bots regardless
+          for bot in $BLOCKED_BOTS; do
+            if [ "$PR_AUTHOR" = "$bot" ]; then
+              echo "external=true" >> $GITHUB_OUTPUT
+              echo "reason=bot" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          done
+
+          # Block any Bot-type account not in allowed list
+          if [ "$PR_AUTHOR_TYPE" = "Bot" ]; then
             echo "external=true" >> $GITHUB_OUTPUT
-          else
-            echo "external=false" >> $GITHUB_OUTPUT
+            echo "reason=bot" >> $GITHUB_OUTPUT
+            exit 0
           fi
+
+          # Block external users
+          for user in $ALLOWED_USERS; do
+            if [ "$PR_AUTHOR" = "$user" ]; then
+              echo "external=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          done
+
+          echo "external=true" >> $GITHUB_OUTPUT
+          echo "reason=external" >> $GITHUB_OUTPUT
 
       - name: Read PR template
         if: steps.check.outputs.external == 'true'
