@@ -4,6 +4,10 @@ on:
   pull_request_target:
     types: [opened]
 
+env:
+  ALLOWED_USERS: remrearas
+  BLOCKED_BOTS: copilot-swe-agent copilot
+
 jobs:
   auto-close:
     runs-on: ubuntu-latest
@@ -13,69 +17,58 @@ jobs:
       issues: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check if PR is from external contributor or bot
-        id: check
+      - name: Check and close unauthorized PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
         run: |
-          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-          PR_AUTHOR_TYPE="${{ github.event.pull_request.user.type }}"
+          REASON=""
 
-          ALLOWED_USERS="remrearas"
-          BLOCKED_BOTS="copilot-swe-agent copilot"
-
-          # Block known bots regardless
+          # Block known bots
           for bot in $BLOCKED_BOTS; do
             if [ "$PR_AUTHOR" = "$bot" ]; then
-              echo "external=true" >> $GITHUB_OUTPUT
-              echo "reason=bot" >> $GITHUB_OUTPUT
-              exit 0
+              REASON="bot"
+              break
             fi
           done
 
-          # Block any Bot-type account not in allowed list
-          if [ "$PR_AUTHOR_TYPE" = "Bot" ]; then
-            echo "external=true" >> $GITHUB_OUTPUT
-            echo "reason=bot" >> $GITHUB_OUTPUT
-            exit 0
+          # Block any Bot-type account
+          if [ -z "$REASON" ] && [ "$PR_AUTHOR_TYPE" = "Bot" ]; then
+            REASON="bot"
           fi
 
           # Block external users
-          for user in $ALLOWED_USERS; do
-            if [ "$PR_AUTHOR" = "$user" ]; then
-              echo "external=false" >> $GITHUB_OUTPUT
-              exit 0
+          if [ -z "$REASON" ]; then
+            ALLOWED=false
+            for user in $ALLOWED_USERS; do
+              if [ "$PR_AUTHOR" = "$user" ]; then
+                ALLOWED=true
+                break
+              fi
+            done
+            if [ "$ALLOWED" = false ]; then
+              REASON="external"
             fi
-          done
+          fi
 
-          echo "external=true" >> $GITHUB_OUTPUT
-          echo "reason=external" >> $GITHUB_OUTPUT
+          # If no reason, PR is allowed
+          if [ -z "$REASON" ]; then
+            echo "PR #$PR_NUMBER by $PR_AUTHOR is allowed"
+            exit 0
+          fi
 
-      - name: Read PR template
-        if: steps.check.outputs.external == 'true'
-        id: template
-        run: |
-          TEMPLATE=$(cat .github/external_pull_request_template.md)
-          echo "content<<EOF" >> $GITHUB_OUTPUT
-          echo "$TEMPLATE" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "Closing PR #$PR_NUMBER by $PR_AUTHOR (reason: $REASON)"
 
-      - name: Close external PR
-        if: steps.check.outputs.external == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: `${{ steps.template.outputs.content }}`
-            });
+          if [ "$REASON" = "bot" ]; then
+            MSG="🚫 Bot-generated PRs are not accepted in this repository. This PR has been automatically closed."
+          else
+            # Fetch external PR template from repo without checkout
+            MSG=$(gh api "repos/$GH_REPO/contents/.github/external_pull_request_template.md" --jq '.content' | base64 -d) || \
+              MSG="🚫 External contributions are not accepted in this repository. This PR has been automatically closed."
+          fi
 
-            await github.rest.pulls.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-              state: 'closed'
-            });
+          gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body "$MSG"
+          gh pr close "$PR_NUMBER" --repo "$GH_REPO"
