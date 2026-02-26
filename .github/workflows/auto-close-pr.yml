@@ -5,8 +5,7 @@ on:
     types: [opened]
 
 env:
-  ALLOWED_USERS: remrearas
-  BLOCKED_BOTS: copilot-swe-agent copilot
+  ALLOWED_USERS: "remrearas"
 
 jobs:
   auto-close:
@@ -15,60 +14,71 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
-
     steps:
       - name: Check and close unauthorized PR
         env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          REASON=""
-
-          # Block known bots
-          for bot in $BLOCKED_BOTS; do
-            if [ "$PR_AUTHOR" = "$bot" ]; then
-              REASON="bot"
+          # Check if author is in allowed list
+          IS_ALLOWED=false
+          for user in $ALLOWED_USERS; do
+            if [ "$PR_AUTHOR" = "$user" ]; then
+              IS_ALLOWED=true
               break
             fi
           done
 
-          # Block any Bot-type account
-          if [ -z "$REASON" ] && [ "$PR_AUTHOR_TYPE" = "Bot" ]; then
-            REASON="bot"
-          fi
-
-          # Block external users
-          if [ -z "$REASON" ]; then
-            ALLOWED=false
-            for user in $ALLOWED_USERS; do
-              if [ "$PR_AUTHOR" = "$user" ]; then
-                ALLOWED=true
-                break
-              fi
-            done
-            if [ "$ALLOWED" = false ]; then
-              REASON="external"
-            fi
-          fi
-
-          # If no reason, PR is allowed
-          if [ -z "$REASON" ]; then
-            echo "PR #$PR_NUMBER by $PR_AUTHOR is allowed"
+          if [ "$IS_ALLOWED" = "true" ]; then
+            echo "✅ Authorized user: $PR_AUTHOR"
             exit 0
           fi
 
-          echo "Closing PR #$PR_NUMBER by $PR_AUTHOR (reason: $REASON)"
+          # Block ALL bot accounts - no exceptions
+          # This catches: copilot-swe-agent[bot], dependabot[bot],
+          # github-actions[bot], renovate[bot], and any future bot
+          IS_BOT=false
 
-          if [ "$REASON" = "bot" ]; then
-            MSG="🚫 Bot-generated PRs are not accepted in this repository. This PR has been automatically closed."
-          else
-            # Fetch external PR template from repo without checkout
-            MSG=$(gh api "repos/$GH_REPO/contents/.github/external_pull_request_template.md" --jq '.content' | base64 -d) || \
-              MSG="🚫 External contributions are not accepted in this repository. This PR has been automatically closed."
+          # Check GitHub account type
+          if [ "$PR_AUTHOR_TYPE" = "Bot" ]; then
+            IS_BOT=true
           fi
 
-          gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body "$MSG"
-          gh pr close "$PR_NUMBER" --repo "$GH_REPO"
+          # Check for [bot] suffix pattern (covers all GitHub App bots)
+          if [[ "$PR_AUTHOR" == *"[bot]"* ]]; then
+            IS_BOT=true
+          fi
+
+          # Explicit Copilot and known bot blocklist
+          BLOCKED_BOTS="copilot-swe-agent copilot copilot-swe-agent[bot] github-actions github-actions[bot] dependabot dependabot[bot] dependabot-bot renovate renovate[bot]"
+          for bot in $BLOCKED_BOTS; do
+            if [ "$PR_AUTHOR" = "$bot" ]; then
+              IS_BOT=true
+              break
+            fi
+          done
+
+          # Determine message and close
+          if [ "$IS_BOT" = "true" ]; then
+            MESSAGE="🚫 Bot-generated PRs are not accepted in this repository. This PR has been automatically closed."
+          else
+            MESSAGE="🚫 External contributions are not accepted in this repository. This PR has been automatically closed."
+          fi
+
+          echo "🚫 Closing PR #$PR_NUMBER from unauthorized author: $PR_AUTHOR (type: $PR_AUTHOR_TYPE)"
+
+          # Post comment
+          curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            -d "{\"body\": \"$MESSAGE\"}"
+
+          # Close PR
+          curl -s -X PATCH \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}" \
+            -d '{"state": "closed"}'
