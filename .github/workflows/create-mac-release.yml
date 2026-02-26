@@ -4,13 +4,11 @@ on:
   push:
     tags: [ "mac-v*" ]
 
-permissions:
-  contents: write
-
 jobs:
   extract-version:
     name: Extract Version
     runs-on: ubuntu-latest
+    permissions: {}
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -27,25 +25,35 @@ jobs:
   build-dmg:
     needs: extract-version
     uses: ./.github/workflows/deploy-dmg.yml
+    permissions:
+      contents: read
     with:
       version: ${{ needs.extract-version.outputs.version }}
-    secrets: inherit
+    secrets:
+      DEVELOPER_ID_CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+      DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+      MAC_PROVISIONING_PROFILE_APP: ${{ secrets.MAC_PROVISIONING_PROFILE_APP }}
+      MAC_PROVISIONING_PROFILE_EXTENSION: ${{ secrets.MAC_PROVISIONING_PROFILE_EXTENSION }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
 
   create-release:
     name: Create GitHub Release
     needs: [extract-version, build-dmg]
     runs-on: ubuntu-latest
     if: success()
+    permissions:
+      contents: write
 
     steps:
       - name: Download DMG artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: "Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}.dmg"
           path: ${{ runner.temp }}/release
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           tag_name: "mac-v${{ needs.extract-version.outputs.version }}"
           name: "Phantom-WG Mac ${{ needs.extract-version.outputs.version }}"

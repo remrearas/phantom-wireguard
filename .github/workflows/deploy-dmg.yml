@@ -22,22 +22,19 @@ on:
         required: true
       APPLE_ID_PASSWORD:
         required: true
-  workflow_dispatch:
-    inputs:
-      version_override:
-        description: "Version override (e.g. 1.0.1) — leave empty to use tag"
-        required: false
-        type: string
-
 concurrency:
   group: deploy-dmg-${{ github.ref }}
   cancel-in-progress: false
+
+permissions: {}
 
 jobs:
   deploy:
     name: Archive & DMG
     runs-on: macos-26
     timeout-minutes: 45
+    permissions:
+      contents: read
     env:
       APP_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS
       TUNNEL_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS.PhantomTunnel
@@ -49,7 +46,7 @@ jobs:
       - name: Setup temp paths
         run: |
           echo "KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db" >> "$GITHUB_ENV"
-          echo "KEYCHAIN_PASSWORD=ci_ephemeral_${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "KEYCHAIN_PASSWORD=ci_ephemeral_${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
           echo "P12_PATH=$RUNNER_TEMP/certificate.p12" >> "$GITHUB_ENV"
           echo "PP_APP_PATH=$RUNNER_TEMP/app.provisionprofile" >> "$GITHUB_ENV"
           echo "PP_TUNNEL_PATH=$RUNNER_TEMP/tunnel.provisionprofile" >> "$GITHUB_ENV"
@@ -59,23 +56,24 @@ jobs:
 
       # ── 1. Checkout ──────────────────────────────────────────
       - name: Checkout with submodules
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
           fetch-depth: 0
+          persist-credentials: false
 
       # ── 2. Extract version & build number ────────────────────
       - name: Extract version & build number
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [[ -n "${{ inputs.version }}" ]]; then
-            VERSION="${{ inputs.version }}"
-          elif [[ -n "${{ inputs.version_override }}" ]]; then
-            VERSION="${{ inputs.version_override }}"
+          if [[ -n "$INPUT_VERSION" ]]; then
+            VERSION="$INPUT_VERSION"
           elif [[ "$GITHUB_REF" == refs/tags/dmg-v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/dmg-v}"
           else
-            echo "::error::No version found. Push a dmg-v* tag or provide version_override."
+            echo "::error::No version found. Push a dmg-v* tag or pass version via workflow_call."
             exit 1
           fi
 
@@ -196,13 +194,16 @@ jobs:
 
       # ── 8. Archive ──────────────────────────────────────────
       - name: Archive
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
         run: |
           xcodebuild archive \
             -scheme "Phantom-WG-MacOS" \
             -destination 'platform=macOS,arch=arm64' \
             -archivePath "$ARCHIVE_PATH" \
-            MARKETING_VERSION="${{ steps.version.outputs.version }}" \
-            CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_number }}" \
+            MARKETING_VERSION="$APP_VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Developer ID Application" \
             DEVELOPMENT_TEAM="$TEAM_ID"
@@ -265,9 +266,12 @@ jobs:
 
       # ── 12. Create DMG ──────────────────────────────────────
       - name: Create DMG
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          DMG_PATH="$RUNNER_TEMP/Phantom-WG-MacOS-$VERSION.dmg"
+          DMG_PATH="$RUNNER_TEMP/Phantom-WG-MacOS-$APP_VERSION.dmg"
           DMG_STAGING="$RUNNER_TEMP/dmg-staging"
 
           # Stage app + Applications shortcut
@@ -283,8 +287,8 @@ jobs:
           rm -rf "$DMG_STAGING"
 
           xcrun notarytool submit "$DMG_PATH" \
-            --apple-id "${{ secrets.APPLE_ID }}" \
-            --password "${{ secrets.APPLE_ID_PASSWORD }}" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
             --team-id "$TEAM_ID" \
             --wait
 
@@ -292,11 +296,11 @@ jobs:
 
           echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
           echo "### DMG Created" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **File:** Phantom-WG-MacOS-$VERSION.dmg" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **File:** Phantom-WG-MacOS-$APP_VERSION.dmg" >> "$GITHUB_STEP_SUMMARY"
 
       # ── 13. Upload artifact ──────────────────────────────────
       - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: "Phantom-WG-MacOS-${{ steps.version.outputs.version }}.dmg"
           path: "${{ env.DMG_PATH }}"
