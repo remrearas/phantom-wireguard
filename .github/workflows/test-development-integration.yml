@@ -32,16 +32,20 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       result: ${{ steps.test_runner.outputs.result }}
       session_id: ${{ steps.test_runner.outputs.session_id }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
         with:
           python-version: '3.9'
 
@@ -73,15 +77,16 @@ jobs:
         id: test_runner
         env:
           RUNNER_TEMP: ${{ runner.temp }}
+          INPUT_SESSION_ID: ${{ inputs.session_id }}
         run: |
           echo "Current directory: $(pwd)"
           echo "Directory contents:"
           ls -la
-          
-          if [ -n "${{ inputs.session_id }}" ]; then
-            SESSION_ID="${{ inputs.session_id }}"
+
+          if [ -n "$INPUT_SESSION_ID" ]; then
+            SESSION_ID="$INPUT_SESSION_ID"
           else
-            SESSION_ID="integration_$(echo ${{ github.sha }} | cut -c1-8)_$(date +%Y%m%d_%H%M%S)"
+            SESSION_ID="integration_$(echo "$GITHUB_SHA" | cut -c1-8)_$(date +%Y%m%d_%H%M%S)"
           fi
           
           echo "Session ID: $SESSION_ID"
@@ -110,25 +115,25 @@ jobs:
           mkdir -p deployment/development-integration
 
           # Copy reports to deployment directory
-          cp -r phantom/reports/coverage/${{ env.SESSION_ID }}/* deployment/development-integration/
+          cp -r "phantom/reports/coverage/${SESSION_ID}/"* deployment/development-integration/
 
           # Generate directory indexes for web browsing
           echo "Generating directory indexes for Cloudflare Pages..."
           python .github/scripts/generate_directory_indexes.py deployment/development-integration/
 
-          DEPLOY_BRANCH="development-integration-${{ env.SESSION_ID }}"
+          DEPLOY_BRANCH="development-integration-${SESSION_ID}"
 
           echo "----------------------------------------"
           echo "Development Integration Test Deployment Information:"
           echo "  Branch: $DEPLOY_BRANCH"
-          echo "  Session ID: ${{ env.SESSION_ID }}"
+          echo "  Session ID: $SESSION_ID"
           echo "----------------------------------------"
 
           echo "Development Integration deployment directory prepared successfully"
 
       - name: Upload Deployment Artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: development-integration-deployment-${{ env.SESSION_ID }}
           path: deployment/development-integration/
@@ -137,22 +142,24 @@ jobs:
       - name: Set Exit Code
         if: always()
         run: |
-          exit ${{ env.TEST_EXIT_CODE }}
+          exit $TEST_EXIT_CODE
 
   deploy:
     needs: test
     if: always()
     runs-on: self-hosted
+    permissions:
+      deployments: write
 
     steps:
       - name: Download Deployment Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: development-integration-deployment-${{ needs.test.outputs.session_id }}
           path: deployment/development-integration
 
       - name: Deploy Integration Tests to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/pages-action@f0a1cd58cd66095dee69bfa18fa5efd1dde93bca # v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -22,7 +22,6 @@ on:
 
 permissions:
   contents: read
-  deployments: write
 
 jobs:
   generate-assets:
@@ -32,10 +31,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
 
@@ -56,12 +57,14 @@ jobs:
       - name: Generate Assets with Phantom Asset Generator
         id: asset_generator
         working-directory: ./tools/phantom-asset-generator
+        env:
+          INPUT_SESSION_ID: ${{ inputs.session_id }}
         run: |
           # Generate or use SESSION_ID
-          if [ -n "${{ inputs.session_id }}" ]; then
-            SESSION_ID="${{ inputs.session_id }}"
+          if [ -n "$INPUT_SESSION_ID" ]; then
+            SESSION_ID="$INPUT_SESSION_ID"
           else
-            SESSION_ID="assets_$(echo ${{ github.sha }} | cut -c1-8)_$(date +%Y%m%d_%H%M%S)"
+            SESSION_ID="assets_$(echo "$GITHUB_SHA" | cut -c1-8)_$(date +%Y%m%d_%H%M%S)"
           fi
 
           echo "Session ID: $SESSION_ID"
@@ -94,7 +97,7 @@ jobs:
 
       - name: Upload Asset Outputs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: phantom-assets-${{ env.SESSION_ID }}
           path: tools/phantom-asset-generator/output
@@ -103,4 +106,4 @@ jobs:
       - name: Set Exit Code
         if: always()
         run: |
-          exit ${{ env.GENERATION_EXIT_CODE }}
+          exit $GENERATION_EXIT_CODE

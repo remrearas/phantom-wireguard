@@ -6,7 +6,7 @@ Environments used for recordings and tests in this section.
 
 Real-world test environment used for scenarios requiring multiple servers.
 
-**Workflow:** [setup-recording-environment.yml](https://github.com/ARAS-Workspace/phantom-wg/blob/main/.github/workflows/setup-recording-environment.yml)
+**Workflow:** [setup-recording-environment.yml](https://github.com/ARAS-Workspace/phantom-wg/blob/main/.github/retired/setup-recording-environment.yml)
 
 ### Environment Structure
 

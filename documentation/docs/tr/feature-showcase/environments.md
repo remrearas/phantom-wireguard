@@ -6,7 +6,7 @@ Bu bölümdeki kayıtlar ve testler için kullanılan ortamlar.
 
 Çoklu sunucu gerektiren senaryolar için kullanılan gerçek dünya test ortamı.
 
-**Workflow:** [setup-recording-environment.yml](https://github.com/ARAS-Workspace/phantom-wg/blob/main/.github/workflows/setup-recording-environment.yml)
+**Workflow:** [setup-recording-environment.yml](https://github.com/ARAS-Workspace/phantom-wg/blob/main/.github/retired/setup-recording-environment.yml)
 
 ### Ortam Yapısı
 

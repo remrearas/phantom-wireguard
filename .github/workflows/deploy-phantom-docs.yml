@@ -8,27 +8,27 @@ on:
       - 'documentation/**'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  deployments: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       artifact_name: ${{ steps.prepare_artifact.outputs.artifact_name }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
 
@@ -49,19 +49,21 @@ jobs:
 
       - name: Prepare Deployment Artifact
         id: prepare_artifact
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
-          ARTIFACT_NAME="phantom-docs-$(echo ${{ github.sha }} | cut -c1-8)-$(date +%Y%m%d_%H%M%S)"
+          ARTIFACT_NAME="phantom-docs-$(echo "$GITHUB_SHA" | cut -c1-8)-$(date +%Y%m%d_%H%M%S)"
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
 
           echo "----------------------------------------"
           echo "Documentation Build Information:"
           echo "  Artifact: $ARTIFACT_NAME"
-          echo "  Branch: ${{ github.head_ref || github.ref_name }}"
-          echo "  Commit: ${{ github.sha }}"
+          echo "  Branch: $BRANCH_NAME"
+          echo "  Commit: $GITHUB_SHA"
           echo "----------------------------------------"
 
       - name: Upload Deployment Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.prepare_artifact.outputs.artifact_name }}
           path: documentation/outputs/www/
@@ -71,16 +73,18 @@ jobs:
     needs: build
     if: success()
     runs-on: self-hosted
+    permissions:
+      deployments: write
 
     steps:
       - name: Download Deployment Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: deployment/www
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/pages-action@f0a1cd58cd66095dee69bfa18fa5efd1dde93bca # v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

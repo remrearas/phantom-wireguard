@@ -11,13 +11,12 @@ on:
 env:
   PYTHON_VERSION: '3.9'
 
-permissions:
-  contents: write
-  deployments: write
-
 jobs:
   test-development-integration:
     uses: ./.github/workflows/test-development-integration.yml
+    permissions:
+      contents: read
+      deployments: write
     with:
       session_id: "${{ github.run_id }}"
     secrets:
@@ -26,6 +25,9 @@ jobs:
 
   test-production-integration:
     uses: ./.github/workflows/test-production-integration.yml
+    permissions:
+      contents: read
+      deployments: write
     with:
       session_id: "${{ github.run_id }}"
     secrets:
@@ -37,16 +39,24 @@ jobs:
     needs: [test-development-integration, test-production-integration]
     runs-on: ubuntu-latest
     if: success()
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Set version from input
         id: get_version
-        run: echo "VERSION=core-v${{ inputs.version_id }}" >> $GITHUB_OUTPUT
+        env:
+          VERSION_ID: ${{ inputs.version_id }}
+        run: echo "VERSION=core-v${VERSION_ID}" >> $GITHUB_OUTPUT
 
       - name: Create release archive
+        env:
+          RELEASE_VERSION: ${{ steps.get_version.outputs.VERSION }}
         run: |
           set -e  # Exit on error
 
@@ -54,7 +64,7 @@ jobs:
           REPO_NAME=$(basename $GITHUB_REPOSITORY)
 
           # Create archive name based on repo name
-          ARCHIVE_NAME="${REPO_NAME}-${{ steps.get_version.outputs.VERSION }}"
+          ARCHIVE_NAME="${REPO_NAME}-${RELEASE_VERSION}"
 
           echo "Creating archive: ${ARCHIVE_NAME}.zip"
 
@@ -114,7 +124,7 @@ jobs:
           ls -lh ${ARCHIVE_NAME}.zip
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
           name: Phantom-WG ${{ steps.get_version.outputs.VERSION }}

@@ -17,13 +17,12 @@ on:
       - 'THIRD_PARTY_LICENSES'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  deployments: write
-
 jobs:
   test-development-integration:
     uses: ./.github/workflows/test-development-integration.yml
+    permissions:
+      contents: read
+      deployments: write
     with:
       session_id: "${{ github.run_id }}"
     secrets:
@@ -32,6 +31,9 @@ jobs:
 
   test-production-integration:
     uses: ./.github/workflows/test-production-integration.yml
+    permissions:
+      contents: read
+      deployments: write
     with:
       session_id: "${{ github.run_id }}"
     secrets:
