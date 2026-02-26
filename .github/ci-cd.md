@@ -12,6 +12,5 @@
 | `phantom-asset-generator-workflow.yml`          | manual, workflow_call                                                 | ubuntu-latest              | Generated assets           |
 | `phantom-wizard-hidden-deployment-workflow.yml` | `tools/phantom-deployment-wizard/**` push, manual                     | ubuntu-latest              | Signed package deploy      |
 | `release-workflow.yml`                          | manual (version_id)                                                   | ubuntu-latest              | GitHub Release             |
-| `setup-recording-environment.yml`               | manual (session_name, ssh_key)                                        | ubuntu-latest              | DigitalOcean infra         |
 | `test-development-integration.yml`              | manual, workflow_call                                                 | ubuntu-latest, self-hosted | Coverage reports, CF Pages |
 | `test-production-integration.yml`               | manual, workflow_call                                                 | ubuntu-latest, self-hosted | Test reports, CF Pages     |
