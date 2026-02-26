@@ -3,19 +3,21 @@ name: iOS Build Validation
 on:
   push:
     branches: [ "ios/main", "ios/*" ]
-  pull_request:
-    branches: [ "ios/main" ]
-  workflow_dispatch:
+
+permissions: {}
 
 jobs:
   build:
     name: Unsigned Build (iOS)
     runs-on: macos-26
+    permissions:
+      contents: read
     steps:
       - name: Checkout with submodules
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Install Go for WireGuardKit
         run: brew install go@1.25
