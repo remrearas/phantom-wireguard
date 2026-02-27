@@ -1,0 +1,149 @@
+name: Build wireguard-go-bridge
+
+on:
+  push:
+    tags:
+      - 'wireguard-go-bridge-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: '1.23'
+
+jobs:
+  build-linux-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Download dependencies
+        run: make go-deps
+
+      - name: Build linux/amd64
+        run: make build-linux-amd64
+
+      - name: Generate checksum
+        run: |
+          cd build/linux-amd64
+          sha256sum libphantom_wg.so > libphantom_wg.so.sha256
+          cat libphantom_wg.so.sha256
+
+      - name: Inspect build artifacts
+        run: |
+          file build/linux-amd64/libphantom_wg.so
+          ls -lh build/linux-amd64/
+          echo "=== Exported symbols ==="
+          nm -D build/linux-amd64/libphantom_wg.so | grep " T wg" | sort
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: libphantom_wg-linux-amd64
+          path: |
+            build/linux-amd64/libphantom_wg.so
+            build/linux-amd64/libphantom_wg.h
+            build/linux-amd64/libphantom_wg.so.sha256
+          retention-days: 90
+
+  build-linux-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Install cross-compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Download dependencies
+        run: make go-deps
+
+      - name: Build linux/arm64
+        run: make build-linux-arm64
+
+      - name: Generate checksum
+        run: |
+          cd build/linux-arm64
+          sha256sum libphantom_wg.so > libphantom_wg.so.sha256
+          cat libphantom_wg.so.sha256
+
+      - name: Inspect build artifacts
+        run: |
+          file build/linux-arm64/libphantom_wg.so
+          ls -lh build/linux-arm64/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: libphantom_wg-linux-arm64
+          path: |
+            build/linux-arm64/libphantom_wg.so
+            build/linux-arm64/libphantom_wg.h
+            build/linux-arm64/libphantom_wg.so.sha256
+          retention-days: 90
+
+  verify-checksums:
+    needs: [build-linux-amd64, build-linux-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Download amd64 artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: libphantom_wg-linux-amd64
+          path: artifacts/linux-amd64
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: libphantom_wg-linux-arm64
+          path: artifacts/linux-arm64
+
+      - name: Verify checksums
+        run: |
+          echo "=== linux/amd64 ==="
+          cd artifacts/linux-amd64 && sha256sum -c libphantom_wg.so.sha256
+          cd ../..
+          echo "=== linux/arm64 ==="
+          cd artifacts/linux-arm64 && sha256sum -c libphantom_wg.so.sha256
+
+      - name: Summary
+        run: |
+          echo "## Build Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | SHA256 |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| linux/amd64 | $(cat artifacts/linux-amd64/libphantom_wg.so.sha256 | awk '{print $1}') |" >> $GITHUB_STEP_SUMMARY
+          echo "| linux/arm64 | $(cat artifacts/linux-arm64/libphantom_wg.so.sha256 | awk '{print $1}') |" >> $GITHUB_STEP_SUMMARY
