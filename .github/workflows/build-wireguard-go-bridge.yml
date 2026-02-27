@@ -6,15 +6,15 @@ on:
       - 'wireguard-go-bridge-v*'
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 env:
   GO_VERSION: '1.23'
+  TARGET_BRANCH: 'dev/wireguard-go-bridge'
 
 jobs:
   build-linux-amd64:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
@@ -63,6 +63,8 @@ jobs:
 
   build-linux-arm64:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
@@ -110,40 +112,80 @@ jobs:
             build/linux-arm64/libphantom_wg.so.sha256
           retention-days: 90
 
-  verify-checksums:
+  publish:
     needs: [build-linux-amd64, build-linux-arm64]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
         with:
           egress-policy: audit
 
+      - name: Checkout target branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          persist-credentials: false
+          fetch-depth: 1
+
       - name: Download amd64 artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: libphantom_wg-linux-amd64
-          path: artifacts/linux-amd64
+          path: lib/linux-amd64
 
       - name: Download arm64 artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: libphantom_wg-linux-arm64
-          path: artifacts/linux-arm64
+          path: lib/linux-arm64
 
       - name: Verify checksums
         run: |
           echo "=== linux/amd64 ==="
-          cd artifacts/linux-amd64 && sha256sum -c libphantom_wg.so.sha256
+          cd lib/linux-amd64 && sha256sum -c libphantom_wg.so.sha256
           cd ../..
           echo "=== linux/arm64 ==="
-          cd artifacts/linux-arm64 && sha256sum -c libphantom_wg.so.sha256
+          cd lib/linux-arm64 && sha256sum -c libphantom_wg.so.sha256
+
+      - name: Extract version
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "${REF_TYPE}" == "tag" ]]; then
+            echo "tag=${REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=manual-$(date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push build artifacts to branch
+        env:
+          VERSION_TAG: ${{ steps.version.outputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git add lib/
+          git commit -m "build: ${VERSION_TAG}"
+          git push origin "${TARGET_BRANCH}"
 
       - name: Summary
+        env:
+          VERSION_TAG: ${{ steps.version.outputs.tag }}
         run: |
-          echo "## Build Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | SHA256 |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| linux/amd64 | $(cat artifacts/linux-amd64/libphantom_wg.so.sha256 | awk '{print $1}') |" >> $GITHUB_STEP_SUMMARY
-          echo "| linux/arm64 | $(cat artifacts/linux-arm64/libphantom_wg.so.sha256 | awk '{print $1}') |" >> $GITHUB_STEP_SUMMARY
+          AMD64_SHA=$(cut -d' ' -f1 lib/linux-amd64/libphantom_wg.so.sha256)
+          ARM64_SHA=$(cut -d' ' -f1 lib/linux-arm64/libphantom_wg.so.sha256)
+          echo "## Build Published" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Version:** \`${VERSION_TAG}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Branch:** \`${TARGET_BRANCH}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Platform | SHA256 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| linux/amd64 | \`${AMD64_SHA}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| linux/arm64 | \`${ARM64_SHA}\` |" >> "$GITHUB_STEP_SUMMARY"

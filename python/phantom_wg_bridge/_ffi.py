@@ -30,7 +30,7 @@ def _find_library() -> str:
 
     candidates = [
         pkg_dir / "libphantom_wg.so",
-        pkg_dir.parent.parent / "build" / arch_dir / "libphantom_wg.so",
+        pkg_dir.parent.parent / "lib" / arch_dir / "libphantom_wg.so",
         Path("/opt/phantom-wg/lib/libphantom_wg.so"),
         Path("/usr/local/lib/libphantom_wg.so"),
         Path("/usr/lib/libphantom_wg.so"),

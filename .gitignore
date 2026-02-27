@@ -1,8 +1,5 @@
-# Build artifacts
+# Local build artifacts
 build/
-*.so
-*.h
-*.dylib
 
 # Go
 vendor/
@@ -12,7 +9,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
-dist/
 
 # IDE
 .idea/
