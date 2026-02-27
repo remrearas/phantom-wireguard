@@ -1,4 +1,4 @@
-BINARY_NAME = libphantom_wg
+BINARY_NAME = wireguard_go_bridge
 SRC_DIR     = src
 BUILD_DIR   = build
 GO          = go

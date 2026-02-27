@@ -1,7 +1,19 @@
+// ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+// ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+// ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+// ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+// ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+// ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+//
+// Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+// Licensed under AGPL-3.0 - see LICENSE file for details
+// Third-party licenses - see THIRD_PARTY_LICENSES file for details
+// WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 package main
 
 /*
-#include "phantom_wg.h"
+#include "wireguard_go_bridge.h"
 */
 import "C"
 import (
@@ -10,31 +22,29 @@ import (
 	"golang.zx2c4.com/wireguard/device"
 )
 
-//export wgSetLogCallback
-func wgSetLogCallback(callback C.WgLogCallback, context unsafe.Pointer) {
-	// Callback is stored on the C/Python side.
-	// This export exists so the FFI consumer can register a callback.
-	// The actual log routing happens through device.NewLogger — logs
-	// are written to the logger's Verbosef/Errorf which go to stderr.
-	// For custom routing, the Python side captures stderr or uses
-	// the callback mechanism at the Python layer.
+//export SetLogCallback
+func SetLogCallback(callback C.WgLogCallback, context unsafe.Pointer) { //nolint:revive
+	// Placeholder: callback registration is handled at the Python layer.
+	// Logs are written to stderr via device.NewLogger's Verbosef/Errorf.
+	_ = callback
+	_ = context
 }
 
-//export wgNewLogger
-func wgNewLogger(level C.int, prepend *C.char) C.int64_t {
+//export NewLogger
+func NewLogger(level C.int, prepend *C.char) C.int64_t {
 	goLevel := int(level)
 	goPrepend := C.GoString(prepend)
 	logger := device.NewLogger(goLevel, goPrepend)
 	return C.int64_t(loggerRegistry.Add(logger))
 }
 
-//export wgLoggerFree
-func wgLoggerFree(handle C.int64_t) {
+//export LoggerFree
+func LoggerFree(handle C.int64_t) {
 	loggerRegistry.Remove(int64(handle))
 }
 
-//export wgDiscardLogf
-func wgDiscardLogf() {
+//export DiscardLogf
+func DiscardLogf() {
 	// No-op: device.DiscardLogf discards all log output.
 }
 

@@ -1,7 +1,19 @@
+// ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+// ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+// ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+// ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+// ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+// ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+//
+// Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+// Licensed under AGPL-3.0 - see LICENSE file for details
+// Third-party licenses - see THIRD_PARTY_LICENSES file for details
+// WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 package main
 
 /*
-#include "phantom_wg.h"
+#include "wireguard_go_bridge.h"
 */
 import "C"
 
@@ -13,13 +25,13 @@ import "C"
 
 // ---------- Keypairs ----------
 // Keypairs and Keypair are internal crypto session state.
-// Keypairs.Current() is exposed via wgPeerHasCurrentKeypair.
+// Keypairs.Current() is exposed via PeerHasCurrentKeypair.
 // DeleteKeypair is called internally during key rotation.
 
 // ---------- WaitPool ----------
 // WaitPool is an internal memory pool (sync.Pool with max capacity).
 // NewWaitPool, Get, and Put are used by device goroutines for
-// zero-allocation packet processing. Exposed via wgDevicePopulatePools.
+// zero-allocation packet processing. Exposed via DevicePopulatePools.
 
 // ---------- Queue Types ----------
 // QueueInboundElement, QueueInboundElementsContainer,
@@ -38,35 +50,35 @@ import "C"
 
 // ---------- IPCError ----------
 
-//export wgIpcErrorCode
-func wgIpcErrorCode(errCode C.int64_t) C.int64_t {
+//export IpcErrorCode
+func IpcErrorCode(errCode C.int64_t) C.int64_t {
 	// IPCError wraps an error with an error code.
-	// When IpcSet fails, wgDeviceIpcSetOperation returns the error code.
+	// When IpcSet fails, DeviceIpcSetOperation returns the error code.
 	// This function documents the pattern — the error code is already
-	// returned directly from wgDeviceIpcSetOperation.
+	// returned directly from DeviceIpcSetOperation.
 	return errCode
 }
 
 // ---------- Version & Info ----------
 
-//export wgBridgeVersion
-func wgBridgeVersion() *C.char {
+//export BridgeVersion
+func BridgeVersion() *C.char {
 	return C.CString("1.0.0")
 }
 
-//export wgWireguardGoVersion
-func wgWireguardGoVersion() *C.char {
+//export WireguardGoVersion
+func WireguardGoVersion() *C.char {
 	return C.CString("0.0.20230223")
 }
 
 // ---------- Handle Count (diagnostics) ----------
 
-//export wgActiveDeviceCount
-func wgActiveDeviceCount() C.int {
+//export ActiveDeviceCount
+func ActiveDeviceCount() C.int {
 	return C.int(deviceRegistry.Count())
 }
 
-//export wgActivePeerCount
-func wgActivePeerCount() C.int {
+//export ActivePeerCount
+func ActivePeerCount() C.int {
 	return C.int(peerRegistry.Count())
 }

@@ -1,4 +1,17 @@
 """
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+Third-party licenses - see THIRD_PARTY_LICENSES file for details
+WireGuard® is a registered trademark of Jason A. Donenfeld.
+"""
+"""
 WireGuardDevice — High-level Python wrapper for wireguard-go Device.
 
 Mirrors the wstunnel WstunnelBridge.Config pattern:
@@ -25,48 +38,42 @@ class WireGuardPeer:
         return self._handle
 
     def start(self) -> None:
-        check_error(get_lib().wgPeerStart(self._handle))
+        check_error(get_lib().PeerStart(self._handle))
 
     def stop(self) -> None:
-        check_error(get_lib().wgPeerStop(self._handle))
+        check_error(get_lib().PeerStop(self._handle))
 
     def string(self) -> str:
-        result = get_lib().wgPeerString(self._handle)
+        result = get_lib().PeerString(self._handle)
         return result.decode("utf-8") if result else ""
 
     def send_handshake_initiation(self, is_retry: bool = False) -> None:
-        check_error(get_lib().wgPeerSendHandshakeInitiation(self._handle, is_retry))
+        check_error(get_lib().PeerSendHandshakeInitiation(self._handle, is_retry))
 
     def send_handshake_response(self) -> None:
-        check_error(get_lib().wgPeerSendHandshakeResponse(self._handle))
+        check_error(get_lib().PeerSendHandshakeResponse(self._handle))
 
     def begin_symmetric_session(self) -> None:
-        check_error(get_lib().wgPeerBeginSymmetricSession(self._handle))
+        check_error(get_lib().PeerBeginSymmetricSession(self._handle))
 
     def send_keepalive(self) -> None:
-        check_error(get_lib().wgPeerSendKeepalive(self._handle))
+        check_error(get_lib().PeerSendKeepalive(self._handle))
 
     def send_staged_packets(self) -> None:
-        check_error(get_lib().wgPeerSendStagedPackets(self._handle))
+        check_error(get_lib().PeerSendStagedPackets(self._handle))
 
     def expire_current_keypairs(self) -> None:
-        check_error(get_lib().wgPeerExpireCurrentKeypairs(self._handle))
-
-    def has_current_keypair(self) -> bool:
-        return get_lib().wgPeerHasCurrentKeypair(self._handle)
+        check_error(get_lib().PeerExpireCurrentKeypairs(self._handle))
 
     def flush_staged_packets(self) -> None:
-        check_error(get_lib().wgPeerFlushStagedPackets(self._handle))
+        check_error(get_lib().PeerFlushStagedPackets(self._handle))
 
     def zero_and_flush_all(self) -> None:
-        check_error(get_lib().wgPeerZeroAndFlushAll(self._handle))
-
-    def handshake_clear(self) -> None:
-        check_error(get_lib().wgPeerHandshakeClear(self._handle))
+        check_error(get_lib().PeerZeroAndFlushAll(self._handle))
 
     def free(self) -> None:
         if self._handle:
-            get_lib().wgPeerFree(self._handle)
+            get_lib().PeerFree(self._handle)
             self._handle = 0
 
     def __repr__(self) -> str:
@@ -102,18 +109,18 @@ class WireGuardDevice:
         self._lib = lib
 
         # Create logger
-        self._logger_handle = lib.wgNewLogger(
+        self._logger_handle = lib.NewLogger(
             int(log_level), log_prepend.encode("utf-8")
         )
 
         # Create device (TUN + bind created internally)
-        self._handle = lib.wgDeviceCreate(
+        self._handle = lib.NewDevice(
             interface_name.encode("utf-8"),
             mtu,
             self._logger_handle,
         )
         if self._handle < 0:
-            lib.wgLoggerFree(self._logger_handle)
+            lib.LoggerFree(self._logger_handle)
             raise WireGuardError(self._handle)
 
         self._interface_name = interface_name
@@ -130,68 +137,81 @@ class WireGuardDevice:
     # --- Lifecycle ---
 
     def up(self) -> None:
-        check_error(self._lib.wgDeviceUp(self._handle))
+        check_error(self._lib.DeviceUp(self._handle))
 
     def down(self) -> None:
-        check_error(self._lib.wgDeviceDown(self._handle))
+        check_error(self._lib.DeviceDown(self._handle))
 
     def close(self) -> None:
         if not self._closed and self._handle > 0:
-            self._lib.wgDeviceClose(self._handle)
-            self._lib.wgLoggerFree(self._logger_handle)
+            self.uapi_close()
+            self._lib.DeviceClose(self._handle)
+            self._lib.LoggerFree(self._logger_handle)
             self._closed = True
 
     def wait(self) -> None:
         """Block until device is closed."""
-        check_error(self._lib.wgDeviceWait(self._handle))
+        check_error(self._lib.DeviceWait(self._handle))
+
+    # --- UAPI Socket ---
+
+    def uapi_listen(self) -> None:
+        """Start UAPI socket listener. wg tool communicates via this socket."""
+        check_error(
+            self._lib.DeviceUAPIListen(self._handle, self._interface_name.encode("utf-8"))
+        )
+
+    def uapi_close(self) -> None:
+        """Stop UAPI socket listener and remove socket file."""
+        self._lib.DeviceUAPIClose(self._handle, self._interface_name.encode("utf-8"))
 
     # --- IPC (UAPI Protocol) ---
 
     def ipc_set(self, config: str) -> None:
-        check_error(self._lib.wgDeviceIpcSet(self._handle, config.encode("utf-8")))
+        check_error(self._lib.DeviceIpcSet(self._handle, config.encode("utf-8")))
 
     def ipc_get(self) -> str:
-        result = self._lib.wgDeviceIpcGet(self._handle)
+        result = self._lib.DeviceIpcGet(self._handle)
         if result is None:
             raise WireGuardError(ErrorCode.NOT_FOUND)
         return result.decode("utf-8")
 
     def ipc_set_operation(self, config: str) -> int:
         """IpcSet with detailed IPC error code return."""
-        return self._lib.wgDeviceIpcSetOperation(
+        return self._lib.DeviceIpcSetOperation(
             self._handle, config.encode("utf-8")
         )
 
     # --- Bind ---
 
     def bind_close(self) -> None:
-        check_error(self._lib.wgDeviceBindClose(self._handle))
+        check_error(self._lib.DeviceBindClose(self._handle))
 
     def bind_update(self) -> None:
-        check_error(self._lib.wgDeviceBindUpdate(self._handle))
+        check_error(self._lib.DeviceBindUpdate(self._handle))
 
     def bind_set_mark(self, mark: int) -> None:
-        check_error(self._lib.wgDeviceBindSetMark(self._handle, mark))
+        check_error(self._lib.DeviceBindSetMark(self._handle, mark))
 
     # --- State ---
 
     def batch_size(self) -> int:
-        return self._lib.wgDeviceBatchSize(self._handle)
+        return self._lib.DeviceBatchSize(self._handle)
 
     def is_under_load(self) -> bool:
-        return self._lib.wgDeviceIsUnderLoad(self._handle)
+        return self._lib.DeviceIsUnderLoad(self._handle)
 
     # --- Key Management ---
 
     def set_private_key(self, hex_key: str) -> None:
         check_error(
-            self._lib.wgDeviceSetPrivateKey(self._handle, hex_key.encode("utf-8"))
+            self._lib.DeviceSetPrivateKey(self._handle, hex_key.encode("utf-8"))
         )
 
     # --- Peer Management ---
 
     def new_peer(self, public_key_hex: str) -> WireGuardPeer:
-        handle = self._lib.wgDeviceNewPeer(
+        handle = self._lib.DeviceNewPeer(
             self._handle, public_key_hex.encode("utf-8")
         )
         if handle < 0:
@@ -199,7 +219,7 @@ class WireGuardDevice:
         return WireGuardPeer(handle, self)
 
     def lookup_peer(self, public_key_hex: str) -> Optional[WireGuardPeer]:
-        handle = self._lib.wgDeviceLookupPeer(
+        handle = self._lib.DeviceLookupPeer(
             self._handle, public_key_hex.encode("utf-8")
         )
         if handle <= 0:
@@ -208,41 +228,28 @@ class WireGuardDevice:
 
     def remove_peer(self, public_key_hex: str) -> None:
         check_error(
-            self._lib.wgDeviceRemovePeer(self._handle, public_key_hex.encode("utf-8"))
+            self._lib.DeviceRemovePeer(self._handle, public_key_hex.encode("utf-8"))
         )
 
     def remove_all_peers(self) -> None:
-        check_error(self._lib.wgDeviceRemoveAllPeers(self._handle))
+        check_error(self._lib.DeviceRemoveAllPeers(self._handle))
 
     # --- AllowedIPs ---
 
     def allowed_ips_insert(self, peer: WireGuardPeer, prefix: str) -> None:
         check_error(
-            self._lib.wgAllowedIpsInsert(
-                self._handle, peer.handle, prefix.encode("utf-8")
-            )
-        )
-
-    def allowed_ips_lookup(self, ip: str) -> Optional[WireGuardPeer]:
-        handle = self._lib.wgAllowedIpsLookup(self._handle, ip.encode("utf-8"))
-        if handle <= 0:
-            return None
-        return WireGuardPeer(handle, self)
-
-    def allowed_ips_remove(self, peer: WireGuardPeer, prefix: str) -> None:
-        check_error(
-            self._lib.wgAllowedIpsRemove(
+            self._lib.AllowedIpsInsert(
                 self._handle, peer.handle, prefix.encode("utf-8")
             )
         )
 
     def allowed_ips_remove_by_peer(self, peer: WireGuardPeer) -> None:
         check_error(
-            self._lib.wgAllowedIpsRemoveByPeer(self._handle, peer.handle)
+            self._lib.AllowedIpsRemoveByPeer(self._handle, peer.handle)
         )
 
     def allowed_ips_entries_for_peer(self, peer: WireGuardPeer) -> List[str]:
-        result = self._lib.wgAllowedIpsGetForPeer(self._handle, peer.handle)
+        result = self._lib.AllowedIpsGetForPeer(self._handle, peer.handle)
         if not result:
             return []
         text = result.decode("utf-8")
@@ -251,13 +258,13 @@ class WireGuardDevice:
     # --- Miscellaneous ---
 
     def populate_pools(self) -> None:
-        check_error(self._lib.wgDevicePopulatePools(self._handle))
+        check_error(self._lib.DevicePopulatePools(self._handle))
 
     def disable_roaming(self) -> None:
-        check_error(self._lib.wgDeviceDisableRoaming(self._handle))
+        check_error(self._lib.DeviceDisableRoaming(self._handle))
 
     def send_keepalives_to_peers(self) -> None:
-        check_error(self._lib.wgDeviceSendKeepalivesToPeers(self._handle))
+        check_error(self._lib.DeviceSendKeepalivesToPeers(self._handle))
 
     # --- Context Manager (RAII) ---
 

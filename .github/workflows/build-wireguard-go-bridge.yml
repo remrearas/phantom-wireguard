@@ -7,11 +7,51 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.23'
-  TARGET_BRANCH: 'development'
+  GO_VERSION: '1.25'
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Build wireguard_go_bridge.so
+        working-directory: src
+        run: |
+          CGO_ENABLED=1 go build -buildmode=c-shared -trimpath -ldflags="-s -w" \
+            -o ../wireguard_go_bridge.so .
+
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            wireguard-tools iproute2 iptables iputils-ping \
+            net-tools iperf3 ncat nmap python3
+
+      - name: Run netns integration test
+        env:
+          WIREGUARD_GO_BRIDGE_LIB_PATH: ${{ github.workspace }}/wireguard_go_bridge.so
+          PYTHONPATH: ${{ github.workspace }}
+        run: sudo -E test/test.sh "${{ github.workspace }}/wireguard_go_bridge.so"
+
   build-linux-amd64:
+    needs: [test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,27 +81,28 @@ jobs:
       - name: Generate checksum
         run: |
           cd build/linux-amd64
-          sha256sum libphantom_wg.so > libphantom_wg.so.sha256
-          cat libphantom_wg.so.sha256
+          sha256sum wireguard_go_bridge.so > wireguard_go_bridge.so.sha256
+          cat wireguard_go_bridge.so.sha256
 
       - name: Inspect build artifacts
         run: |
-          file build/linux-amd64/libphantom_wg.so
+          file build/linux-amd64/wireguard_go_bridge.so
           ls -lh build/linux-amd64/
           echo "=== Exported symbols ==="
-          nm -D build/linux-amd64/libphantom_wg.so | grep " T wg" | sort
+          nm -D build/linux-amd64/wireguard_go_bridge.so | grep " T " | sort
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: libphantom_wg-linux-amd64
+          name: wireguard-go-bridge-linux-amd64
           path: |
-            build/linux-amd64/libphantom_wg.so
-            build/linux-amd64/libphantom_wg.h
-            build/linux-amd64/libphantom_wg.so.sha256
+            build/linux-amd64/wireguard_go_bridge.so
+            build/linux-amd64/wireguard_go_bridge.h
+            build/linux-amd64/wireguard_go_bridge.so.sha256
           retention-days: 90
 
   build-linux-arm64:
+    needs: [test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -94,22 +135,22 @@ jobs:
       - name: Generate checksum
         run: |
           cd build/linux-arm64
-          sha256sum libphantom_wg.so > libphantom_wg.so.sha256
-          cat libphantom_wg.so.sha256
+          sha256sum wireguard_go_bridge.so > wireguard_go_bridge.so.sha256
+          cat wireguard_go_bridge.so.sha256
 
       - name: Inspect build artifacts
         run: |
-          file build/linux-arm64/libphantom_wg.so
+          file build/linux-arm64/wireguard_go_bridge.so
           ls -lh build/linux-arm64/
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: libphantom_wg-linux-arm64
+          name: wireguard-go-bridge-linux-arm64
           path: |
-            build/linux-arm64/libphantom_wg.so
-            build/linux-arm64/libphantom_wg.h
-            build/linux-arm64/libphantom_wg.so.sha256
+            build/linux-arm64/wireguard_go_bridge.so
+            build/linux-arm64/wireguard_go_bridge.h
+            build/linux-arm64/wireguard_go_bridge.so.sha256
           retention-days: 90
 
   publish:
@@ -123,32 +164,31 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Checkout target branch
+      - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: ${{ env.TARGET_BRANCH }}
           persist-credentials: false
           fetch-depth: 1
 
       - name: Download amd64 artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: libphantom_wg-linux-amd64
-          path: lib/linux-amd64
+          name: wireguard-go-bridge-linux-amd64
+          path: dist/linux-amd64
 
       - name: Download arm64 artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: libphantom_wg-linux-arm64
-          path: lib/linux-arm64
+          name: wireguard-go-bridge-linux-arm64
+          path: dist/linux-arm64
 
       - name: Verify checksums
         run: |
           echo "=== linux/amd64 ==="
-          cd lib/linux-amd64 && sha256sum -c libphantom_wg.so.sha256
+          cd dist/linux-amd64 && sha256sum -c wireguard_go_bridge.so.sha256
           cd ../..
           echo "=== linux/arm64 ==="
-          cd lib/linux-arm64 && sha256sum -c libphantom_wg.so.sha256
+          cd dist/linux-arm64 && sha256sum -c wireguard_go_bridge.so.sha256
 
       - name: Extract version
         id: version
@@ -170,20 +210,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          git add lib/
+          git add dist/
           git commit -m "build: ${VERSION_TAG}"
-          git push origin "${TARGET_BRANCH}"
+          git push origin HEAD
 
       - name: Summary
         env:
           VERSION_TAG: ${{ steps.version.outputs.tag }}
         run: |
-          AMD64_SHA=$(cut -d' ' -f1 lib/linux-amd64/libphantom_wg.so.sha256)
-          ARM64_SHA=$(cut -d' ' -f1 lib/linux-arm64/libphantom_wg.so.sha256)
+          AMD64_SHA=$(cut -d' ' -f1 dist/linux-amd64/wireguard_go_bridge.so.sha256)
+          ARM64_SHA=$(cut -d' ' -f1 dist/linux-arm64/wireguard_go_bridge.so.sha256)
           echo "## Build Published" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Version:** \`${VERSION_TAG}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Branch:** \`${TARGET_BRANCH}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Branch:** \`dev/wireguard-go-bridge\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Platform | SHA256 |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|--------|" >> "$GITHUB_STEP_SUMMARY"

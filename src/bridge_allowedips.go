@@ -1,7 +1,19 @@
+// ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+// ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+// ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+// ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+// ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+// ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+//
+// Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+// Licensed under AGPL-3.0 - see LICENSE file for details
+// Third-party licenses - see THIRD_PARTY_LICENSES file for details
+// WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 package main
 
 /*
-#include "phantom_wg.h"
+#include "wireguard_go_bridge.h"
 */
 import "C"
 import (
@@ -16,8 +28,8 @@ import (
 //
 // These helpers build UAPI strings for AllowedIPs manipulation.
 
-//export wgAllowedIpsInsert
-func wgAllowedIpsInsert(deviceHandle C.int64_t, peerPubKeyHex *C.char, prefixStr *C.char) C.int32_t {
+//export AllowedIpsInsert
+func AllowedIpsInsert(deviceHandle C.int64_t, peerPubKeyHex *C.char, prefixStr *C.char) C.int32_t {
 	dev, err := getDevice(int64(deviceHandle))
 	if err != C.WG_OK {
 		return err
@@ -31,8 +43,8 @@ func wgAllowedIpsInsert(deviceHandle C.int64_t, peerPubKeyHex *C.char, prefixStr
 	return C.WG_OK
 }
 
-//export wgAllowedIpsReplaceForPeer
-func wgAllowedIpsReplaceForPeer(deviceHandle C.int64_t, peerPubKeyHex *C.char, prefixes *C.char) C.int32_t {
+//export AllowedIpsReplaceForPeer
+func AllowedIpsReplaceForPeer(deviceHandle C.int64_t, peerPubKeyHex *C.char, prefixes *C.char) C.int32_t {
 	dev, err := getDevice(int64(deviceHandle))
 	if err != C.WG_OK {
 		return err
@@ -54,8 +66,8 @@ func wgAllowedIpsReplaceForPeer(deviceHandle C.int64_t, peerPubKeyHex *C.char, p
 	return C.WG_OK
 }
 
-//export wgAllowedIpsRemoveByPeer
-func wgAllowedIpsRemoveByPeer(deviceHandle C.int64_t, peerPubKeyHex *C.char) C.int32_t {
+//export AllowedIpsRemoveByPeer
+func AllowedIpsRemoveByPeer(deviceHandle C.int64_t, peerPubKeyHex *C.char) C.int32_t {
 	dev, err := getDevice(int64(deviceHandle))
 	if err != C.WG_OK {
 		return err
@@ -69,11 +81,11 @@ func wgAllowedIpsRemoveByPeer(deviceHandle C.int64_t, peerPubKeyHex *C.char) C.i
 	return C.WG_OK
 }
 
-// wgAllowedIpsGetForPeer returns allowed IPs for a peer via IpcGet parsing.
-// Returns newline-separated CIDR prefixes. Caller must free with wgFreeString.
+// AllowedIpsGetForPeer returns allowed IPs for a peer via IpcGet parsing.
+// Returns newline-separated CIDR prefixes. Caller must free with FreeString.
 //
-//export wgAllowedIpsGetForPeer
-func wgAllowedIpsGetForPeer(deviceHandle C.int64_t, peerPubKeyHex *C.char) *C.char {
+//export AllowedIpsGetForPeer
+func AllowedIpsGetForPeer(deviceHandle C.int64_t, peerPubKeyHex *C.char) *C.char {
 	dev, err := getDevice(int64(deviceHandle))
 	if err != C.WG_OK {
 		return nil

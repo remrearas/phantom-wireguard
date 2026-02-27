@@ -1,13 +1,14 @@
-// wireguard-go-bridge
+// ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+// ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+// ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+// ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+// ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+// ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
 //
-// Native bridge for wireguard-go → Python via c-shared FFI.
-// Compiles to libphantom_wg.so for Linux production environments.
-//
-// All exported functions use handle-based access for Go objects
-// that cannot cross the FFI boundary directly.
-//
-// Copyright (c) 2025 Rıza Emre ARAS
-// Licensed under AGPL-3.0
+// Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+// Licensed under AGPL-3.0 - see LICENSE file for details
+// Third-party licenses - see THIRD_PARTY_LICENSES file for details
+// WireGuard® is a registered trademark of Jason A. Donenfeld.
 
 package main
 

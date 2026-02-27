@@ -1,7 +1,19 @@
+// ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+// ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+// ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+// ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+// ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+// ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+//
+// Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+// Licensed under AGPL-3.0 - see LICENSE file for details
+// Third-party licenses - see THIRD_PARTY_LICENSES file for details
+// WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 package main
 
 /*
-#include "phantom_wg.h"
+#include "wireguard_go_bridge.h"
 */
 import "C"
 import (
@@ -16,8 +28,8 @@ import (
 // ---------- Key Generation ----------
 // Replaces: wg genkey, wg pubkey, wg genpsk subprocess calls
 
-//export wgGeneratePrivateKey
-func wgGeneratePrivateKey() *C.char {
+//export GeneratePrivateKey
+func GeneratePrivateKey() *C.char {
 	var key [32]byte
 	if _, err := rand.Read(key[:]); err != nil {
 		return nil
@@ -29,8 +41,8 @@ func wgGeneratePrivateKey() *C.char {
 	return C.CString(hex.EncodeToString(key[:]))
 }
 
-//export wgDerivePublicKey
-func wgDerivePublicKey(privateKeyHex *C.char) *C.char {
+//export DerivePublicKey
+func DerivePublicKey(privateKeyHex *C.char) *C.char {
 	privHex := C.GoString(privateKeyHex)
 	privBytes, err := hex.DecodeString(privHex)
 	if err != nil || len(privBytes) != 32 {
@@ -46,8 +58,8 @@ func wgDerivePublicKey(privateKeyHex *C.char) *C.char {
 	return C.CString(hex.EncodeToString(pubBytes))
 }
 
-//export wgGeneratePresharedKey
-func wgGeneratePresharedKey() *C.char {
+//export GeneratePresharedKey
+func GeneratePresharedKey() *C.char {
 	var key [32]byte
 	if _, err := rand.Read(key[:]); err != nil {
 		return nil
@@ -57,8 +69,8 @@ func wgGeneratePresharedKey() *C.char {
 
 // ---------- NoisePrivateKey Operations ----------
 
-//export wgPrivateKeyFromHex
-func wgPrivateKeyFromHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
+//export PrivateKeyFromHex
+func PrivateKeyFromHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
 	var key device.NoisePrivateKey
 	if err := key.FromHex(C.GoString(hexStr)); err != nil {
 		return C.WG_ERR_KEY_PARSE
@@ -67,8 +79,8 @@ func wgPrivateKeyFromHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgPrivateKeyFromMaybeZeroHex
-func wgPrivateKeyFromMaybeZeroHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
+//export PrivateKeyFromMaybeZeroHex
+func PrivateKeyFromMaybeZeroHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
 	var key device.NoisePrivateKey
 	if err := key.FromMaybeZeroHex(C.GoString(hexStr)); err != nil {
 		return C.WG_ERR_KEY_PARSE
@@ -77,8 +89,8 @@ func wgPrivateKeyFromMaybeZeroHex(hexStr *C.char, out unsafe.Pointer) C.int32_t 
 	return C.WG_OK
 }
 
-//export wgPrivateKeyIsZero
-func wgPrivateKeyIsZero(keyHex *C.char) C.bool {
+//export PrivateKeyIsZero
+func PrivateKeyIsZero(keyHex *C.char) C.bool {
 	var key device.NoisePrivateKey
 	if err := key.FromMaybeZeroHex(C.GoString(keyHex)); err != nil {
 		return C.bool(true)
@@ -86,8 +98,8 @@ func wgPrivateKeyIsZero(keyHex *C.char) C.bool {
 	return C.bool(key.IsZero())
 }
 
-//export wgPrivateKeyEquals
-func wgPrivateKeyEquals(keyAHex *C.char, keyBHex *C.char) C.bool {
+//export PrivateKeyEquals
+func PrivateKeyEquals(keyAHex *C.char, keyBHex *C.char) C.bool {
 	var a, b device.NoisePrivateKey
 	if err := a.FromHex(C.GoString(keyAHex)); err != nil {
 		return C.bool(false)
@@ -100,8 +112,8 @@ func wgPrivateKeyEquals(keyAHex *C.char, keyBHex *C.char) C.bool {
 
 // ---------- NoisePublicKey Operations ----------
 
-//export wgPublicKeyFromHex
-func wgPublicKeyFromHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
+//export PublicKeyFromHex
+func PublicKeyFromHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
 	var key device.NoisePublicKey
 	if err := key.FromHex(C.GoString(hexStr)); err != nil {
 		return C.WG_ERR_KEY_PARSE
@@ -110,8 +122,8 @@ func wgPublicKeyFromHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgPublicKeyIsZero
-func wgPublicKeyIsZero(keyHex *C.char) C.bool {
+//export PublicKeyIsZero
+func PublicKeyIsZero(keyHex *C.char) C.bool {
 	var key device.NoisePublicKey
 	if err := key.FromHex(C.GoString(keyHex)); err != nil {
 		return C.bool(true)
@@ -119,8 +131,8 @@ func wgPublicKeyIsZero(keyHex *C.char) C.bool {
 	return C.bool(key.IsZero())
 }
 
-//export wgPublicKeyEquals
-func wgPublicKeyEquals(keyAHex *C.char, keyBHex *C.char) C.bool {
+//export PublicKeyEquals
+func PublicKeyEquals(keyAHex *C.char, keyBHex *C.char) C.bool {
 	var a, b device.NoisePublicKey
 	if err := a.FromHex(C.GoString(keyAHex)); err != nil {
 		return C.bool(false)
@@ -133,8 +145,8 @@ func wgPublicKeyEquals(keyAHex *C.char, keyBHex *C.char) C.bool {
 
 // ---------- NoisePresharedKey Operations ----------
 
-//export wgPresharedKeyFromHex
-func wgPresharedKeyFromHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
+//export PresharedKeyFromHex
+func PresharedKeyFromHex(hexStr *C.char, out unsafe.Pointer) C.int32_t {
 	var key device.NoisePresharedKey
 	if err := key.FromHex(C.GoString(hexStr)); err != nil {
 		return C.WG_ERR_KEY_PARSE

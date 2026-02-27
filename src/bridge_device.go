@@ -1,7 +1,19 @@
+// ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+// ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+// ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+// ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+// ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+// ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+//
+// Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+// Licensed under AGPL-3.0 - see LICENSE file for details
+// Third-party licenses - see THIRD_PARTY_LICENSES file for details
+// WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 package main
 
 /*
-#include "phantom_wg.h"
+#include "wireguard_go_bridge.h"
 */
 import "C"
 import (
@@ -21,8 +33,8 @@ type deviceEntry struct {
 
 // ---------- Device Lifecycle ----------
 
-//export wgDeviceCreate
-func wgDeviceCreate(ifname *C.char, mtu C.int, loggerHandle C.int64_t) C.int64_t {
+//export NewDevice
+func NewDevice(ifname *C.char, mtu C.int, loggerHandle C.int64_t) C.int64_t {
 	name := C.GoString(ifname)
 	goMtu := int(mtu)
 
@@ -44,8 +56,8 @@ func wgDeviceCreate(ifname *C.char, mtu C.int, loggerHandle C.int64_t) C.int64_t
 	return C.int64_t(deviceRegistry.Add(entry))
 }
 
-//export wgDeviceClose
-func wgDeviceClose(handle C.int64_t) C.int32_t {
+//export DeviceClose
+func DeviceClose(handle C.int64_t) C.int32_t {
 	obj, ok := deviceRegistry.Get(int64(handle))
 	if !ok {
 		return C.WG_ERR_NOT_FOUND
@@ -56,8 +68,8 @@ func wgDeviceClose(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgDeviceUp
-func wgDeviceUp(handle C.int64_t) C.int32_t {
+//export DeviceUp
+func DeviceUp(handle C.int64_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -68,8 +80,8 @@ func wgDeviceUp(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgDeviceDown
-func wgDeviceDown(handle C.int64_t) C.int32_t {
+//export DeviceDown
+func DeviceDown(handle C.int64_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -82,8 +94,8 @@ func wgDeviceDown(handle C.int64_t) C.int32_t {
 
 // ---------- IPC (UAPI Protocol) ----------
 
-//export wgDeviceIpcSet
-func wgDeviceIpcSet(handle C.int64_t, config *C.char) C.int32_t {
+//export DeviceIpcSet
+func DeviceIpcSet(handle C.int64_t, config *C.char) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -95,8 +107,8 @@ func wgDeviceIpcSet(handle C.int64_t, config *C.char) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgDeviceIpcGet
-func wgDeviceIpcGet(handle C.int64_t) *C.char {
+//export DeviceIpcGet
+func DeviceIpcGet(handle C.int64_t) *C.char {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return nil
@@ -108,8 +120,8 @@ func wgDeviceIpcGet(handle C.int64_t) *C.char {
 	return C.CString(config)
 }
 
-//export wgDeviceIpcSetOperation
-func wgDeviceIpcSetOperation(handle C.int64_t, config *C.char) C.int64_t {
+//export DeviceIpcSetOperation
+func DeviceIpcSetOperation(handle C.int64_t, config *C.char) C.int64_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return C.int64_t(err)
@@ -127,8 +139,8 @@ func wgDeviceIpcSetOperation(handle C.int64_t, config *C.char) C.int64_t {
 
 // ---------- Bind Operations ----------
 
-//export wgDeviceBindClose
-func wgDeviceBindClose(handle C.int64_t) C.int32_t {
+//export DeviceBindClose
+func DeviceBindClose(handle C.int64_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -139,8 +151,8 @@ func wgDeviceBindClose(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgDeviceBindUpdate
-func wgDeviceBindUpdate(handle C.int64_t) C.int32_t {
+//export DeviceBindUpdate
+func DeviceBindUpdate(handle C.int64_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -151,8 +163,8 @@ func wgDeviceBindUpdate(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgDeviceBindSetMark
-func wgDeviceBindSetMark(handle C.int64_t, mark C.uint32_t) C.int32_t {
+//export DeviceBindSetMark
+func DeviceBindSetMark(handle C.int64_t, mark C.uint32_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -163,8 +175,8 @@ func wgDeviceBindSetMark(handle C.int64_t, mark C.uint32_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgDeviceBind
-func wgDeviceBind(handle C.int64_t) C.int64_t {
+//export DeviceBind
+func DeviceBind(handle C.int64_t) C.int64_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return 0
@@ -177,8 +189,8 @@ func wgDeviceBind(handle C.int64_t) C.int64_t {
 
 // ---------- Device State & Info ----------
 
-//export wgDeviceBatchSize
-func wgDeviceBatchSize(handle C.int64_t) C.int {
+//export DeviceBatchSize
+func DeviceBatchSize(handle C.int64_t) C.int {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return 0
@@ -186,8 +198,8 @@ func wgDeviceBatchSize(handle C.int64_t) C.int {
 	return C.int(dev.BatchSize())
 }
 
-//export wgDeviceIsUnderLoad
-func wgDeviceIsUnderLoad(handle C.int64_t) C.bool {
+//export DeviceIsUnderLoad
+func DeviceIsUnderLoad(handle C.int64_t) C.bool {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return C.bool(false)
@@ -195,8 +207,8 @@ func wgDeviceIsUnderLoad(handle C.int64_t) C.bool {
 	return C.bool(dev.IsUnderLoad())
 }
 
-//export wgDeviceWait
-func wgDeviceWait(handle C.int64_t) C.int32_t {
+//export DeviceWait
+func DeviceWait(handle C.int64_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -207,8 +219,8 @@ func wgDeviceWait(handle C.int64_t) C.int32_t {
 
 // ---------- Key Management on Device ----------
 
-//export wgDeviceSetPrivateKey
-func wgDeviceSetPrivateKey(handle C.int64_t, hexKey *C.char) C.int32_t {
+//export DeviceSetPrivateKey
+func DeviceSetPrivateKey(handle C.int64_t, hexKey *C.char) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -225,8 +237,8 @@ func wgDeviceSetPrivateKey(handle C.int64_t, hexKey *C.char) C.int32_t {
 
 // ---------- Peer Management via Device ----------
 
-//export wgDeviceNewPeer
-func wgDeviceNewPeer(handle C.int64_t, pubKeyHex *C.char) C.int64_t {
+//export DeviceNewPeer
+func DeviceNewPeer(handle C.int64_t, pubKeyHex *C.char) C.int64_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return C.int64_t(err)
@@ -242,8 +254,8 @@ func wgDeviceNewPeer(handle C.int64_t, pubKeyHex *C.char) C.int64_t {
 	return C.int64_t(peerRegistry.Add(peer))
 }
 
-//export wgDeviceLookupPeer
-func wgDeviceLookupPeer(handle C.int64_t, pubKeyHex *C.char) C.int64_t {
+//export DeviceLookupPeer
+func DeviceLookupPeer(handle C.int64_t, pubKeyHex *C.char) C.int64_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return 0
@@ -259,8 +271,8 @@ func wgDeviceLookupPeer(handle C.int64_t, pubKeyHex *C.char) C.int64_t {
 	return C.int64_t(peerRegistry.Add(peer))
 }
 
-//export wgDeviceRemovePeer
-func wgDeviceRemovePeer(handle C.int64_t, pubKeyHex *C.char) C.int32_t {
+//export DeviceRemovePeer
+func DeviceRemovePeer(handle C.int64_t, pubKeyHex *C.char) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -273,8 +285,8 @@ func wgDeviceRemovePeer(handle C.int64_t, pubKeyHex *C.char) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgDeviceRemoveAllPeers
-func wgDeviceRemoveAllPeers(handle C.int64_t) C.int32_t {
+//export DeviceRemoveAllPeers
+func DeviceRemoveAllPeers(handle C.int64_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -285,8 +297,8 @@ func wgDeviceRemoveAllPeers(handle C.int64_t) C.int32_t {
 
 // ---------- Device Miscellaneous ----------
 
-//export wgDevicePopulatePools
-func wgDevicePopulatePools(handle C.int64_t) C.int32_t {
+//export DevicePopulatePools
+func DevicePopulatePools(handle C.int64_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -295,8 +307,8 @@ func wgDevicePopulatePools(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgDeviceDisableRoaming
-func wgDeviceDisableRoaming(handle C.int64_t) C.int32_t {
+//export DeviceDisableRoaming
+func DeviceDisableRoaming(handle C.int64_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -305,8 +317,8 @@ func wgDeviceDisableRoaming(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgDeviceSendKeepalivesToPeers
-func wgDeviceSendKeepalivesToPeers(handle C.int64_t) C.int32_t {
+//export DeviceSendKeepalivesToPeers
+func DeviceSendKeepalivesToPeers(handle C.int64_t) C.int32_t {
 	dev, err := getDevice(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -344,7 +356,7 @@ func getDevice(handle int64) (*device.Device, C.int32_t) {
 	return obj.(*deviceEntry).device, C.WG_OK
 }
 
-//export wgFreeString
-func wgFreeString(s *C.char) {
+//export FreeString
+func FreeString(s *C.char) {
 	C.free(unsafe.Pointer(s))
 }

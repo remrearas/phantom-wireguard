@@ -1,7 +1,19 @@
+// ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+// ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+// ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+// ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+// ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+// ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+//
+// Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+// Licensed under AGPL-3.0 - see LICENSE file for details
+// Third-party licenses - see THIRD_PARTY_LICENSES file for details
+// WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 package main
 
 /*
-#include "phantom_wg.h"
+#include "wireguard_go_bridge.h"
 */
 import "C"
 import (
@@ -12,14 +24,14 @@ import (
 
 // ---------- CookieChecker ----------
 
-//export wgCookieCheckerCreate
-func wgCookieCheckerCreate() C.int64_t {
+//export CookieCheckerCreate
+func CookieCheckerCreate() C.int64_t {
 	checker := new(device.CookieChecker)
 	return C.int64_t(cookieCheckerRegistry.Add(checker))
 }
 
-//export wgCookieCheckerInit
-func wgCookieCheckerInit(handle C.int64_t, pubKeyHex *C.char) C.int32_t {
+//export CookieCheckerInit
+func CookieCheckerInit(handle C.int64_t, pubKeyHex *C.char) C.int32_t {
 	obj, ok := cookieCheckerRegistry.Get(int64(handle))
 	if !ok {
 		return C.WG_ERR_NOT_FOUND
@@ -35,8 +47,8 @@ func wgCookieCheckerInit(handle C.int64_t, pubKeyHex *C.char) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgCookieCheckerCheckMac1
-func wgCookieCheckerCheckMac1(handle C.int64_t, msg unsafe.Pointer, msgLen C.int) C.bool {
+//export CookieCheckerCheckMAC1
+func CookieCheckerCheckMAC1(handle C.int64_t, msg unsafe.Pointer, msgLen C.int) C.bool {
 	obj, ok := cookieCheckerRegistry.Get(int64(handle))
 	if !ok {
 		return C.bool(false)
@@ -46,8 +58,8 @@ func wgCookieCheckerCheckMac1(handle C.int64_t, msg unsafe.Pointer, msgLen C.int
 	return C.bool(checker.CheckMAC1(msgSlice))
 }
 
-//export wgCookieCheckerCheckMac2
-func wgCookieCheckerCheckMac2(handle C.int64_t, msg unsafe.Pointer, msgLen C.int, src unsafe.Pointer, srcLen C.int) C.bool {
+//export CookieCheckerCheckMAC2
+func CookieCheckerCheckMAC2(handle C.int64_t, msg unsafe.Pointer, msgLen C.int, src unsafe.Pointer, srcLen C.int) C.bool {
 	obj, ok := cookieCheckerRegistry.Get(int64(handle))
 	if !ok {
 		return C.bool(false)
@@ -58,8 +70,8 @@ func wgCookieCheckerCheckMac2(handle C.int64_t, msg unsafe.Pointer, msgLen C.int
 	return C.bool(checker.CheckMAC2(msgSlice, srcSlice))
 }
 
-//export wgCookieCheckerCreateReply
-func wgCookieCheckerCreateReply(
+//export CookieCheckerCreateReply
+func CookieCheckerCreateReply(
 	handle C.int64_t,
 	msg unsafe.Pointer, msgLen C.int,
 	recv C.uint32_t,
@@ -88,21 +100,21 @@ func wgCookieCheckerCreateReply(
 	return C.WG_OK
 }
 
-//export wgCookieCheckerFree
-func wgCookieCheckerFree(handle C.int64_t) {
+//export CookieCheckerFree
+func CookieCheckerFree(handle C.int64_t) {
 	cookieCheckerRegistry.Remove(int64(handle))
 }
 
 // ---------- CookieGenerator ----------
 
-//export wgCookieGeneratorCreate
-func wgCookieGeneratorCreate() C.int64_t {
+//export CookieGeneratorCreate
+func CookieGeneratorCreate() C.int64_t {
 	gen := new(device.CookieGenerator)
 	return C.int64_t(cookieGenRegistry.Add(gen))
 }
 
-//export wgCookieGeneratorInit
-func wgCookieGeneratorInit(handle C.int64_t, pubKeyHex *C.char) C.int32_t {
+//export CookieGeneratorInit
+func CookieGeneratorInit(handle C.int64_t, pubKeyHex *C.char) C.int32_t {
 	obj, ok := cookieGenRegistry.Get(int64(handle))
 	if !ok {
 		return C.WG_ERR_NOT_FOUND
@@ -118,8 +130,8 @@ func wgCookieGeneratorInit(handle C.int64_t, pubKeyHex *C.char) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgCookieGeneratorAddMacs
-func wgCookieGeneratorAddMacs(handle C.int64_t, msg unsafe.Pointer, msgLen C.int) C.int32_t {
+//export CookieGeneratorAddMacs
+func CookieGeneratorAddMacs(handle C.int64_t, msg unsafe.Pointer, msgLen C.int) C.int32_t {
 	obj, ok := cookieGenRegistry.Get(int64(handle))
 	if !ok {
 		return C.WG_ERR_NOT_FOUND
@@ -133,8 +145,8 @@ func wgCookieGeneratorAddMacs(handle C.int64_t, msg unsafe.Pointer, msgLen C.int
 	return C.WG_OK
 }
 
-//export wgCookieGeneratorConsumeReply
-func wgCookieGeneratorConsumeReply(handle C.int64_t, msg unsafe.Pointer, msgLen C.int) C.bool {
+//export CookieGeneratorConsumeReply
+func CookieGeneratorConsumeReply(handle C.int64_t, msg unsafe.Pointer, msgLen C.int) C.bool {
 	obj, ok := cookieGenRegistry.Get(int64(handle))
 	if !ok {
 		return C.bool(false)
@@ -149,7 +161,7 @@ func wgCookieGeneratorConsumeReply(handle C.int64_t, msg unsafe.Pointer, msgLen 
 	return C.bool(gen.ConsumeReply(reply))
 }
 
-//export wgCookieGeneratorFree
-func wgCookieGeneratorFree(handle C.int64_t) {
+//export CookieGeneratorFree
+func CookieGeneratorFree(handle C.int64_t) {
 	cookieGenRegistry.Remove(int64(handle))
 }

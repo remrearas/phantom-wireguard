@@ -1,7 +1,19 @@
+// ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+// ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+// ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+// ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+// ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+// ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+//
+// Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+// Licensed under AGPL-3.0 - see LICENSE file for details
+// Third-party licenses - see THIRD_PARTY_LICENSES file for details
+// WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 package main
 
 /*
-#include "phantom_wg.h"
+#include "wireguard_go_bridge.h"
 */
 import "C"
 import (
@@ -13,8 +25,8 @@ import (
 
 // ---------- HMAC Functions ----------
 
-//export wgHmac1
-func wgHmac1(
+//export HMAC1
+func HMAC1(
 	key unsafe.Pointer, keyLen C.int,
 	in0 unsafe.Pointer, in0Len C.int,
 	out unsafe.Pointer,
@@ -27,8 +39,8 @@ func wgHmac1(
 	C.memcpy(out, unsafe.Pointer(&sum[0]), C.size_t(blake2s.Size))
 }
 
-//export wgHmac2
-func wgHmac2(
+//export HMAC2
+func HMAC2(
 	key unsafe.Pointer, keyLen C.int,
 	in0 unsafe.Pointer, in0Len C.int,
 	in1 unsafe.Pointer, in1Len C.int,
@@ -45,8 +57,8 @@ func wgHmac2(
 
 // ---------- KDF Functions ----------
 
-//export wgKdf1
-func wgKdf1(
+//export KDF1
+func KDF1(
 	key unsafe.Pointer, keyLen C.int,
 	input unsafe.Pointer, inputLen C.int,
 	t0 unsafe.Pointer,
@@ -59,8 +71,8 @@ func wgKdf1(
 	C.memcpy(t0, unsafe.Pointer(&out0[0]), C.size_t(blake2s.Size))
 }
 
-//export wgKdf2
-func wgKdf2(
+//export KDF2
+func KDF2(
 	key unsafe.Pointer, keyLen C.int,
 	input unsafe.Pointer, inputLen C.int,
 	t0 unsafe.Pointer,
@@ -75,8 +87,8 @@ func wgKdf2(
 	C.memcpy(t1, unsafe.Pointer(&out1[0]), C.size_t(blake2s.Size))
 }
 
-//export wgKdf3
-func wgKdf3(
+//export KDF3
+func KDF3(
 	key unsafe.Pointer, keyLen C.int,
 	input unsafe.Pointer, inputLen C.int,
 	t0 unsafe.Pointer,
@@ -95,7 +107,7 @@ func wgKdf3(
 
 // ---------- Constants ----------
 
-//export wgBlake2sSize
-func wgBlake2sSize() C.int {
+//export Blake2sSize
+func Blake2sSize() C.int {
 	return C.int(blake2s.Size)
 }

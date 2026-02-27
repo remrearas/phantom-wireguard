@@ -1,7 +1,19 @@
+// ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+// ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+// ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+// ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+// ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+// ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+//
+// Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+// Licensed under AGPL-3.0 - see LICENSE file for details
+// Third-party licenses - see THIRD_PARTY_LICENSES file for details
+// WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 package main
 
 /*
-#include "phantom_wg.h"
+#include "wireguard_go_bridge.h"
 */
 import "C"
 import (
@@ -10,8 +22,8 @@ import (
 
 // ---------- Peer Lifecycle ----------
 
-//export wgPeerStart
-func wgPeerStart(handle C.int64_t) C.int32_t {
+//export PeerStart
+func PeerStart(handle C.int64_t) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -20,8 +32,8 @@ func wgPeerStart(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgPeerStop
-func wgPeerStop(handle C.int64_t) C.int32_t {
+//export PeerStop
+func PeerStop(handle C.int64_t) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -30,8 +42,8 @@ func wgPeerStop(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgPeerString
-func wgPeerString(handle C.int64_t) *C.char {
+//export PeerString
+func PeerString(handle C.int64_t) *C.char {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return nil
@@ -39,15 +51,15 @@ func wgPeerString(handle C.int64_t) *C.char {
 	return C.CString(peer.String())
 }
 
-//export wgPeerFree
-func wgPeerFree(handle C.int64_t) {
+//export PeerFree
+func PeerFree(handle C.int64_t) {
 	peerRegistry.Remove(int64(handle))
 }
 
 // ---------- Handshake Operations ----------
 
-//export wgPeerSendHandshakeInitiation
-func wgPeerSendHandshakeInitiation(handle C.int64_t, isRetry C.bool) C.int32_t {
+//export PeerSendHandshakeInitiation
+func PeerSendHandshakeInitiation(handle C.int64_t, isRetry C.bool) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -58,8 +70,8 @@ func wgPeerSendHandshakeInitiation(handle C.int64_t, isRetry C.bool) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgPeerSendHandshakeResponse
-func wgPeerSendHandshakeResponse(handle C.int64_t) C.int32_t {
+//export PeerSendHandshakeResponse
+func PeerSendHandshakeResponse(handle C.int64_t) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -70,8 +82,8 @@ func wgPeerSendHandshakeResponse(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgPeerBeginSymmetricSession
-func wgPeerBeginSymmetricSession(handle C.int64_t) C.int32_t {
+//export PeerBeginSymmetricSession
+func PeerBeginSymmetricSession(handle C.int64_t) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -84,8 +96,8 @@ func wgPeerBeginSymmetricSession(handle C.int64_t) C.int32_t {
 
 // ---------- Keepalive ----------
 
-//export wgPeerSendKeepalive
-func wgPeerSendKeepalive(handle C.int64_t) C.int32_t {
+//export PeerSendKeepalive
+func PeerSendKeepalive(handle C.int64_t) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -94,8 +106,8 @@ func wgPeerSendKeepalive(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgPeerSendStagedPackets
-func wgPeerSendStagedPackets(handle C.int64_t) C.int32_t {
+//export PeerSendStagedPackets
+func PeerSendStagedPackets(handle C.int64_t) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -106,8 +118,8 @@ func wgPeerSendStagedPackets(handle C.int64_t) C.int32_t {
 
 // ---------- Keypair Management ----------
 
-//export wgPeerExpireCurrentKeypairs
-func wgPeerExpireCurrentKeypairs(handle C.int64_t) C.int32_t {
+//export PeerExpireCurrentKeypairs
+func PeerExpireCurrentKeypairs(handle C.int64_t) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -118,8 +130,8 @@ func wgPeerExpireCurrentKeypairs(handle C.int64_t) C.int32_t {
 
 // ---------- Flush & Cleanup ----------
 
-//export wgPeerFlushStagedPackets
-func wgPeerFlushStagedPackets(handle C.int64_t) C.int32_t {
+//export PeerFlushStagedPackets
+func PeerFlushStagedPackets(handle C.int64_t) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err
@@ -128,8 +140,8 @@ func wgPeerFlushStagedPackets(handle C.int64_t) C.int32_t {
 	return C.WG_OK
 }
 
-//export wgPeerZeroAndFlushAll
-func wgPeerZeroAndFlushAll(handle C.int64_t) C.int32_t {
+//export PeerZeroAndFlushAll
+func PeerZeroAndFlushAll(handle C.int64_t) C.int32_t {
 	peer, err := getPeer(int64(handle))
 	if err != C.WG_OK {
 		return err

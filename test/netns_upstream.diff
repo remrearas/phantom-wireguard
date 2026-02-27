@@ -1,0 +1,23 @@
+--- test/netns_upstream.sh	2026-02-28 00:48:43
++++ test/netns.sh	2026-02-28 00:50:04
+@@ -55,7 +55,7 @@
+ cleanup() {
+     set +e
+     exec 2>/dev/null
+-    printf "$orig_message_cost" > /proc/sys/net/core/message_cost
++    printf "$orig_message_cost" > /proc/sys/net/core/message_cost 2>/dev/null || true
+     ip0 link del dev wg1
+     ip1 link del dev wg1
+     ip2 link del dev wg1
+@@ -67,9 +67,9 @@
+     exit
+ }
+ 
+-orig_message_cost="$(< /proc/sys/net/core/message_cost)"
++orig_message_cost="$(cat /proc/sys/net/core/message_cost 2>/dev/null || echo 0)"
+ trap cleanup EXIT
+-printf 0 > /proc/sys/net/core/message_cost
++printf 0 > /proc/sys/net/core/message_cost 2>/dev/null || true
+ 
+ ip netns del $netns0 2>/dev/null || true
+ ip netns del $netns1 2>/dev/null || true
