@@ -8,7 +8,7 @@ on:
 
 env:
   GO_VERSION: '1.23'
-  TARGET_BRANCH: 'dev/wireguard-go-bridge'
+  TARGET_BRANCH: 'development'
 
 jobs:
   build-linux-amd64:
