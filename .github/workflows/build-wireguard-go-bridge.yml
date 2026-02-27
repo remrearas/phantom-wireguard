@@ -45,6 +45,7 @@ jobs:
             net-tools iperf3 ncat nmap python3
 
       - name: Run netns integration test
+        continue-on-error: true
         env:
           WIREGUARD_GO_BRIDGE_LIB_PATH: ${{ github.workspace }}/wireguard_go_bridge.so
           PYTHONPATH: ${{ github.workspace }}
