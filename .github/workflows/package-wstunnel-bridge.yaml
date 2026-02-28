@@ -7,10 +7,10 @@ on:
 
 jobs:
   test:
-    name: Unit tests
+    name: Test and package
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
@@ -28,28 +28,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run unit tests
-        run: |
-          pip install pytest
-          pytest test/test_types.py test/test_ffi_discovery.py -v
+      - name: Install test dependencies
+        run: pip install pytest docker
 
-  package:
-    name: Package release
-    needs: [test]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
-        with:
-          egress-policy: audit
-
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: dev/wstunnel-bridge
-          persist-credentials: false
+      - name: Run all tests
+        run: pytest --docker test/ -v
 
       - name: Extract version
         id: version
