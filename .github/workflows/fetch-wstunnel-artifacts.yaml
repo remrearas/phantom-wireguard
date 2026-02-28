@@ -6,7 +6,7 @@ on:
       - "fetch-wstunnel-artifacts-*"
 
 env:
-  WSTUNNEL_RUN_ID: "22508580781"
+  WSTUNNEL_RUN_ID: "22510288990"
 
 permissions:
   contents: write
