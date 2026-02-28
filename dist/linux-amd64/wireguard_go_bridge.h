@@ -21,57 +21,14 @@ extern const char *_GoStringPtr(_GoString_ s);
 /* Start of preamble from import "C" comments.  */
 
 
-#line 15 "bridge_allowedips.go"
+#line 18 "exports.go"
 
 #include "wireguard_go_bridge.h"
 
-#line 1 "cgo-generated-wrapper"
-
-#line 15 "bridge_cookie.go"
-
-#include "wireguard_go_bridge.h"
-
-#line 1 "cgo-generated-wrapper"
-
-#line 15 "bridge_crypto.go"
-
-#include "wireguard_go_bridge.h"
-
-#line 1 "cgo-generated-wrapper"
-
-#line 15 "bridge_device.go"
-
-#include "wireguard_go_bridge.h"
-
-#line 1 "cgo-generated-wrapper"
-
-#line 15 "bridge_keys.go"
-
-#include "wireguard_go_bridge.h"
-
-#line 1 "cgo-generated-wrapper"
-
-#line 15 "bridge_logger.go"
-
-#include "wireguard_go_bridge.h"
-
-#line 1 "cgo-generated-wrapper"
-
-#line 15 "bridge_misc.go"
-
-#include "wireguard_go_bridge.h"
-
-#line 1 "cgo-generated-wrapper"
-
-#line 15 "bridge_peer.go"
-
-#include "wireguard_go_bridge.h"
-
-#line 1 "cgo-generated-wrapper"
-
-#line 15 "bridge_uapi.go"
-
-#include "wireguard_go_bridge.h"
+// C wrapper to invoke the log callback function pointer from Go.
+static inline void invoke_log_callback(WgLogCallback cb, int32_t level, const char *msg, void *ctx) {
+    if (cb) cb(level, msg, ctx);
+}
 
 #line 1 "cgo-generated-wrapper"
 
@@ -135,82 +92,55 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-extern int32_t AllowedIpsInsert(int64_t deviceHandle, char* peerPubKeyHex, char* prefixStr);
-extern int32_t AllowedIpsReplaceForPeer(int64_t deviceHandle, char* peerPubKeyHex, char* prefixes);
-extern int32_t AllowedIpsRemoveByPeer(int64_t deviceHandle, char* peerPubKeyHex);
-extern char* AllowedIpsGetForPeer(int64_t deviceHandle, char* peerPubKeyHex);
-extern int64_t CookieCheckerCreate(void);
-extern int32_t CookieCheckerInit(int64_t handle, char* pubKeyHex);
-extern _Bool CookieCheckerCheckMAC1(int64_t handle, void* msg, int msgLen);
-extern _Bool CookieCheckerCheckMAC2(int64_t handle, void* msg, int msgLen, void* src, int srcLen);
-extern int32_t CookieCheckerCreateReply(int64_t handle, void* msg, int msgLen, uint32_t recv, void* src, int srcLen, void* out, int* outLen);
-extern void CookieCheckerFree(int64_t handle);
-extern int64_t CookieGeneratorCreate(void);
-extern int32_t CookieGeneratorInit(int64_t handle, char* pubKeyHex);
-extern int32_t CookieGeneratorAddMacs(int64_t handle, void* msg, int msgLen);
-extern _Bool CookieGeneratorConsumeReply(int64_t handle, void* msg, int msgLen);
-extern void CookieGeneratorFree(int64_t handle);
-extern void HMAC1(void* key, int keyLen, void* in0, int in0Len, void* out);
-extern void HMAC2(void* key, int keyLen, void* in0, int in0Len, void* in1, int in1Len, void* out);
-extern void KDF1(void* key, int keyLen, void* input, int inputLen, void* t0);
-extern void KDF2(void* key, int keyLen, void* input, int inputLen, void* t0, void* t1);
-extern void KDF3(void* key, int keyLen, void* input, int inputLen, void* t0, void* t1, void* t2);
-extern int Blake2sSize(void);
+extern void BridgeSetLogCallback(WgLogCallback callback, void* context);
+extern int32_t BridgeInit(char* dbPath, char* ifname, int listenPort, int logLevel);
+extern char* BridgeGetStatus(void);
+extern int32_t BridgeSetup(char* endpoint, char* network, char* dnsPrimary, char* dnsSecondary, int mtu, int fwmark);
+extern int32_t BridgeClose(void);
+extern int32_t BridgeStart(void);
+extern int32_t BridgeStop(void);
+extern char* BridgeAddClient(char* allowedIp);
+extern int32_t BridgeRemoveClient(char* pubKeyHex);
+extern int32_t BridgeEnableClient(char* pubKeyHex);
+extern int32_t BridgeDisableClient(char* pubKeyHex);
+extern char* BridgeGetClient(char* pubKeyHex);
+extern char* BridgeListClients(int page, int limit);
+extern char* BridgeExportClientConfig(char* pubKeyHex, char* serverEndpoint, char* dns);
+extern int32_t BridgeStartStatsSync(int intervalSec);
+extern int32_t BridgeStopStatsSync(void);
+extern char* BridgeGetDeviceInfo(void);
+extern char* BridgeGetServerConfig(void);
+extern int32_t BridgeSetServerConfig(char* configJSON);
+extern char* BridgeCreateMultihopTunnel(char* name, char* ifaceName, char* remoteEndpoint, char* remotePubKey, int fwmark);
+extern int32_t BridgeStartMultihopTunnel(char* name);
+extern int32_t BridgeStopMultihopTunnel(char* name);
+extern int32_t BridgeDisableMultihopTunnel(char* name);
+extern int32_t BridgeDeleteMultihopTunnel(char* name);
+extern char* BridgeListMultihopTunnels(void);
+extern char* BridgeGetMultihopTunnel(char* name);
 extern int64_t NewDevice(char* ifname, int mtu, int64_t loggerHandle);
 extern int32_t DeviceClose(int64_t handle);
 extern int32_t DeviceUp(int64_t handle);
 extern int32_t DeviceDown(int64_t handle);
+extern int32_t DeviceSetPrivateKey(int64_t handle, char* hexKey);
 extern int32_t DeviceIpcSet(int64_t handle, char* config);
 extern char* DeviceIpcGet(int64_t handle);
-extern int64_t DeviceIpcSetOperation(int64_t handle, char* config);
-extern int32_t DeviceBindClose(int64_t handle);
-extern int32_t DeviceBindUpdate(int64_t handle);
-extern int32_t DeviceBindSetMark(int64_t handle, uint32_t mark);
-extern int64_t DeviceBind(int64_t handle);
-extern int DeviceBatchSize(int64_t handle);
-extern _Bool DeviceIsUnderLoad(int64_t handle);
-extern int32_t DeviceWait(int64_t handle);
-extern int32_t DeviceSetPrivateKey(int64_t handle, char* hexKey);
 extern int64_t DeviceNewPeer(int64_t handle, char* pubKeyHex);
 extern int64_t DeviceLookupPeer(int64_t handle, char* pubKeyHex);
 extern int32_t DeviceRemovePeer(int64_t handle, char* pubKeyHex);
 extern int32_t DeviceRemoveAllPeers(int64_t handle);
-extern int32_t DevicePopulatePools(int64_t handle);
-extern int32_t DeviceDisableRoaming(int64_t handle);
-extern int32_t DeviceSendKeepalivesToPeers(int64_t handle);
-extern void FreeString(char* s);
+extern int32_t DeviceBindClose(int64_t handle);
+extern int32_t DeviceBindUpdate(int64_t handle);
+extern int32_t DeviceBindSetMark(int64_t handle, uint32_t mark);
+extern int32_t AllowedIpsInsert(int64_t deviceHandle, char* peerPubKeyHex, char* prefixStr);
+extern int32_t PeerStart(int64_t handle);
+extern int32_t PeerStop(int64_t handle);
 extern char* GeneratePrivateKey(void);
 extern char* DerivePublicKey(char* privateKeyHex);
 extern char* GeneratePresharedKey(void);
-extern int32_t PrivateKeyFromHex(char* hexStr, void* out);
-extern int32_t PrivateKeyFromMaybeZeroHex(char* hexStr, void* out);
-extern _Bool PrivateKeyIsZero(char* keyHex);
-extern _Bool PrivateKeyEquals(char* keyAHex, char* keyBHex);
-extern int32_t PublicKeyFromHex(char* hexStr, void* out);
-extern _Bool PublicKeyIsZero(char* keyHex);
-extern _Bool PublicKeyEquals(char* keyAHex, char* keyBHex);
-extern int32_t PresharedKeyFromHex(char* hexStr, void* out);
-extern void SetLogCallback(WgLogCallback callback, void* context);
-extern int64_t NewLogger(int level, char* prepend);
-extern void LoggerFree(int64_t handle);
-extern void DiscardLogf(void);
-extern int64_t IpcErrorCode(int64_t errCode);
 extern char* BridgeVersion(void);
 extern char* WireguardGoVersion(void);
-extern int ActiveDeviceCount(void);
-extern int ActivePeerCount(void);
-extern int32_t PeerStart(int64_t handle);
-extern int32_t PeerStop(int64_t handle);
-extern char* PeerString(int64_t handle);
-extern void PeerFree(int64_t handle);
-extern int32_t PeerSendHandshakeInitiation(int64_t handle, _Bool isRetry);
-extern int32_t PeerSendHandshakeResponse(int64_t handle);
-extern int32_t PeerBeginSymmetricSession(int64_t handle);
-extern int32_t PeerSendKeepalive(int64_t handle);
-extern int32_t PeerSendStagedPackets(int64_t handle);
-extern int32_t PeerExpireCurrentKeypairs(int64_t handle);
-extern int32_t PeerFlushStagedPackets(int64_t handle);
-extern int32_t PeerZeroAndFlushAll(int64_t handle);
+extern void FreeString(char* s);
 extern int32_t Run(char* ifname, int logLevel);
 extern int32_t DeviceUAPIListen(int64_t deviceHandle, char* ifname);
 extern int32_t DeviceUAPIClose(int64_t deviceHandle, char* ifname);
