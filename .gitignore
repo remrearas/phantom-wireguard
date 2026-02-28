@@ -6,9 +6,11 @@ build/
 *.so
 *.dylib
 
-# Allow dist/ artifacts
+# Allow tracked artifacts
 !dist/
 !dist/**
+!wstunnel_bridge/
+!wstunnel_bridge/**
 
 # Virtual environments
 .venv/
