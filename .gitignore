@@ -1,0 +1,21 @@
+# Build artifacts (CI-managed)
+dist/
+*.so
+*.dylib
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+
+# Test / IDE
+.pytest_cache/
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Claude workspace
+.claude/
