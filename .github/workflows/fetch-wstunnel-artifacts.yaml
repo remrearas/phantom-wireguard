@@ -29,7 +29,7 @@ jobs:
 
       - name: Download artifacts from wstunnel repo
         env:
-          GH_TOKEN: ${{ secrets.WSTUNNEL_REPO_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh run download "${WSTUNNEL_RUN_ID}" \
             --repo ARAS-Workspace/wstunnel \
