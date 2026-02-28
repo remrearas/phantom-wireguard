@@ -32,6 +32,8 @@ jobs:
         run: pip install pytest docker
 
       - name: Run all tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: pytest --docker test/ -v
 
       - name: Extract version
