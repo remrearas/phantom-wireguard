@@ -1,0 +1,94 @@
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+THIRD PARTY LICENSES — wstunnel-bridge
+================================================================================
+
+Phantom-WG / wstunnel-bridge
+Copyright (c) 2025 - Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+
+This document lists third-party software dependencies and their licenses.
+
+================================================================================
+UPSTREAM SOURCE
+================================================================================
+
+| Component       | Version   | License      | SPDX Identifier | URL                                       |
+|-----------------|-----------|--------------|-----------------|-------------------------------------------|
+| wstunnel        | 10.5.2    | BSD-3-Clause | BSD-3-Clause    | https://github.com/erebe/wstunnel          |
+
+Source Note:
+wstunnel-bridge is built from ARAS-Workspace/wstunnel fork (branch: linux/v10.5.2)
+which adds a C-compatible FFI layer on top of the upstream erebe/wstunnel codebase.
+The upstream license (BSD-3-Clause) applies to the original wstunnel source code.
+
+Fork repository: https://github.com/ARAS-Workspace/wstunnel
+
+================================================================================
+KEY RUST CRATE DEPENDENCIES (from upstream)
+================================================================================
+
+wstunnel embeds a large dependency tree. The primary crates and their licenses:
+
+| Crate              | License            | SPDX Identifier         |
+|--------------------|--------------------|-------------------------|
+| tokio              | MIT License        | MIT                     |
+| hyper              | MIT License        | MIT                     |
+| rustls             | Apache-2.0 OR ISC OR MIT | Apache-2.0 OR ISC OR MIT |
+| tokio-tungstenite  | MIT License        | MIT                     |
+| tungstenite        | MIT OR Apache-2.0  | MIT OR Apache-2.0       |
+| url                | MIT OR Apache-2.0  | MIT OR Apache-2.0       |
+| bytes              | MIT License        | MIT                     |
+| log                | MIT OR Apache-2.0  | MIT OR Apache-2.0       |
+| tracing            | MIT License        | MIT                     |
+| serde              | MIT OR Apache-2.0  | MIT OR Apache-2.0       |
+| libc               | MIT OR Apache-2.0  | MIT OR Apache-2.0       |
+
+License URLs:
+- wstunnel:          https://github.com/erebe/wstunnel/blob/main/LICENSE
+- tokio:             https://github.com/tokio-rs/tokio/blob/master/LICENSE
+- hyper:             https://github.com/hyperium/hyper/blob/master/LICENSE
+- rustls:            https://github.com/rustls/rustls/blob/main/LICENSE
+- tokio-tungstenite: https://github.com/snapview/tokio-tungstenite/blob/master/LICENSE
+- tungstenite:       https://github.com/snapview/tungstenite-rs/blob/master/LICENSE-MIT
+- url:               https://github.com/servo/rust-url/blob/main/LICENSE-MIT
+- bytes:             https://github.com/tokio-rs/bytes/blob/master/LICENSE
+- log:               https://github.com/rust-lang/log/blob/master/LICENSE-MIT
+- tracing:           https://github.com/tokio-rs/tracing/blob/master/LICENSE
+- serde:             https://github.com/serde-rs/serde/blob/master/LICENSE-MIT
+- libc:              https://github.com/rust-lang/libc/blob/main/LICENSE-MIT
+
+================================================================================
+LICENSE COMPATIBILITY
+================================================================================
+
+All upstream dependencies use permissive licenses (MIT, BSD-3-Clause, Apache-2.0,
+ISC) that are fully compatible with AGPL-3.0 and allow use in this project.
+
+The wstunnel upstream (BSD-3-Clause) requires attribution in redistributions,
+which is satisfied by this document and the LICENSE file.
+
+================================================================================
+TRADEMARK NOTICES
+================================================================================
+
+wstunnel is developed by Erebe (Romain Gerard).
+https://github.com/erebe/wstunnel
+
+================================================================================
+DOCUMENT INFO
+================================================================================
+
+Maintained by:  Rıza Emre ARAS <r.emrearas@proton.me>
+Project:        Phantom-WG / wstunnel-bridge
+License:        AGPL-3.0-or-later
+Repository:     https://github.com/ARAS-Workspace/phantom-wg
+Branch:         dev/wstunnel-bridge
+Last Updated:   2026-02-28
+
+================================================================================
