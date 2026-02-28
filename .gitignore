@@ -6,11 +6,9 @@ build/
 *.so
 *.dylib
 
-# Allow tracked artifacts
-!dist/
-!dist/**
-!wstunnel_bridge/
-!wstunnel_bridge/**
+# CI-managed artifacts (pushed by workflow, not local)
+dist/
+wstunnel_bridge/
 
 # Virtual environments
 .venv/

@@ -73,7 +73,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          git add dist/ wstunnel_bridge/
+          git add -f dist/ wstunnel_bridge/
           git commit -m "build: wstunnel-bridge from run ${WSTUNNEL_RUN_ID}"
           git push origin dev/wstunnel-bridge
 
