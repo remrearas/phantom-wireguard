@@ -9,6 +9,9 @@ on:
 env:
   GO_VERSION: '1.25'
 
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,34 +28,26 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false
-
-      - name: Build wireguard_go_bridge.so
-        working-directory: src
-        run: |
-          CGO_ENABLED=1 go build -buildmode=c-shared -trimpath -ldflags="-s -w" \
-            -o ../wireguard_go_bridge.so .
+          python-version: '3.12'
 
       - name: Install test dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            wireguard-tools iproute2 iptables iputils-ping \
-            net-tools iperf3 ncat nmap python3
+        run: pip install -r requirements.txt
 
-      - name: Run netns integration test
-        continue-on-error: true
-        env:
-          WIREGUARD_GO_BRIDGE_LIB_PATH: ${{ github.workspace }}/wireguard_go_bridge.so
-          PYTHONPATH: ${{ github.workspace }}
-        run: sudo -E test/test.sh "${{ github.workspace }}/wireguard_go_bridge.so"
+      - name: Run test_runner.py (unit + integration)
+        run: python test_runner.py --force-build
 
-  build-linux-amd64:
-    needs: [test]
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-results
+          path: test_results/
+          retention-days: 30
+
+  test-netns:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,6 +67,52 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libsqlite3-dev \
+            wireguard-tools iproute2 iptables iputils-ping \
+            net-tools iperf3 ncat nmap python3
+
+      - name: Build wireguard_go_bridge.so
+        working-directory: src
+        run: |
+          CGO_ENABLED=1 go build -buildmode=c-shared -trimpath -ldflags="-s -w" \
+            -o ../wireguard_go_bridge.so .
+
+      - name: Run netns integration test
+        continue-on-error: true
+        env:
+          WIREGUARD_GO_BRIDGE_LIB_PATH: ${{ github.workspace }}/wireguard_go_bridge.so
+          PYTHONPATH: ${{ github.workspace }}
+        run: sudo -E tests/netns-test/test.sh "${{ github.workspace }}/wireguard_go_bridge.so"
+
+  build-linux-amd64:
+    needs: [test, test-netns]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libsqlite3-dev
 
       - name: Download dependencies
         run: make go-deps
@@ -103,7 +144,7 @@ jobs:
           retention-days: 90
 
   build-linux-arm64:
-    needs: [test]
+    needs: [test, test-netns]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -124,8 +165,10 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
-      - name: Install cross-compiler
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Install cross-compiler and build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu libsqlite3-dev
 
       - name: Download dependencies
         run: make go-deps

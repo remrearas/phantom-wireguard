@@ -11,10 +11,7 @@
  * Third-party licenses - see THIRD_PARTY_LICENSES file for details
  * WireGuard® is a registered trademark of Jason A. Donenfeld.
  *
- * wireguard_go_bridge.h — Shared C definitions for wireguard-go-bridge
- *
- * Included by all Go bridge files via CGo preamble.
- * This header is also the public API for non-Python consumers.
+ * wireguard_go_bridge.h — v2.0.0 public API
  */
 
 #ifndef WIREGUARD_GO_BRIDGE_H
@@ -41,6 +38,13 @@
 #define WG_ERR_SESSION          -12
 #define WG_ERR_HANDSHAKE        -13
 #define WG_ERR_COOKIE           -14
+/* v2 error codes */
+#define WG_ERR_DB_OPEN          -20
+#define WG_ERR_DB_QUERY         -21
+#define WG_ERR_DB_WRITE         -22
+#define WG_ERR_IP_EXHAUSTED     -23
+#define WG_ERR_NOT_INITIALIZED  -24
+#define WG_ERR_STATS_RUNNING    -25
 #define WG_ERR_INTERNAL         -99
 
 /* Log levels */
@@ -48,7 +52,7 @@
 #define WG_LOG_ERROR     1
 #define WG_LOG_VERBOSE   2
 
-/* Log callback */
+/* Log callback (placeholder) */
 typedef void (*WgLogCallback)(int32_t level, const char *message, void *context);
 
 #endif /* WIREGUARD_GO_BRIDGE_H */

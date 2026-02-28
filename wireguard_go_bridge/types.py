@@ -8,12 +8,10 @@
 
 Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
-Third-party licenses - see THIRD_PARTY_LICENSES file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
-"""
-"""
-Error codes, log levels, and type definitions.
-Mirrors the C error codes from errors.go.
+
+Error codes, log levels, and exception types.
+Mirrors C error codes from wireguard_go_bridge.h (v2).
 """
 
 from enum import IntEnum
@@ -35,6 +33,13 @@ class ErrorCode(IntEnum):
     SESSION = -12
     HANDSHAKE = -13
     COOKIE = -14
+    # v2 error codes
+    DB_OPEN = -20
+    DB_QUERY = -21
+    DB_WRITE = -22
+    IP_EXHAUSTED = -23
+    NOT_INITIALIZED = -24
+    STATS_RUNNING = -25
     INTERNAL = -99
 
 
@@ -45,8 +50,6 @@ class LogLevel(IntEnum):
 
 
 class WireGuardError(Exception):
-    """Maps C error codes to Python exceptions."""
-
     _messages = {
         ErrorCode.INVALID_PARAM: "Invalid parameter",
         ErrorCode.TUN_CREATE: "TUN device creation failed",
@@ -62,6 +65,12 @@ class WireGuardError(Exception):
         ErrorCode.SESSION: "Symmetric session failed",
         ErrorCode.HANDSHAKE: "Handshake failed",
         ErrorCode.COOKIE: "Cookie operation failed",
+        ErrorCode.DB_OPEN: "Database open failed",
+        ErrorCode.DB_QUERY: "Database query failed",
+        ErrorCode.DB_WRITE: "Database write failed",
+        ErrorCode.IP_EXHAUSTED: "IP pool exhausted",
+        ErrorCode.NOT_INITIALIZED: "Bridge not initialized",
+        ErrorCode.STATS_RUNNING: "Stats sync already running",
         ErrorCode.INTERNAL: "Internal error",
     }
 
@@ -72,6 +81,5 @@ class WireGuardError(Exception):
 
 
 def check_error(result: int) -> None:
-    """Raise WireGuardError if result is not OK."""
     if result != ErrorCode.OK:
         raise WireGuardError(result)

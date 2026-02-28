@@ -23,3 +23,10 @@ Thumbs.db
 # Env
 .env
 .venv/
+
+# Test results
+test_results/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/

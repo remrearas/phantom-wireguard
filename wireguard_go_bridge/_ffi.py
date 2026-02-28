@@ -8,33 +8,25 @@
 
 Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
-Third-party licenses - see THIRD_PARTY_LICENSES file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
-"""
-"""
-Low-level ctypes bindings to wireguard_go_bridge.so.
-All other modules use this as the FFI foundation.
+
+Low-level ctypes bindings to wireguard_go_bridge.so (v2 API).
 """
 
 import ctypes
 import ctypes.util
 import os
 import platform
-from typing import Callable, Optional
-
-# --- Library Loading ---
+from typing import Optional
 
 _lib: Optional[ctypes.CDLL] = None
 
 
 def _resolve_platform() -> tuple[str, str]:
-    """Resolve library filename and architecture directory for current platform."""
     system = platform.system().lower()
     arch = platform.machine()
-
     ext = ".dylib" if system == "darwin" else ".so"
     lib_name = f"wireguard_go_bridge{ext}"
-
     arch_map = {
         ("linux", "x86_64"): "linux-amd64",
         ("linux", "aarch64"): "linux-arm64",
@@ -47,12 +39,17 @@ def _resolve_platform() -> tuple[str, str]:
 
 
 def _find_library() -> str:
-    """Locate wireguard_go_bridge shared library via environment variable."""
     env_path = os.environ.get("WIREGUARD_GO_BRIDGE_LIB_PATH")
     if env_path and os.path.isfile(env_path):
         return env_path
 
-    lib_name, _ = _resolve_platform()
+    lib_name, arch_dir = _resolve_platform()
+
+    # Check dist/ directory (CI-published artifacts)
+    dist_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dist", arch_dir, lib_name)
+    if os.path.isfile(dist_path):
+        return dist_path
+
     found = ctypes.util.find_library("wireguard_go_bridge")
     if found:
         return found
@@ -75,258 +72,212 @@ def get_lib() -> ctypes.CDLL:
     return _load_library()
 
 
-# --- Function Signatures ---
+# Log callback type: void(int32_t level, const char *message, void *context)
+LOG_CALLBACK_TYPE = ctypes.CFUNCTYPE(None, ctypes.c_int32, ctypes.c_char_p, ctypes.c_void_p)
+
+# prevent GC of active callback
+_active_log_callback = None
 
 
 def _setup_signatures(lib: ctypes.CDLL) -> None:
-    """Define C function signatures for type safety."""
+    """Define C function signatures for v2 API."""
 
-    # --- Logger ---
-    lib.SetLogCallback.argtypes = [_WG_LOG_CALLBACK_TYPE, ctypes.c_void_p]
-    lib.SetLogCallback.restype = None
+    c_p = ctypes.c_char_p       # input strings (Python → Go)
+    c_vp = ctypes.c_void_p      # output strings (Go → Python, must FreeString)
+    c_i32 = ctypes.c_int32
+    c_i64 = ctypes.c_int64
+    c_int = ctypes.c_int
+    c_u32 = ctypes.c_uint32
 
-    lib.NewLogger.argtypes = [ctypes.c_int, ctypes.c_char_p]
-    lib.NewLogger.restype = ctypes.c_int64
+    # ---- Log Callback ----
 
-    lib.LoggerFree.argtypes = [ctypes.c_int64]
-    lib.LoggerFree.restype = None
+    lib.BridgeSetLogCallback.argtypes = [LOG_CALLBACK_TYPE, ctypes.c_void_p]
+    lib.BridgeSetLogCallback.restype = None
 
-    # --- Device Lifecycle ---
-    lib.NewDevice.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_int64]
-    lib.NewDevice.restype = ctypes.c_int64
+    # ---- Bridge-DB High-Level API ----
 
-    lib.DeviceClose.argtypes = [ctypes.c_int64]
-    lib.DeviceClose.restype = ctypes.c_int32
+    lib.BridgeInit.argtypes = [c_p, c_p, c_int, c_int]
+    lib.BridgeInit.restype = c_i32
 
-    lib.DeviceUp.argtypes = [ctypes.c_int64]
-    lib.DeviceUp.restype = ctypes.c_int32
+    lib.BridgeGetStatus.argtypes = []
+    lib.BridgeGetStatus.restype = c_vp
 
-    lib.DeviceDown.argtypes = [ctypes.c_int64]
-    lib.DeviceDown.restype = ctypes.c_int32
+    lib.BridgeSetup.argtypes = [c_p, c_p, c_p, c_p, c_int, c_int]
+    lib.BridgeSetup.restype = c_i32
 
-    # --- IPC ---
-    lib.DeviceIpcSet.argtypes = [ctypes.c_int64, ctypes.c_char_p]
-    lib.DeviceIpcSet.restype = ctypes.c_int32
+    lib.BridgeClose.argtypes = []
+    lib.BridgeClose.restype = c_i32
 
-    lib.DeviceIpcGet.argtypes = [ctypes.c_int64]
-    lib.DeviceIpcGet.restype = ctypes.c_char_p
+    lib.BridgeStart.argtypes = []
+    lib.BridgeStart.restype = c_i32
 
-    lib.DeviceIpcSetOperation.argtypes = [ctypes.c_int64, ctypes.c_char_p]
-    lib.DeviceIpcSetOperation.restype = ctypes.c_int64
+    lib.BridgeStop.argtypes = []
+    lib.BridgeStop.restype = c_i32
 
-    # --- Bind ---
-    lib.DeviceBindClose.argtypes = [ctypes.c_int64]
-    lib.DeviceBindClose.restype = ctypes.c_int32
+    lib.BridgeAddClient.argtypes = [c_p]
+    lib.BridgeAddClient.restype = c_vp
 
-    lib.DeviceBindUpdate.argtypes = [ctypes.c_int64]
-    lib.DeviceBindUpdate.restype = ctypes.c_int32
+    lib.BridgeRemoveClient.argtypes = [c_p]
+    lib.BridgeRemoveClient.restype = c_i32
 
-    lib.DeviceBindSetMark.argtypes = [ctypes.c_int64, ctypes.c_uint32]
-    lib.DeviceBindSetMark.restype = ctypes.c_int32
+    lib.BridgeEnableClient.argtypes = [c_p]
+    lib.BridgeEnableClient.restype = c_i32
 
-    # --- Device State ---
-    lib.DeviceBatchSize.argtypes = [ctypes.c_int64]
-    lib.DeviceBatchSize.restype = ctypes.c_int
+    lib.BridgeDisableClient.argtypes = [c_p]
+    lib.BridgeDisableClient.restype = c_i32
 
-    lib.DeviceIsUnderLoad.argtypes = [ctypes.c_int64]
-    lib.DeviceIsUnderLoad.restype = ctypes.c_bool
+    lib.BridgeGetClient.argtypes = [c_p]
+    lib.BridgeGetClient.restype = c_vp
 
-    lib.DeviceWait.argtypes = [ctypes.c_int64]
-    lib.DeviceWait.restype = ctypes.c_int32
+    lib.BridgeListClients.argtypes = [c_int, c_int]
+    lib.BridgeListClients.restype = c_vp
 
-    # --- Device Key ---
-    lib.DeviceSetPrivateKey.argtypes = [ctypes.c_int64, ctypes.c_char_p]
-    lib.DeviceSetPrivateKey.restype = ctypes.c_int32
+    lib.BridgeExportClientConfig.argtypes = [c_p, c_p, c_p]
+    lib.BridgeExportClientConfig.restype = c_vp
 
-    # --- Peer Management via Device ---
-    lib.DeviceNewPeer.argtypes = [ctypes.c_int64, ctypes.c_char_p]
-    lib.DeviceNewPeer.restype = ctypes.c_int64
+    lib.BridgeStartStatsSync.argtypes = [c_int]
+    lib.BridgeStartStatsSync.restype = c_i32
 
-    lib.DeviceLookupPeer.argtypes = [ctypes.c_int64, ctypes.c_char_p]
-    lib.DeviceLookupPeer.restype = ctypes.c_int64
+    lib.BridgeStopStatsSync.argtypes = []
+    lib.BridgeStopStatsSync.restype = c_i32
 
-    lib.DeviceRemovePeer.argtypes = [ctypes.c_int64, ctypes.c_char_p]
-    lib.DeviceRemovePeer.restype = ctypes.c_int32
+    lib.BridgeGetDeviceInfo.argtypes = []
+    lib.BridgeGetDeviceInfo.restype = c_vp
 
-    lib.DeviceRemoveAllPeers.argtypes = [ctypes.c_int64]
-    lib.DeviceRemoveAllPeers.restype = ctypes.c_int32
+    # ---- Server Config API ----
 
-    # --- Device Misc ---
-    lib.DevicePopulatePools.argtypes = [ctypes.c_int64]
-    lib.DevicePopulatePools.restype = ctypes.c_int32
+    lib.BridgeGetServerConfig.argtypes = []
+    lib.BridgeGetServerConfig.restype = c_vp
 
-    lib.DeviceDisableRoaming.argtypes = [ctypes.c_int64]
-    lib.DeviceDisableRoaming.restype = ctypes.c_int32
+    lib.BridgeSetServerConfig.argtypes = [c_p]
+    lib.BridgeSetServerConfig.restype = c_i32
 
-    lib.DeviceSendKeepalivesToPeers.argtypes = [ctypes.c_int64]
-    lib.DeviceSendKeepalivesToPeers.restype = ctypes.c_int32
+    # ---- Multihop Tunnel API ----
 
-    # --- Run (full wireguard-go foreground equivalent) ---
-    lib.Run.argtypes = [ctypes.c_char_p, ctypes.c_int]
-    lib.Run.restype = ctypes.c_int32
+    lib.BridgeCreateMultihopTunnel.argtypes = [c_p, c_p, c_p, c_p, c_int]
+    lib.BridgeCreateMultihopTunnel.restype = c_vp
 
-    # --- UAPI Socket ---
-    lib.DeviceUAPIListen.argtypes = [ctypes.c_int64, ctypes.c_char_p]
-    lib.DeviceUAPIListen.restype = ctypes.c_int32
+    lib.BridgeStartMultihopTunnel.argtypes = [c_p]
+    lib.BridgeStartMultihopTunnel.restype = c_i32
 
-    lib.DeviceUAPIClose.argtypes = [ctypes.c_int64, ctypes.c_char_p]
-    lib.DeviceUAPIClose.restype = ctypes.c_int32
+    lib.BridgeStopMultihopTunnel.argtypes = [c_p]
+    lib.BridgeStopMultihopTunnel.restype = c_i32
 
-    lib.DeviceUAPISocketPath.argtypes = [ctypes.c_char_p]
-    lib.DeviceUAPISocketPath.restype = ctypes.c_char_p
+    lib.BridgeDisableMultihopTunnel.argtypes = [c_p]
+    lib.BridgeDisableMultihopTunnel.restype = c_i32
 
-    # --- Peer ---
-    lib.PeerStart.argtypes = [ctypes.c_int64]
-    lib.PeerStart.restype = ctypes.c_int32
+    lib.BridgeDeleteMultihopTunnel.argtypes = [c_p]
+    lib.BridgeDeleteMultihopTunnel.restype = c_i32
 
-    lib.PeerStop.argtypes = [ctypes.c_int64]
-    lib.PeerStop.restype = ctypes.c_int32
+    lib.BridgeListMultihopTunnels.argtypes = []
+    lib.BridgeListMultihopTunnels.restype = c_vp
 
-    lib.PeerString.argtypes = [ctypes.c_int64]
-    lib.PeerString.restype = ctypes.c_char_p
+    lib.BridgeGetMultihopTunnel.argtypes = [c_p]
+    lib.BridgeGetMultihopTunnel.restype = c_vp
 
-    lib.PeerFree.argtypes = [ctypes.c_int64]
-    lib.PeerFree.restype = None
+    # ---- Low-Level Device API (multihop/advanced) ----
 
-    lib.PeerSendHandshakeInitiation.argtypes = [ctypes.c_int64, ctypes.c_bool]
-    lib.PeerSendHandshakeInitiation.restype = ctypes.c_int32
+    lib.NewDevice.argtypes = [c_p, c_int, c_i64]
+    lib.NewDevice.restype = c_i64
 
-    lib.PeerSendHandshakeResponse.argtypes = [ctypes.c_int64]
-    lib.PeerSendHandshakeResponse.restype = ctypes.c_int32
+    lib.DeviceClose.argtypes = [c_i64]
+    lib.DeviceClose.restype = c_i32
 
-    lib.PeerBeginSymmetricSession.argtypes = [ctypes.c_int64]
-    lib.PeerBeginSymmetricSession.restype = ctypes.c_int32
+    lib.DeviceUp.argtypes = [c_i64]
+    lib.DeviceUp.restype = c_i32
 
-    lib.PeerSendKeepalive.argtypes = [ctypes.c_int64]
-    lib.PeerSendKeepalive.restype = ctypes.c_int32
+    lib.DeviceDown.argtypes = [c_i64]
+    lib.DeviceDown.restype = c_i32
 
-    lib.PeerSendStagedPackets.argtypes = [ctypes.c_int64]
-    lib.PeerSendStagedPackets.restype = ctypes.c_int32
+    lib.DeviceSetPrivateKey.argtypes = [c_i64, c_p]
+    lib.DeviceSetPrivateKey.restype = c_i32
 
-    lib.PeerExpireCurrentKeypairs.argtypes = [ctypes.c_int64]
-    lib.PeerExpireCurrentKeypairs.restype = ctypes.c_int32
+    lib.DeviceIpcSet.argtypes = [c_i64, c_p]
+    lib.DeviceIpcSet.restype = c_i32
 
-    lib.PeerFlushStagedPackets.argtypes = [ctypes.c_int64]
-    lib.PeerFlushStagedPackets.restype = ctypes.c_int32
+    lib.DeviceIpcGet.argtypes = [c_i64]
+    lib.DeviceIpcGet.restype = c_vp
 
-    lib.PeerZeroAndFlushAll.argtypes = [ctypes.c_int64]
-    lib.PeerZeroAndFlushAll.restype = ctypes.c_int32
+    lib.DeviceNewPeer.argtypes = [c_i64, c_p]
+    lib.DeviceNewPeer.restype = c_i64
 
-    # --- Keys ---
+    lib.DeviceLookupPeer.argtypes = [c_i64, c_p]
+    lib.DeviceLookupPeer.restype = c_i64
+
+    lib.DeviceRemovePeer.argtypes = [c_i64, c_p]
+    lib.DeviceRemovePeer.restype = c_i32
+
+    lib.DeviceRemoveAllPeers.argtypes = [c_i64]
+    lib.DeviceRemoveAllPeers.restype = c_i32
+
+    lib.DeviceBindClose.argtypes = [c_i64]
+    lib.DeviceBindClose.restype = c_i32
+
+    lib.DeviceBindUpdate.argtypes = [c_i64]
+    lib.DeviceBindUpdate.restype = c_i32
+
+    lib.DeviceBindSetMark.argtypes = [c_i64, c_u32]
+    lib.DeviceBindSetMark.restype = c_i32
+
+    lib.AllowedIpsInsert.argtypes = [c_i64, c_p, c_p]
+    lib.AllowedIpsInsert.restype = c_i32
+
+    lib.PeerStart.argtypes = [c_i64]
+    lib.PeerStart.restype = c_i32
+
+    lib.PeerStop.argtypes = [c_i64]
+    lib.PeerStop.restype = c_i32
+
+    # ---- Key Generation ----
+
     lib.GeneratePrivateKey.argtypes = []
-    lib.GeneratePrivateKey.restype = ctypes.c_char_p
+    lib.GeneratePrivateKey.restype = c_vp
 
-    lib.DerivePublicKey.argtypes = [ctypes.c_char_p]
-    lib.DerivePublicKey.restype = ctypes.c_char_p
+    lib.DerivePublicKey.argtypes = [c_p]
+    lib.DerivePublicKey.restype = c_vp
 
     lib.GeneratePresharedKey.argtypes = []
-    lib.GeneratePresharedKey.restype = ctypes.c_char_p
+    lib.GeneratePresharedKey.restype = c_vp
 
-    lib.PrivateKeyIsZero.argtypes = [ctypes.c_char_p]
-    lib.PrivateKeyIsZero.restype = ctypes.c_bool
+    # ---- Version & Utility ----
 
-    lib.PrivateKeyEquals.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-    lib.PrivateKeyEquals.restype = ctypes.c_bool
-
-    lib.PublicKeyIsZero.argtypes = [ctypes.c_char_p]
-    lib.PublicKeyIsZero.restype = ctypes.c_bool
-
-    lib.PublicKeyEquals.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-    lib.PublicKeyEquals.restype = ctypes.c_bool
-
-    # --- Crypto ---
-    lib.HMAC1.argtypes = [
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p,
-    ]
-    lib.HMAC1.restype = None
-
-    lib.HMAC2.argtypes = [
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p,
-    ]
-    lib.HMAC2.restype = None
-
-    lib.KDF1.argtypes = [
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p,
-    ]
-    lib.KDF1.restype = None
-
-    lib.KDF2.argtypes = [
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p, ctypes.c_void_p,
-    ]
-    lib.KDF2.restype = None
-
-    lib.KDF3.argtypes = [
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p, ctypes.c_int,
-        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
-    ]
-    lib.KDF3.restype = None
-
-    lib.Blake2sSize.argtypes = []
-    lib.Blake2sSize.restype = ctypes.c_int
-
-    # --- AllowedIPs ---
-    lib.AllowedIpsInsert.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_char_p]
-    lib.AllowedIpsInsert.restype = ctypes.c_int32
-
-    lib.AllowedIpsRemoveByPeer.argtypes = [ctypes.c_int64, ctypes.c_int64]
-    lib.AllowedIpsRemoveByPeer.restype = ctypes.c_int32
-
-    lib.AllowedIpsGetForPeer.argtypes = [ctypes.c_int64, ctypes.c_int64]
-    lib.AllowedIpsGetForPeer.restype = ctypes.c_char_p
-
-    # --- Version ---
     lib.BridgeVersion.argtypes = []
-    lib.BridgeVersion.restype = ctypes.c_char_p
+    lib.BridgeVersion.restype = c_vp
 
     lib.WireguardGoVersion.argtypes = []
-    lib.WireguardGoVersion.restype = ctypes.c_char_p
+    lib.WireguardGoVersion.restype = c_vp
 
-    # --- Diagnostics ---
-    lib.ActiveDeviceCount.argtypes = []
-    lib.ActiveDeviceCount.restype = ctypes.c_int
-
-    lib.ActivePeerCount.argtypes = []
-    lib.ActivePeerCount.restype = ctypes.c_int
-
-    # --- Memory ---
-    lib.FreeString.argtypes = [ctypes.c_char_p]
+    lib.FreeString.argtypes = [c_p]
     lib.FreeString.restype = None
 
+    # ---- UAPI / Run (tests) ----
 
-# --- Convenience ---
+    lib.Run.argtypes = [c_p, c_int]
+    lib.Run.restype = c_i32
 
-# Store callback reference to prevent GC
-_log_callback_ref = None
+    lib.DeviceUAPIListen.argtypes = [c_i64, c_p]
+    lib.DeviceUAPIListen.restype = c_i32
 
-_WG_LOG_CALLBACK_TYPE = ctypes.CFUNCTYPE(None, ctypes.c_int32, ctypes.c_char_p, ctypes.c_void_p)
+    lib.DeviceUAPIClose.argtypes = [c_i64, c_p]
+    lib.DeviceUAPIClose.restype = c_i32
+
+    lib.DeviceUAPISocketPath.argtypes = [c_p]
+    lib.DeviceUAPISocketPath.restype = c_vp
 
 
-def set_log_callback(callback: Callable[[int, str], None]) -> None:
-    """Set global log callback. callback(level: int, message: str)"""
-    global _log_callback_ref
-
-    def _c_callback(level, message, _context):
-        callback(int(level), message.decode("utf-8") if message else "")
-
-    _log_callback_ref = _WG_LOG_CALLBACK_TYPE(_c_callback)
-    get_lib().SetLogCallback(_log_callback_ref, None)
+def _read_and_free(ptr) -> str:
+    """Read a Go-allocated C string and free it."""
+    if not ptr:
+        return ""
+    s = ctypes.cast(ptr, ctypes.c_char_p)
+    text = s.value.decode("utf-8") if s.value else ""
+    get_lib().FreeString(s)
+    return text
 
 
 def get_bridge_version() -> str:
-    result = get_lib().BridgeVersion()
-    return result.decode("utf-8") if result else "unknown"
+    return _read_and_free(get_lib().BridgeVersion()) or "unknown"
 
 
 def get_wireguard_go_version() -> str:
-    result = get_lib().WireguardGoVersion()
-    return result.decode("utf-8") if result else "unknown"
+    return _read_and_free(get_lib().WireguardGoVersion()) or "unknown"
