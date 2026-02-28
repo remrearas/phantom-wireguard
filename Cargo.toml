@@ -1,0 +1,18 @@
+[package]
+name = "firewall-bridge-linux"
+version = "1.0.0"
+edition = "2021"
+description = "Native firewall bridge — nftables and routing via netlink"
+
+[lib]
+name = "firewall_bridge_linux"
+crate-type = ["cdylib"]
+
+[dependencies]
+libc = "0.2"
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

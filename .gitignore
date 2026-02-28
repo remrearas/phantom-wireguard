@@ -3,6 +3,10 @@ dist/
 *.so
 *.dylib
 
+# Rust build
+target/
+Cargo.lock
+
 # Python
 __pycache__/
 *.pyc
