@@ -34,7 +34,8 @@ class TestResolvePlatform:
 
 
 class TestFindLibrary:
-    def setup_method(self):
+    @staticmethod
+    def setup_method():
         """Reset cached lib before each test."""
         import firewall_bridge._ffi as ffi
         ffi._lib = None
@@ -53,16 +54,18 @@ class TestFindLibrary:
         """When dist/ has no .so and find_library succeeds, return system path."""
         import firewall_bridge._ffi as ffi
 
-        # dist/ exists but has no .so file — _find_library falls through to ctypes
-        with patch("firewall_bridge._ffi.ctypes.util.find_library",
-                    return_value="/usr/lib/libfirewall_bridge_linux.so"):
-            path = ffi._find_library()
-            assert path == "/usr/lib/libfirewall_bridge_linux.so"
+        # Point _resolve_platform to a nonexistent arch dir so dist/ path won't match
+        with patch.object(ffi, "_resolve_platform", return_value=("libfirewall_bridge_linux.so", "linux-nonexistent")):
+            with patch("firewall_bridge._ffi.ctypes.util.find_library",
+                        return_value="/usr/lib/libfirewall_bridge_linux.so"):
+                path = ffi._find_library()
+                assert path == "/usr/lib/libfirewall_bridge_linux.so"
 
     def test_not_found_raises(self):
         """When nothing is found, raise FileNotFoundError."""
         import firewall_bridge._ffi as ffi
 
-        with patch("firewall_bridge._ffi.ctypes.util.find_library", return_value=None):
-            with pytest.raises(FileNotFoundError, match="Cannot find"):
-                ffi._find_library()
+        with patch.object(ffi, "_resolve_platform", return_value=("libfirewall_bridge_linux.so", "linux-nonexistent")):
+            with patch("firewall_bridge._ffi.ctypes.util.find_library", return_value=None):
+                with pytest.raises(FileNotFoundError, match="Cannot find"):
+                    ffi._find_library()
