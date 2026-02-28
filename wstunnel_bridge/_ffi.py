@@ -155,6 +155,53 @@ def _setup_signatures(lib: ctypes.CDLL) -> None:
     lib.wstunnel_get_version.argtypes = []
     lib.wstunnel_get_version.restype = ctypes.c_char_p
 
+    # --- Server Config Builder ---
+    lib.wstunnel_server_config_new.argtypes = []
+    lib.wstunnel_server_config_new.restype = ctypes.c_void_p
+
+    lib.wstunnel_server_config_free.argtypes = [ctypes.c_void_p]
+    lib.wstunnel_server_config_free.restype = None
+
+    lib.wstunnel_server_config_set_bind_url.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    lib.wstunnel_server_config_set_bind_url.restype = ctypes.c_int32
+
+    lib.wstunnel_server_config_set_tls_certificate.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    lib.wstunnel_server_config_set_tls_certificate.restype = ctypes.c_int32
+
+    lib.wstunnel_server_config_set_tls_private_key.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    lib.wstunnel_server_config_set_tls_private_key.restype = ctypes.c_int32
+
+    lib.wstunnel_server_config_set_tls_client_ca_certs.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    lib.wstunnel_server_config_set_tls_client_ca_certs.restype = ctypes.c_int32
+
+    lib.wstunnel_server_config_add_restrict_to.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    lib.wstunnel_server_config_add_restrict_to.restype = ctypes.c_int32
+
+    lib.wstunnel_server_config_add_restrict_path_prefix.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    lib.wstunnel_server_config_add_restrict_path_prefix.restype = ctypes.c_int32
+
+    lib.wstunnel_server_config_set_websocket_ping_frequency.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+    lib.wstunnel_server_config_set_websocket_ping_frequency.restype = ctypes.c_int32
+
+    lib.wstunnel_server_config_set_websocket_mask_frame.argtypes = [ctypes.c_void_p, ctypes.c_bool]
+    lib.wstunnel_server_config_set_websocket_mask_frame.restype = ctypes.c_int32
+
+    lib.wstunnel_server_config_set_worker_threads.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+    lib.wstunnel_server_config_set_worker_threads.restype = ctypes.c_int32
+
+    # --- Server Control ---
+    lib.wstunnel_server_start.argtypes = [ctypes.c_void_p]
+    lib.wstunnel_server_start.restype = ctypes.c_int32
+
+    lib.wstunnel_server_stop.argtypes = []
+    lib.wstunnel_server_stop.restype = ctypes.c_int32
+
+    lib.wstunnel_server_is_running.argtypes = []
+    lib.wstunnel_server_is_running.restype = ctypes.c_int32
+
+    lib.wstunnel_server_get_last_error.argtypes = []
+    lib.wstunnel_server_get_last_error.restype = ctypes.c_char_p
+
 
 # --- Convenience ---
 

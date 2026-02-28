@@ -7,10 +7,10 @@
 /*
  * wstunnel-bridge-linux: C FFI wrapper for wstunnel (Linux)
  *
- * Wraps wstunnel identically to wstunnel-cli: constructs the same Client
- * config and calls run_client() internally. Only the interface differs.
+ * Wraps wstunnel identically to wstunnel-cli: constructs the same Client/Server
+ * config and calls run_client()/run_server() internally.
  *
- * Usage:
+ * Client usage:
  *   1. (Optional) wstunnel_set_log_callback()
  *   2. wstunnel_init_logging()
  *   3. config = wstunnel_config_new()
@@ -20,6 +20,17 @@
  *   7. wstunnel_config_free(config)
  *   ...
  *   8. wstunnel_client_stop()
+ *
+ * Server usage:
+ *   1. (Optional) wstunnel_set_log_callback()
+ *   2. wstunnel_init_logging()
+ *   3. config = wstunnel_server_config_new()
+ *   4. wstunnel_server_config_set_bind_url(config, ...)
+ *   5. wstunnel_server_config_set_tls_certificate/key(config, ...)
+ *   6. wstunnel_server_start(config)
+ *   7. wstunnel_server_config_free(config)
+ *   ...
+ *   8. wstunnel_server_stop()
  */
 
 /* ═══════════════════════════════════════════════════════════════
@@ -43,9 +54,10 @@
 #define WS_LOG_TRACE  4
 
 /* ═══════════════════════════════════════════════════════════════
- * Opaque config handle
+ * Opaque config handles
  * ═══════════════════════════════════════════════════════════════ */
 typedef struct WstunnelConfig WstunnelConfig;
+typedef struct WstunnelServerConfig WstunnelServerConfig;
 
 /* ═══════════════════════════════════════════════════════════════
  * Log callback
@@ -57,7 +69,7 @@ void wstunnel_set_log_callback(WstunnelLogCallback callback, void *context);
 void wstunnel_init_logging(int32_t log_level);
 
 /* ═══════════════════════════════════════════════════════════════
- * Config Builder
+ * Client Config Builder
  * ═══════════════════════════════════════════════════════════════ */
 
 WstunnelConfig *wstunnel_config_new(void);
@@ -140,5 +152,48 @@ int32_t wstunnel_client_stop(void);
 int32_t wstunnel_client_is_running(void);
 const char *wstunnel_client_get_last_error(void);
 const char *wstunnel_get_version(void);
+
+/* ═══════════════════════════════════════════════════════════════
+ * Server Config Builder
+ * ═══════════════════════════════════════════════════════════════ */
+
+WstunnelServerConfig *wstunnel_server_config_new(void);
+void wstunnel_server_config_free(WstunnelServerConfig *config);
+
+/* Bind URL (required) — e.g. "wss://0.0.0.0:8443" or "ws://0.0.0.0:8080" */
+int32_t wstunnel_server_config_set_bind_url(WstunnelServerConfig *config, const char *url);
+
+/* TLS certificate PEM file path (optional, wss:// uses self-signed if not set) */
+int32_t wstunnel_server_config_set_tls_certificate(WstunnelServerConfig *config, const char *path);
+
+/* TLS private key PEM file path */
+int32_t wstunnel_server_config_set_tls_private_key(WstunnelServerConfig *config, const char *path);
+
+/* TLS client CA certificates PEM file path for mutual TLS */
+int32_t wstunnel_server_config_set_tls_client_ca_certs(WstunnelServerConfig *config, const char *path);
+
+/* Restrict tunnels to specific destinations — "host:port" (repeatable) */
+int32_t wstunnel_server_config_add_restrict_to(WstunnelServerConfig *config, const char *target);
+
+/* Restrict HTTP upgrade path prefix (repeatable) */
+int32_t wstunnel_server_config_add_restrict_path_prefix(WstunnelServerConfig *config, const char *prefix);
+
+/* WebSocket ping frequency in seconds (default: 30, 0 to disable) */
+int32_t wstunnel_server_config_set_websocket_ping_frequency(WstunnelServerConfig *config, uint32_t secs);
+
+/* WebSocket frame masking (default: false) */
+int32_t wstunnel_server_config_set_websocket_mask_frame(WstunnelServerConfig *config, bool mask);
+
+/* Tokio worker threads (default: 2) */
+int32_t wstunnel_server_config_set_worker_threads(WstunnelServerConfig *config, uint32_t threads);
+
+/* ═══════════════════════════════════════════════════════════════
+ * Server Control
+ * ═══════════════════════════════════════════════════════════════ */
+
+int32_t wstunnel_server_start(WstunnelServerConfig *config);
+int32_t wstunnel_server_stop(void);
+int32_t wstunnel_server_is_running(void);
+const char *wstunnel_server_get_last_error(void);
 
 #endif /* WSTUNNEL_BRIDGE_LINUX_H */
