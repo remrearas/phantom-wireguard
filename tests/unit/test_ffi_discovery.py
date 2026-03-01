@@ -93,5 +93,5 @@ class TestFindLibrary:
 
         with patch.object(ffi, "_resolve_platform", return_value=("libfirewall_bridge_linux.so", "linux-nonexistent")):
             with patch("firewall_bridge._ffi.ctypes.util.find_library", return_value=None):
-                with pytest.raises(FileNotFoundError, match="Cannot find"):
+                with pytest.raises(FileNotFoundError, match="not found"):
                     ffi._find_library()
