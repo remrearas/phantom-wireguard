@@ -45,10 +45,10 @@ def _find_library() -> str:
 
     lib_name, arch_dir = _resolve_platform()
 
-    # Check dist/ directory (CI-published artifacts)
-    dist_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dist", arch_dir, lib_name)
-    if os.path.isfile(dist_path):
-        return dist_path
+    # Sibling path — .so alongside _ffi.py (vendor-pack layout)
+    sibling_path = os.path.join(os.path.dirname(__file__), lib_name)
+    if os.path.isfile(sibling_path):
+        return sibling_path
 
     found = ctypes.util.find_library("wireguard_go_bridge")
     if found:
