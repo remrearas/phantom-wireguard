@@ -11,3 +11,5 @@
 // WireGuard® is a registered trademark of Jason A. Donenfeld.
 
 package main
+
+const BridgeVersionStr = "2.1.0"

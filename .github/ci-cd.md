@@ -1,16 +1,16 @@
-# CI/CD — wireguard-go-bridge
+# CI/CD — wireguard-go-bridge v2.1.0
 
-| Workflow                          | Trigger                                         | Jobs                                                               | Output                            |
-|-----------------------------------|------------------------------------------------ |--------------------------------------------------------------------|---------------------------------  |
-| `test-wireguard-go-bridge.yml`    | `dev/wireguard-go-bridge` push, `workflow_call` | `test` (Docker unit+integration), `test-netns` (network namespace) | test-results artifact             |
-| `build-wireguard-go-bridge.yml`   | `dev/wireguard-go-bridge` push, `workflow_call` | `build-linux-amd64`, `build-linux-arm64`                           | .so + .h + .sha256 artifacts      |
-| `publish-wireguard-go-bridge.yml` | `publish-vendor-wireguard-go-bridge-v*` tag     | `test` → `build` → `publish`                                      | dev/vendor branch (amd64 + arm64) |
+| Workflow                          | Trigger                                         | Jobs                           | Output                            |
+|-----------------------------------|------------------------------------------------ |--------------------------------|---------------------------------  |
+| `test-wireguard-go-bridge.yml`    | `dev/wireguard-go-bridge` push, `workflow_call` | `test` (Docker unit+integration) | test-results artifact             |
+| `build-wireguard-go-bridge.yml`   | `dev/wireguard-go-bridge` push, `workflow_call` | `build-linux-amd64`, `build-linux-arm64` | .so + .h + .sha256 artifacts      |
+| `publish-wireguard-go-bridge.yml` | `publish-vendor-wireguard-go-bridge-v*` tag     | `test` → `build` → `publish`  | dev/vendor branch (amd64 + arm64) |
 
 ## Flow
 
 ```
 Branch push (dev/wireguard-go-bridge):
-  ├── test-wireguard-go-bridge.yml    (unit + integration + netns)
+  ├── test-wireguard-go-bridge.yml    (unit + integration via test_runner.py)
   └── build-wireguard-go-bridge.yml   (amd64 + arm64 → artifact upload)
 
 Vendor tag (publish-vendor-wireguard-go-bridge-v*):
@@ -39,7 +39,8 @@ wireguard-go-bridge/
 │   └── wireguard_go_bridge/
 │       ├── __init__.py
 │       ├── _ffi.py
-│       ├── client.py
+│       ├── bridge.py
+│       ├── keys.py
 │       └── types.py
 └── linux-arm64/
     ├── wireguard_go_bridge.so

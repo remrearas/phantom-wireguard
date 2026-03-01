@@ -10,82 +10,81 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Unit tests for error codes, log levels, and exception types.
+Unit tests for exception hierarchy and check_result.
 """
 
 import pytest
 
-from wireguard_go_bridge.types import ErrorCode, LogLevel, WireGuardError, check_error
+from wireguard_go_bridge.types import (
+    BridgeError,
+    TunCreateError,
+    DeviceCreateError,
+    IpcError,
+    DeviceNotFoundError,
+    DeviceUpError,
+    DeviceDownError,
+    check_result,
+)
 
 
-class TestErrorCode:
-    def test_ok_is_zero(self):
-        assert ErrorCode.OK == 0
+class TestExceptionHierarchy:
+    def test_all_inherit_from_bridge_error(self):
+        for cls in (TunCreateError, DeviceCreateError, IpcError,
+                    DeviceNotFoundError, DeviceUpError, DeviceDownError):
+            assert issubclass(cls, BridgeError)
 
-    def test_v1_error_codes(self):
-        assert ErrorCode.INVALID_PARAM == -1
-        assert ErrorCode.TUN_CREATE == -2
-        assert ErrorCode.DEVICE_CREATE == -3
-        assert ErrorCode.NOT_FOUND == -5
-        assert ErrorCode.INTERNAL == -99
+    def test_bridge_error_is_exception(self):
+        assert issubclass(BridgeError, Exception)
 
-    def test_v2_error_codes(self):
-        assert ErrorCode.DB_OPEN == -20
-        assert ErrorCode.DB_QUERY == -21
-        assert ErrorCode.DB_WRITE == -22
-        assert ErrorCode.IP_EXHAUSTED == -23
-        assert ErrorCode.NOT_INITIALIZED == -24
-        assert ErrorCode.STATS_RUNNING == -25
+    def test_catch_specific(self):
+        with pytest.raises(DeviceUpError):
+            raise DeviceUpError("test")
 
-    def test_all_codes_unique(self):
-        values = [e.value for e in ErrorCode]
-        assert len(values) == len(set(values))
+    def test_catch_base(self):
+        with pytest.raises(BridgeError):
+            raise IpcError("test")
+
+    def test_message_preserved(self):
+        err = TunCreateError("no /dev/net/tun")
+        assert "no /dev/net/tun" in str(err)
 
 
-class TestLogLevel:
-    def test_levels(self):
-        assert LogLevel.SILENT == 0
-        assert LogLevel.ERROR == 1
-        assert LogLevel.VERBOSE == 2
+class TestCheckResult:
+    def test_zero_passes(self):
+        check_result(0)
 
+    def test_positive_passes(self):
+        check_result(1)
+        check_result(42)
 
-class TestWireGuardError:
-    def test_known_code(self):
-        err = WireGuardError(ErrorCode.DB_OPEN)
-        assert err.code == ErrorCode.DB_OPEN
-        assert "Database open" in str(err)
+    def test_tun_create(self):
+        with pytest.raises(TunCreateError):
+            check_result(-2)
+
+    def test_device_create(self):
+        with pytest.raises(DeviceCreateError):
+            check_result(-3)
+
+    def test_ipc_set(self):
+        with pytest.raises(IpcError):
+            check_result(-4)
 
     def test_not_found(self):
-        err = WireGuardError(ErrorCode.NOT_FOUND)
-        assert err.code == ErrorCode.NOT_FOUND
-        assert "not found" in str(err).lower()
+        with pytest.raises(DeviceNotFoundError):
+            check_result(-5)
 
-    def test_not_initialized(self):
-        err = WireGuardError(ErrorCode.NOT_INITIALIZED)
-        assert "not initialized" in str(err).lower()
+    def test_device_up(self):
+        with pytest.raises(DeviceUpError):
+            check_result(-7)
 
-    def test_ip_exhausted(self):
-        err = WireGuardError(ErrorCode.IP_EXHAUSTED)
-        assert "exhausted" in str(err).lower()
+    def test_device_down(self):
+        with pytest.raises(DeviceDownError):
+            check_result(-8)
 
-    def test_unknown_code(self):
-        err = WireGuardError(-999)
-        assert "Unknown error" in str(err)
+    def test_internal(self):
+        with pytest.raises(BridgeError):
+            check_result(-99)
 
-    def test_is_exception(self):
-        assert issubclass(WireGuardError, Exception)
-
-
-class TestCheckError:
-    def test_ok_does_not_raise(self):
-        check_error(0)
-
-    def test_error_raises(self):
-        with pytest.raises(WireGuardError) as exc_info:
-            check_error(-20)
-        assert exc_info.value.code == ErrorCode.DB_OPEN
-
-    def test_internal_error(self):
-        with pytest.raises(WireGuardError) as exc_info:
-            check_error(-99)
-        assert exc_info.value.code == ErrorCode.INTERNAL
+    def test_unknown_code_raises_base(self):
+        with pytest.raises(BridgeError, match="FFI error code: -42"):
+            check_result(-42)

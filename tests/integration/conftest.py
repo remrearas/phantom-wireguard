@@ -10,101 +10,73 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Integration test fixtures.
-new_bridge: function-scoped running bridge per test.
-new_bridge_factory: creates isolated bridge instances for recovery tests.
+Integration test helpers — runs inside Docker container.
+Docker socket mounted for cross-container communication.
+All command output streams live to stdout.
 """
 
+import logging
 import os
-import tempfile
-import uuid
-from typing import Optional
+import sqlite3
+import subprocess
+import sys
 
-import pytest
+log = logging.getLogger("integration")
 
-from wireguard_go_bridge.client import BridgeClient
-from wireguard_go_bridge.types import WireGuardError
-
-
-def pytest_collection_modifyitems(config, items):
-    if not config.getoption("--docker", default=False):
-        skip = pytest.mark.skip(reason="Need --docker to run")
-        for item in items:
-            if "docker" in item.keywords:
-                item.add_marker(skip)
+CLIENT_CONTAINER = "wg-client"
 
 
-@pytest.fixture
-def uid():
-    """Unique 8-char hex for each test."""
-    return uuid.uuid4().hex[:8]
+# ---- Local shell (live output) ----
+
+def sh(cmd: str, check: bool = True) -> subprocess.CompletedProcess:
+    log.info("  $ %s", cmd)
+    r = subprocess.run(cmd, shell=True, stdout=sys.stdout, stderr=sys.stderr, text=True, check=False)
+    if check and r.returncode != 0:
+        log.warning("  exit=%d", r.returncode)
+    return r
 
 
-@pytest.fixture
-def new_bridge(uid):
-    """Function-scoped bridge — fresh for every test."""
-    db_path = os.path.join(tempfile.gettempdir(), f"bridge_{uid}.db")
-    ifname = f"wg-{uid[:6]}"
+# ---- Remote exec on client container via Docker SDK ----
 
-    bridge = BridgeClient(db_path, ifname, 51820, log_level=1)
-    bridge.setup(
-        endpoint="10.0.0.1:51820",
-        network="10.100.0.0/24",
-        dns_primary="1.1.1.1",
-        dns_secondary="9.9.9.9",
-    )
-    bridge.start()
-
-    yield bridge
-
-    try:
-        bridge.stop()
-    except WireGuardError:
-        pass
-    try:
-        bridge.close()
-    except WireGuardError:
-        pass
-
-    if os.path.exists(db_path):
-        os.remove(db_path)
+def _get_docker_client():
+    import docker
+    return docker.from_env()
 
 
-@pytest.fixture
-def new_bridge_factory():
-    """Factory for isolated bridge instances (crash recovery tests)."""
-    active: Optional[BridgeClient] = None
-    counter = [0]
+def client_exec(cmd: str, check: bool = True) -> tuple[int, str]:
+    log.info("  CLIENT $ %s", cmd)
+    dc = _get_docker_client()
+    container = dc.containers.get(CLIENT_CONTAINER)
+    r = container.exec_run(["sh", "-c", cmd])
+    output = r.output.decode("utf-8", errors="replace")
+    # Print live
+    if output.strip():
+        for line in output.strip().splitlines():
+            print(f"  CLIENT | {line}", flush=True)
+    if check and r.exit_code != 0:
+        log.warning("  CLIENT exit=%d", r.exit_code)
+    return r.exit_code, output
 
-    def _create(db_path: Optional[str] = None,
-                ifname: Optional[str] = None,
-                port: Optional[int] = None) -> tuple[BridgeClient, str]:
-        nonlocal active
 
-        if active is not None:
-            try:
-                active.close()
-            except WireGuardError:
-                pass
+def client_write_file(path: str, content: str) -> None:
+    import base64
+    encoded = base64.b64encode(content.encode()).decode()
+    client_exec(f"echo {encoded} | base64 -d > {path}")
 
-        idx = counter[0]
-        counter[0] += 1
 
-        if db_path is None:
-            db_path = os.path.join(tempfile.gettempdir(), f"factory_{uuid.uuid4().hex[:8]}.db")
-        if ifname is None:
-            ifname = f"wg-f{idx}-{uuid.uuid4().hex[:4]}"
-        if port is None:
-            port = 52000 + idx
+# ---- device.db ----
 
-        bridge = BridgeClient(db_path, ifname, port)
-        active = bridge
-        return bridge, db_path
-
-    yield _create
-
-    if active is not None:
-        try:
-            active.close()
-        except WireGuardError:
-            pass
+def create_device_db(path: str) -> None:
+    for suffix in ("", "-shm", "-wal"):
+        p = path + suffix
+        if os.path.exists(p):
+            os.remove(p)
+    conn = sqlite3.connect(path)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ipc_state (
+            id   INTEGER PRIMARY KEY CHECK (id = 1),
+            dump TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()

@@ -11,22 +11,22 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Test runner for wireguard-go-bridge v2.
+Test runner for wireguard-go-bridge v2.1.0.
 
-Runs ALL tests (unit + integration) inside a Docker container and
-produces a single combined coverage report.
+Three containers:
+    bridge-test  — Go .so + Python code, runs pytest (Docker socket mounted)
+    exit-server  — WireGuard server, provides client config (external VPN provider)
+    client       — Plain WireGuard client (wg-quick), controlled from bridge via Docker SDK
+
+Docker SDK manages all containers + shared network.
+Code synced dynamically into bridge container at runtime.
 
 Usage:
-    python test_runner.py              # full run
-    python test_runner.py --unit       # unit tests only (still in container)
-    python test_runner.py --integration # integration tests only
-    python test_runner.py --no-build   # skip Docker image build
+    python test_runner.py
 """
 
-import argparse
 import io
 import logging
-import os
 import sys
 import tarfile
 import time
@@ -38,18 +38,23 @@ logging.basicConfig(level=logging.INFO, format=LOG_FMT, handlers=[logging.Stream
 log = logging.getLogger("test_runner")
 
 ROOT = Path(__file__).parent
-IMAGE_NAME = "wireguard-go-bridge-v2-test:latest"
-CONTAINER_PREFIX = "wg-bridge-test"
+BRIDGE_IMAGE = "wireguard-go-bridge-test:v2.1.0"
+EXIT_IMAGE = "wireguard-go-bridge-exit:v2.1.0"
+CLIENT_IMAGE = "wireguard-go-bridge-client:v2.1.0"
+NETWORK_NAME = "wg-bridge-test-net"
+BRIDGE_NAME = "wg-bridge-test"
+EXIT_NAME = "wg-exit-server"
+CLIENT_NAME = "wg-client"
 
 
 def step(msg: str):
-    log.info(f"{'=' * 60}")
-    log.info(f"STEP: {msg}")
-    log.info(f"{'=' * 60}")
+    log.info("=" * 60)
+    log.info("STEP: %s", msg)
+    log.info("=" * 60)
 
 
 # ============================================================================
-# Docker SDK
+# Docker helpers
 # ============================================================================
 
 def get_docker_client():
@@ -57,95 +62,110 @@ def get_docker_client():
         from docker import from_env
         from docker.errors import DockerException
     except ImportError:
-        log.error("Docker SDK not installed (pip install docker)")
+        log.error("Docker SDK not installed: pip install docker")
         return None
     try:
         client = from_env()
         client.ping()
         return client
     except DockerException as e:
-        log.error(f"Docker not available: {e}")
+        log.error("Docker not available: %s", e)
         return None
 
 
-def build_image(client, force: bool = False) -> bool:
-    step("Building Docker image")
+def build_image(client, dockerfile: str, tag: str) -> bool:
     from docker.errors import ImageNotFound
+    try:
+        client.images.get(tag)
+        log.info("  Image exists: %s", tag)
+        return True
+    except ImageNotFound:
+        pass
 
-    if not force:
-        try:
-            client.images.get(IMAGE_NAME)
-            log.info(f"Image exists (use --force-build to rebuild)")
-            return True
-        except ImageNotFound:
-            pass
-
+    log.info("  Building: %s (dockerfile=%s)", tag, dockerfile)
     try:
         for line in client.api.build(
-            path=str(ROOT), dockerfile="tests/Dockerfile",
-            tag=IMAGE_NAME, rm=True, forcerm=True, decode=True,
+            path=str(ROOT), dockerfile=dockerfile,
+            tag=tag, rm=True, forcerm=True, decode=True,
         ):
             if "stream" in line:
                 text = line["stream"].strip()
                 if text:
-                    log.info(f"  BUILD | {text}")
+                    log.info("    BUILD | %s", text)
             elif "error" in line:
-                log.error(f"  BUILD ERROR | {line['error']}")
+                log.error("    BUILD ERROR | %s", line["error"])
                 return False
-        log.info(f"Image built: {IMAGE_NAME}")
         return True
     except Exception as e:
-        log.error(f"Build failed: {e}")
+        log.error("  Build failed: %s", e)
         return False
 
 
-def start_container(client, name: str):
-    step(f"Starting container: {name}")
+def ensure_network(client) -> str:
+    from docker.errors import NotFound
+    try:
+        net = client.networks.get(NETWORK_NAME)
+        return net.id
+    except NotFound:
+        net = client.networks.create(NETWORK_NAME, driver="bridge")
+        log.info("  Network created: %s", NETWORK_NAME)
+        return net.id
+
+
+def remove_container(client, name: str):
     from docker.errors import NotFound, APIError
     try:
-        old = client.containers.get(name)
-        old.stop(timeout=3)
-        old.remove(force=True)
+        c = client.containers.get(name)
+        c.stop(timeout=3)
+        c.remove(force=True)
     except (NotFound, APIError):
         pass
 
-    container = client.containers.run(
-        image=IMAGE_NAME, name=name, detach=True, privileged=True,
-        cap_add=["NET_ADMIN", "SYS_ADMIN"],
-        devices=["/dev/net/tun:/dev/net/tun"],
-        sysctls={"net.ipv4.ip_forward": "1", "net.ipv6.conf.all.forwarding": "1"},
-        remove=False,
-    )
-    for _ in range(30):
-        container.reload()
-        if container.status == "running":
-            r = container.exec_run(["echo", "ready"])
-            if r.exit_code == 0:
-                log.info(f"Container ready: {name}")
-                return container
-        time.sleep(1)
-    raise TimeoutError(f"Container {name} not ready")
+
+def get_container_ip(container, network_name: str) -> str:
+    container.reload()
+    networks = container.attrs["NetworkSettings"]["Networks"]
+    return networks[network_name]["IPAddress"]
 
 
-def exec_in_container(container, cmd: str, stream_to_log: bool = True) -> tuple[int, str]:
-    """Execute command in container with real-time streaming output."""
+def _make_tar(src: Path) -> bytes:
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        tar.add(str(src), arcname=src.name)
+    return buf.getvalue()
+
+
+def sync_code(container):
+    step("Syncing code into bridge container")
+    targets = [
+        ("wireguard_go_bridge", "/workspace"),
+        ("tests", "/workspace"),
+        ("pytest.ini", "/workspace"),
+    ]
+    for src_name, dest_dir in targets:
+        src = ROOT / src_name
+        if not src.exists():
+            continue
+        container.exec_run(["rm", "-rf", f"{dest_dir}/{src_name}"])
+        container.put_archive(dest_dir, _make_tar(src))
+        log.info("  %s → %s/%s", src_name, dest_dir, src_name)
+
+
+def exec_stream(container, cmd: str) -> tuple[int, str]:
     exec_id = container.client.api.exec_create(container.id, ["sh", "-c", cmd])
     stream = container.client.api.exec_start(exec_id, stream=True)
-
     lines = []
     for chunk in stream:
         text = chunk.decode("utf-8", errors="replace")
         for line in text.splitlines():
             lines.append(line)
-            if stream_to_log and line.strip():
-                log.info(f"  TEST | {line}")
-
+            if line.strip():
+                log.info("  TEST | %s", line)
     inspect = container.client.api.exec_inspect(exec_id)
-    exit_code = inspect.get("ExitCode", -1)
-    return exit_code, "\n".join(lines)
+    return inspect.get("ExitCode", -1), "\n".join(lines)
 
 
-def copy_from_container(container, src: str, dest: Path):
+def copy_from_container(container, src: str, dest: Path) -> bool:
     from docker.errors import NotFound, APIError
     try:
         bits, _ = container.get_archive(src)
@@ -158,107 +178,137 @@ def copy_from_container(container, src: str, dest: Path):
         return False
 
 
-def stop_container(container):
-    from docker.errors import NotFound, APIError
-    try:
-        container.stop(timeout=5)
-        container.remove(force=True)
-    except (NotFound, APIError):
-        pass
+# ============================================================================
+# Exit server
+# ============================================================================
+
+def start_exit_server(client) -> tuple:
+    """Start exit server, wait for ready, return (container, client_conf)."""
+    step("Starting exit server")
+
+    remove_container(client, EXIT_NAME)
+    container = client.containers.run(
+        image=EXIT_IMAGE, name=EXIT_NAME, detach=True, privileged=True,
+        cap_add=["NET_ADMIN"],
+        network=NETWORK_NAME,
+        remove=False,
+    )
+
+    # Wait for EXIT_READY
+    for _ in range(30):
+        container.reload()
+        if container.status != "running":
+            logs = container.logs().decode()
+            raise RuntimeError(f"Exit server died: {logs}")
+        logs = container.logs().decode()
+        if "EXIT_READY" in logs:
+            break
+        time.sleep(1)
+    else:
+        raise TimeoutError("Exit server not ready")
+
+    exit_ip = get_container_ip(container, NETWORK_NAME)
+    log.info("  Exit server IP: %s", exit_ip)
+
+    # Read client config
+    r = container.exec_run(["cat", "/config/client.conf"])
+    client_conf = r.output.decode()
+    # Replace placeholder with actual IP
+    client_conf = client_conf.replace("__EXIT_SERVER_IP__", exit_ip)
+    log.info("  Client config received (%d bytes)", len(client_conf))
+
+    return container, client_conf
+
+
+# ============================================================================
+# Client container
+# ============================================================================
+
+def start_client(client):
+    """Start client container — plain WireGuard, connects via bridge config."""
+    step("Starting client container")
+    remove_container(client, CLIENT_NAME)
+
+    container = client.containers.run(
+        image=CLIENT_IMAGE, name=CLIENT_NAME, detach=True, privileged=True,
+        cap_add=["NET_ADMIN"],
+        devices=["/dev/net/tun:/dev/net/tun"],
+        network=NETWORK_NAME,
+        remove=False,
+    )
+
+    for _ in range(30):
+        container.reload()
+        if container.status == "running":
+            r = container.exec_run(["echo", "ready"])
+            if r.exit_code == 0:
+                log.info("  Client container ready")
+                return container
+        time.sleep(1)
+    raise TimeoutError("Client container not ready")
+
+
+# ============================================================================
+# Bridge container
+# ============================================================================
+
+def start_bridge(client, env: dict = None):
+    step("Starting bridge container")
+    remove_container(client, BRIDGE_NAME)
+
+    environment = {
+        "WIREGUARD_GO_BRIDGE_LIB_PATH": "/workspace/wireguard_go_bridge.so",
+        "PYTHONPATH": "/workspace",
+    }
+    if env:
+        environment.update(env)
+
+    container = client.containers.run(
+        image=BRIDGE_IMAGE, name=BRIDGE_NAME, detach=True, privileged=True,
+        cap_add=["NET_ADMIN", "SYS_ADMIN"],
+        devices=["/dev/net/tun:/dev/net/tun"],
+        volumes={"/var/run/docker.sock": {"bind": "/var/run/docker.sock", "mode": "rw"}},
+        sysctls={"net.ipv4.ip_forward": "1"},
+        network=NETWORK_NAME,
+        environment=environment,
+        remove=False,
+    )
+
+    for _ in range(30):
+        container.reload()
+        if container.status == "running":
+            r = container.exec_run(["echo", "ready"])
+            if r.exit_code == 0:
+                log.info("  Bridge container ready")
+                return container
+        time.sleep(1)
+    raise TimeoutError("Bridge container not ready")
 
 
 # ============================================================================
 # Test execution
 # ============================================================================
 
-def run_tests(container, results_dir: Path, scope: str) -> tuple[bool, bool]:
-    """Run tests inside container with combined coverage.
-
-    Returns (unit_ok, intg_ok).
-    """
-    unit_ok = True
-    intg_ok = True
-
-    # Determine test paths
-    if scope == "unit":
-        test_paths = "tests/unit/"
-        extra = ""
-    elif scope == "integration":
-        test_paths = "tests/integration/"
-        extra = "--docker"
-    else:
-        test_paths = "tests/unit/ tests/integration/"
-        extra = "--docker"
-
-    step(f"Running tests: {scope}")
+def run_tests(bridge, results_dir: Path) -> bool:
+    step("Running tests: unit + integration")
 
     cmd = (
-        f"cd /workspace && python3 -m pytest {test_paths} {extra} "
-        f"-v --tb=short "
-        f"--cov=wireguard_go_bridge --cov-report=term-missing "
-        f"--cov-report=html:/workspace/coverage_html "
-        f"2>&1"
+        "cd /workspace && python3 -m pytest "
+        "tests/unit/ tests/integration/ --docker "
+        "-v --tb=short "
+        "--cov=wireguard_go_bridge --cov-report=term-missing "
+        "--cov-report=html:/workspace/coverage_html "
+        "2>&1"
     )
 
-    exit_code, output = exec_in_container(container, cmd)
+    exit_code, output = exec_stream(bridge, cmd)
+    (results_dir / "tests.log").write_text(output)
 
-    # Save full log
-    log_path = results_dir / "tests.log"
-    log_path.write_text(output)
+    step("Collecting coverage")
+    if copy_from_container(bridge, "/workspace/coverage_html", results_dir):
+        log.info("  Coverage → %s", results_dir / "coverage_html")
 
-    # Parse results
-    if "failed" in output.lower() or exit_code != 0:
-        if scope in ("unit", "all"):
-            if "tests/unit/" in output and "FAILED" in output:
-                unit_ok = False
-        if scope in ("integration", "all"):
-            if "tests/integration/" in output and "FAILED" in output:
-                intg_ok = False
-        # If we can't tell which failed, mark based on exit code
-        if exit_code != 0 and unit_ok and intg_ok:
-            if scope == "unit":
-                unit_ok = False
-            elif scope == "integration":
-                intg_ok = False
-            else:
-                intg_ok = False
-
-    # Copy coverage HTML
-    step("Collecting coverage report")
-    if copy_from_container(container, "/workspace/coverage_html", results_dir):
-        log.info(f"Coverage HTML → {results_dir / 'coverage_html'}")
-    else:
-        log.warning("Could not copy coverage HTML")
-
-    return unit_ok, intg_ok
-
-
-# ============================================================================
-# Summary
-# ============================================================================
-
-def write_summary(results_dir: Path, unit_ok: bool, intg_ok: bool, duration: float, scope: str):
-    step("Test summary")
-    overall = unit_ok and intg_ok
-
-    lines = [
-        "wireguard-go-bridge v2 — Test Results",
-        "=" * 50,
-        f"Timestamp: {datetime.now().isoformat()}",
-        f"Duration:  {duration:.1f}s",
-        f"Scope:     {scope}",
-        "",
-        f"Unit tests:        {'PASSED' if unit_ok else 'FAILED'}",
-        f"Integration tests: {'PASSED' if intg_ok else 'FAILED'}",
-        f"Overall:           {'PASSED' if overall else 'FAILED'}",
-        "",
-        f"Results:  {results_dir}",
-        f"Log:      {results_dir / 'tests.log'}",
-        f"Coverage: {results_dir / 'coverage_html'}",
-    ]
-    (results_dir / "summary.txt").write_text("\n".join(lines) + "\n")
-    for line in lines:
-        log.info(f"  {line}")
+    return exit_code == 0
 
 
 # ============================================================================
@@ -266,50 +316,69 @@ def write_summary(results_dir: Path, unit_ok: bool, intg_ok: bool, duration: flo
 # ============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="wireguard-go-bridge v2 test runner")
-    parser.add_argument("--unit", action="store_true", help="Unit tests only")
-    parser.add_argument("--integration", action="store_true", help="Integration tests only")
-    parser.add_argument("--no-build", action="store_true", help="Skip Docker image build")
-    parser.add_argument("--force-build", action="store_true", help="Force image rebuild")
-    args = parser.parse_args()
-
-    scope = "all"
-    if args.unit:
-        scope = "unit"
-    elif args.integration:
-        scope = "integration"
-
     start_time = time.time()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     results_dir = ROOT / "test_results" / timestamp
     results_dir.mkdir(parents=True, exist_ok=True)
-    log.info(f"Results → {results_dir}")
 
-    # Docker
     client = get_docker_client()
     if client is None:
-        log.error("Docker required")
         sys.exit(1)
 
-    if not args.no_build:
-        if not build_image(client, force=args.force_build):
-            sys.exit(1)
+    # Build images
+    step("Building images")
+    if not build_image(client, "tests/Dockerfile", BRIDGE_IMAGE):
+        sys.exit(1)
+    if not build_image(client, "tests/exit-server.Dockerfile", EXIT_IMAGE):
+        sys.exit(1)
+    if not build_image(client, "tests/client.Dockerfile", CLIENT_IMAGE):
+        sys.exit(1)
 
-    name = f"{CONTAINER_PREFIX}-{os.getpid()}"
-    container = start_container(client, name)
+    # Network + containers
+    ensure_network(client)
+    exit_container, client_conf = start_exit_server(client)
+    client_container = start_client(client)
+    client_ip = get_container_ip(client_container, NETWORK_NAME)
+    log.info("  Client container IP: %s", client_ip)
+
+    env = {
+        "EXIT_SERVER_CONFIGURATION": client_conf,
+        "CLIENT_CONTAINER_IP": client_ip,
+    }
+    bridge = start_bridge(client, env)
+    passed = False
 
     try:
-        unit_ok, intg_ok = run_tests(container, results_dir, scope)
+        sync_code(bridge)
+        passed = run_tests(bridge, results_dir)
     finally:
-        stop_container(container)
-        log.info(f"Container {name} destroyed")
+        remove_container(client, BRIDGE_NAME)
+        remove_container(client, EXIT_NAME)
+        remove_container(client, CLIENT_NAME)
+        from docker.errors import NotFound, APIError
+        try:
+            client.networks.get(NETWORK_NAME).remove()
+        except (NotFound, APIError):
+            pass
+        log.info("Cleanup complete — all containers + network destroyed")
 
     duration = time.time() - start_time
-    write_summary(results_dir, unit_ok, intg_ok, duration, scope)
+    status = "PASSED" if passed else "FAILED"
+    step(f"OVERALL: {status} ({duration:.1f}s)")
 
-    overall = unit_ok and intg_ok
-    step(f"OVERALL: {'PASSED' if overall else 'FAILED'} ({duration:.1f}s)")
-    sys.exit(0 if overall else 1)
+    summary = [
+        "wireguard-go-bridge v2.1.0 — Test Results",
+        "=" * 50,
+        f"Timestamp: {datetime.now().isoformat()}",
+        f"Duration:  {duration:.1f}s",
+        f"Result:    {status}",
+        f"Log:      {results_dir / 'tests.log'}",
+    ]
+    (results_dir / "summary.txt").write_text("\n".join(summary) + "\n")
+    for line in summary:
+        log.info("  %s", line)
+
+    sys.exit(0 if passed else 1)
 
 
 if __name__ == "__main__":

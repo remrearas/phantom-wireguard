@@ -14,9 +14,4 @@ package main
 
 import "wireguard-go-bridge/core"
 
-// Global registries — one per type for type safety
-var (
-	deviceRegistry = core.NewHandleRegistry()
-	peerRegistry   = core.NewHandleRegistry()
-	loggerRegistry = core.NewHandleRegistry()
-)
+var deviceRegistry = core.NewHandleRegistry()
