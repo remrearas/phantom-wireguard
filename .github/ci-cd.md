@@ -1,10 +1,10 @@
 # CI/CD — wstunnel-bridge
 
-| Workflow                        | Trigger                                     | Jobs                                  | Output                             |
-|---------------------------------|---------------------------------------------|---------------------------------------|------------------------------------|
-| `test-wstunnel-bridge.yml`      | `dev/wstunnel-bridge` push, `workflow_call` | `test-python` (Docker test_runner.py) | test-results artifact              |
-| `fetch-wstunnel-artifacts.yaml` | `fetch-wstunnel-artifacts-*` tag            | `fetch-and-publish`                   | dist/ + wstunnel_bridge/ (commit)  |
-| `publish-wstunnel-bridge.yml`   | `wstunnel-bridge-release-v*` tag            | `test` → `package`                    | GitHub Release (amd64 + arm64 zip) |
+| Workflow                        | Trigger                                     | Jobs                                  | Output                            |
+|---------------------------------|---------------------------------------------|---------------------------------------|-----------------------------------|
+| `test-wstunnel-bridge.yml`      | `dev/wstunnel-bridge` push, `workflow_call` | `test-python` (Docker test_runner.py) | test-results artifact             |
+| `fetch-wstunnel-artifacts.yaml` | `fetch-wstunnel-artifacts-*` tag            | `fetch-and-publish`                   | dist/ + wstunnel_bridge/ (commit) |
+| `publish-wstunnel-bridge.yml`   | `publish-vendor-wstunnel-bridge-v*` tag     | `test` → `publish`                    | dev/vendor branch (amd64 + arm64) |
 
 ## Flow
 
@@ -16,10 +16,10 @@ Fetch tag (fetch-wstunnel-artifacts-*):
   └── fetch-wstunnel-artifacts.yaml
         └── Download .so from ARAS-Workspace/wstunnel → dist/ commit
 
-Release tag (wstunnel-bridge-release-v*):
+Vendor tag (publish-vendor-wstunnel-bridge-v*):
   └── publish-wstunnel-bridge.yml
         ├── test    (workflow_call → test-wstunnel-bridge.yml)
-        └── package (dist/ → zip + Python wrapper → gh release create)
+        └── publish (dist/ + Python wrapper → push to dev/vendor)
 ```
 
 ## Artifacts
@@ -28,25 +28,32 @@ Release tag (wstunnel-bridge-release-v*):
 |----------------|------------------------------|-----------|
 | `test-results` | pytest output, coverage HTML | 30 days   |
 
-## Release Package Contents
+## Vendor Directory Structure (dev/vendor branch)
 
 ```
-wstunnel-bridge-vX.Y.Z-linux-{amd64,arm64}.zip
-├── libwstunnel_bridge_linux.so
-├── libwstunnel_bridge_linux.so.sha256
-└── wstunnel_bridge/
-    ├── __init__.py
-    ├── _ffi.py
-    ├── client.py
-    ├── db.py
-    ├── server.py
-    ├── state.py
-    └── types.py
+wstunnel-bridge/
+├── VERSION
+├── linux-amd64/
+│   ├── libwstunnel_bridge_linux.so
+│   ├── libwstunnel_bridge_linux.so.sha256
+│   └── wstunnel_bridge/
+│       ├── __init__.py
+│       ├── _ffi.py
+│       ├── client.py
+│       ├── db.py
+│       ├── server.py
+│       ├── state.py
+│       └── types.py
+└── linux-arm64/
+    ├── libwstunnel_bridge_linux.so
+    ├── libwstunnel_bridge_linux.so.sha256
+    └── wstunnel_bridge/
+        └── ...
 ```
 
 ## Notes
 
 - `.so` is built in external repo (ARAS-Workspace/wstunnel), fetched via `fetch-wstunnel-artifacts.yaml`
-- `dist/` is committed to branch (unlike firewall/wireguard bridges which use artifact-only flow)
-- Release packages are assembled from branch `dist/` contents
-- No build workflow needed — build happens in external repo
+- `dist/` is committed to branch (unlike wireguard-go-bridge which uses artifact-only flow)
+- Vendor artifacts are published to `dev/vendor` branch, not as GitHub Releases
+- Each publish overwrites the previous version — version history lives in git commits
