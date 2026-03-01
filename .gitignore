@@ -1,5 +1,6 @@
-# Local build artifacts
+# Build artifacts
 build/
+dist/
 
 # Go
 vendor/
