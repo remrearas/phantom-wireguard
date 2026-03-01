@@ -41,16 +41,22 @@ def _resolve_platform() -> tuple[str, str]:
 
 
 def _find_library() -> str:
-    """Locate wstunnel bridge shared library via environment variable."""
+    """Locate wstunnel bridge shared library."""
     env_path = os.environ.get("WSTUNNEL_BRIDGE_LIB_PATH")
     if env_path and os.path.isfile(env_path):
         return env_path
+
+    lib_name, _ = _resolve_platform()
+
+    # Sibling path — .so alongside _ffi.py (vendor-pack layout)
+    sibling_path = os.path.join(os.path.dirname(__file__), lib_name)
+    if os.path.isfile(sibling_path):
+        return sibling_path
 
     found = ctypes.util.find_library("wstunnel_bridge_linux")
     if found:
         return found
 
-    lib_name, _ = _resolve_platform()
     raise FileNotFoundError(
         f"{lib_name} not found. Set WSTUNNEL_BRIDGE_LIB_PATH environment variable."
     )
