@@ -1,4 +1,14 @@
 """
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+
 WstunnelServer — High-level Python wrapper for wstunnel bridge server.
 
 Usage:
@@ -19,7 +29,7 @@ Or as context manager:
 
 from typing import Optional
 
-from ._ffi import get_lib
+from ._ffi import get_lib, _setup_log_callback
 from .types import check_error, LogLevel
 
 
@@ -27,10 +37,11 @@ class WstunnelServer:
     """Wstunnel server managed via native bridge."""
 
     def __init__(self, bind_url: str, log_level: LogLevel = LogLevel.ERROR):
+        _setup_log_callback()
         lib = get_lib()
         self._lib = lib
 
-        # Initialize logging
+        # Initialize logging (must be after callback registration)
         lib.wstunnel_init_logging(int(log_level))
 
         # Create server config

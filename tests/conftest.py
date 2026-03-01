@@ -9,28 +9,29 @@
 Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 
-wstunnel_bridge — Python bindings for wstunnel via native FFI bridge.
-Replaces subprocess-based wstunnel management.
+wstunnel-bridge test configuration.
+
+--docker flag gates integration tests that require native .so library.
+Unit tests run on any platform without the flag.
 """
 
-__version__ = "2.0.0"
+import pytest
 
-from ._ffi import get_lib, set_log_callback, get_version
-from .types import WstunnelError, LogLevel, ErrorCode
-from .client import WstunnelClient
-from .server import WstunnelServer
-from .db import WstunnelDB
-from .state import WstunnelState
 
-__all__ = [
-    "get_lib",
-    "set_log_callback",
-    "get_version",
-    "WstunnelError",
-    "LogLevel",
-    "ErrorCode",
-    "WstunnelClient",
-    "WstunnelServer",
-    "WstunnelDB",
-    "WstunnelState",
-]
+def pytest_addoption(parser):
+    parser.addoption(
+        "--docker", action="store_true", default=False,
+        help="Run Docker-based integration tests",
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "docker: Docker-based integration tests")
+
+
+def pytest_collection_modifyitems(config, items):
+    if not config.getoption("--docker"):
+        skip_marker = pytest.mark.skip(reason="Need --docker to run")
+        for item in items:
+            if "docker" in item.keywords:
+                item.add_marker(skip_marker)

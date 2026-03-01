@@ -1,10 +1,21 @@
 """
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+
 Low-level ctypes bindings to libwstunnel_bridge_linux.so.
 All other modules use this as the FFI foundation.
 """
 
 import ctypes
 import ctypes.util
+import logging
 import os
 import platform
 from typing import Callable, Optional
@@ -203,20 +214,50 @@ def _setup_signatures(lib: ctypes.CDLL) -> None:
     lib.wstunnel_server_get_last_error.restype = ctypes.c_char_p
 
 
-# --- Convenience ---
+# --- Logging ---
 
-_log_callback_ref = None
+_log = logging.getLogger("wstunnel_bridge")
+
+# Rust → Python level mapping
+_LEVEL_MAP = {
+    0: logging.ERROR,    # WS_LOG_ERROR
+    1: logging.WARNING,  # WS_LOG_WARN
+    2: logging.INFO,     # WS_LOG_INFO
+    3: logging.DEBUG,    # WS_LOG_DEBUG
+    4: logging.DEBUG,    # WS_LOG_TRACE → DEBUG (Python has no TRACE)
+}
+
+# Prevent GC of active callback
+_active_log_callback = None
+_log_callback_registered = False
+
+
+def _setup_log_callback() -> None:
+    """Register Rust→Python log bridge (once). Called by Client/Server init."""
+    global _active_log_callback, _log_callback_registered
+    if _log_callback_registered:
+        return
+
+    def _callback(level, message, _context):
+        py_level = _LEVEL_MAP.get(level, logging.DEBUG)
+        text = message.decode("utf-8") if message else ""
+        _log.log(py_level, text)
+
+    _active_log_callback = _WS_LOG_CALLBACK_TYPE(_callback)
+    get_lib().wstunnel_set_log_callback(_active_log_callback, None)
+    _log_callback_registered = True
 
 
 def set_log_callback(callback: Callable[[int, str], None]) -> None:
-    """Set global log callback. callback(level: int, message: str)"""
-    global _log_callback_ref
+    """Set custom log callback — overrides default Python logging bridge."""
+    global _active_log_callback, _log_callback_registered
 
     def _c_callback(level, message, _context):
         callback(int(level), message.decode("utf-8") if message else "")
 
-    _log_callback_ref = _WS_LOG_CALLBACK_TYPE(_c_callback)
-    get_lib().wstunnel_set_log_callback(_log_callback_ref, None)
+    _active_log_callback = _WS_LOG_CALLBACK_TYPE(_c_callback)
+    get_lib().wstunnel_set_log_callback(_active_log_callback, None)
+    _log_callback_registered = True
 
 
 def get_version() -> str:

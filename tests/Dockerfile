@@ -2,6 +2,7 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
+    python3-pip \
     socat \
     ncat \
     openssl \
@@ -9,6 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     tar \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --break-system-packages pytest==9.0.2 pytest-cov==7.0.0
 
 WORKDIR /workspace
 
@@ -28,9 +31,12 @@ RUN ARCH=$(dpkg --print-architecture) && \
     cp /tmp/lib-${ARCH}.so /workspace/libwstunnel_bridge_linux.so && \
     rm /tmp/lib-*.so
 
+# Python package + tests
 COPY wstunnel_bridge/ /workspace/wstunnel_bridge/
-COPY test/ /workspace/test/
+COPY tests/ /workspace/tests/
+COPY pytest.ini /workspace/pytest.ini
 
+# Self-signed certificate for integration tests
 RUN mkdir -p /workspace/certs && \
     openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
     -keyout /workspace/certs/key.pem -out /workspace/certs/cert.pem \

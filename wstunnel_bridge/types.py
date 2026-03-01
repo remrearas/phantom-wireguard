@@ -1,4 +1,14 @@
 """
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+
 wstunnel_bridge types — Error codes, log levels, exceptions.
 """
 
@@ -6,6 +16,7 @@ from enum import IntEnum
 
 
 class ErrorCode(IntEnum):
+    # v1 codes (FFI)
     OK = 0
     ALREADY_RUNNING = -1
     INVALID_PARAM = -2
@@ -13,6 +24,13 @@ class ErrorCode(IntEnum):
     START_FAILED = -4
     NOT_RUNNING = -5
     CONFIG_NULL = -6
+
+    # v2 codes (DB/state)
+    DB_OPEN = -10
+    DB_QUERY = -11
+    DB_WRITE = -12
+    INVALID_STATE = -13
+    NOT_INITIALIZED = -14
 
 
 class LogLevel(IntEnum):
@@ -30,6 +48,11 @@ _ERROR_MESSAGES = {
     ErrorCode.START_FAILED: "Client start failed",
     ErrorCode.NOT_RUNNING: "Client is not running",
     ErrorCode.CONFIG_NULL: "Config handle is null",
+    ErrorCode.DB_OPEN: "Database open failed",
+    ErrorCode.DB_QUERY: "Database query failed",
+    ErrorCode.DB_WRITE: "Database write failed",
+    ErrorCode.INVALID_STATE: "Invalid state transition",
+    ErrorCode.NOT_INITIALIZED: "Not initialized",
 }
 
 

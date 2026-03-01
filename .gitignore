@@ -8,7 +8,6 @@ build/
 
 # CI-managed artifacts (pushed by workflow, not local)
 dist/
-wstunnel_bridge/
 
 # Virtual environments
 .venv/
@@ -29,6 +28,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+test_results/
 
 # Environments
 .env

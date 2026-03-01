@@ -1,13 +1,23 @@
-name: Package wstunnel-bridge
+name: Publish wstunnel-bridge
 
 on:
   push:
     tags:
-      - "wstunnel-bridge-release-v*"
+      - 'wstunnel-bridge-release-v*'
+
+permissions:
+  contents: read
 
 jobs:
   test:
-    name: Test and package
+    name: Test
+    uses: ./.github/workflows/test-wstunnel-bridge.yml
+    permissions:
+      contents: read
+
+  package:
+    name: Package and release
+    needs: [test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -22,19 +32,6 @@ jobs:
         with:
           ref: dev/wstunnel-bridge
           persist-credentials: false
-
-      - name: Setup Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.12"
-
-      - name: Install test dependencies
-        run: pip install pytest docker
-
-      - name: Run all tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: pytest --docker test/ -v
 
       - name: Extract version
         id: version
@@ -76,3 +73,16 @@ jobs:
             --generate-notes \
             "${ARCHIVE}-linux-amd64.zip" \
             "${ARCHIVE}-linux-arm64.zip"
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          AMD64_SHA=$(cut -d' ' -f1 dist/linux-amd64/libwstunnel_bridge_linux.so.sha256)
+          ARM64_SHA=$(cut -d' ' -f1 dist/linux-arm64/libwstunnel_bridge_linux.so.sha256)
+          echo "## wstunnel-bridge ${VERSION} Released" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Platform | SHA256 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| linux/amd64 | \`${AMD64_SHA}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| linux/arm64 | \`${ARM64_SHA}\` |" >> "$GITHUB_STEP_SUMMARY"
