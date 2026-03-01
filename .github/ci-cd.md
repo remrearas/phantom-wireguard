@@ -1,10 +1,10 @@
 # CI/CD — wireguard-go-bridge
 
-| Workflow                          | Trigger                                         | Jobs                                                               | Output                             |
-|-----------------------------------|-------------------------------------------------|--------------------------------------------------------------------|------------------------------------|
-| `test-wireguard-go-bridge.yml`    | `dev/wireguard-go-bridge` push, `workflow_call` | `test` (Docker unit+integration), `test-netns` (network namespace) | test-results artifact              |
-| `build-wireguard-go-bridge.yml`   | `dev/wireguard-go-bridge` push, `workflow_call` | `build-linux-amd64`, `build-linux-arm64`                           | .so + .h + .sha256 artifacts       |
-| `publish-wireguard-go-bridge.yml` | `publish-vendor-wireguard-go-bridge-v*` tag     | `test` → `build` → `publish`                                       | dev/vendors branch (amd64 + arm64) |
+| Workflow                          | Trigger                                         | Jobs                                                               | Output                            |
+|-----------------------------------|------------------------------------------------ |--------------------------------------------------------------------|---------------------------------  |
+| `test-wireguard-go-bridge.yml`    | `dev/wireguard-go-bridge` push, `workflow_call` | `test` (Docker unit+integration), `test-netns` (network namespace) | test-results artifact             |
+| `build-wireguard-go-bridge.yml`   | `dev/wireguard-go-bridge` push, `workflow_call` | `build-linux-amd64`, `build-linux-arm64`                           | .so + .h + .sha256 artifacts      |
+| `publish-wireguard-go-bridge.yml` | `publish-vendor-wireguard-go-bridge-v*` tag     | `test` → `build` → `publish`                                      | dev/vendor branch (amd64 + arm64) |
 
 ## Flow
 
@@ -17,7 +17,7 @@ Vendor tag (publish-vendor-wireguard-go-bridge-v*):
   └── publish-wireguard-go-bridge.yml
         ├── test    (workflow_call → test-wireguard-go-bridge.yml)
         ├── build   (workflow_call → build-wireguard-go-bridge.yml)
-        └── publish (download artifacts → organize → push to dev/vendors)
+        └── publish (download artifacts → organize → push to dev/vendor)
 ```
 
 ## Artifacts
@@ -28,10 +28,11 @@ Vendor tag (publish-vendor-wireguard-go-bridge-v*):
 | `wireguard-go-bridge-linux-amd64` | .so, .h, .sha256        | 90 days   |
 | `wireguard-go-bridge-linux-arm64` | .so, .h, .sha256        | 90 days   |
 
-## Vendor Directory Structure (dev/vendors branch)
+## Vendor Directory Structure (dev/vendor branch)
 
 ```
-wireguard-go-bridge/vX.Y.Z/
+wireguard-go-bridge/
+├── VERSION
 ├── linux-amd64/
 │   ├── wireguard_go_bridge.so
 │   ├── wireguard_go_bridge.so.sha256
@@ -50,5 +51,5 @@ wireguard-go-bridge/vX.Y.Z/
 ## Notes
 
 - `dist/` is not used — build artifacts flow through GitHub Actions artifacts only
-- Vendor artifacts are published to `dev/vendors` branch, not as GitHub Releases
-- Each version gets its own directory, preserving history of all published versions
+- Vendor artifacts are published to `dev/vendor` branch, not as GitHub Releases
+- Each publish overwrites the previous version — version history lives in git commits
