@@ -39,21 +39,19 @@ def _find_library() -> str:
     if env_path and os.path.isfile(env_path):
         return env_path
 
-    lib_name, arch_dir = _resolve_platform()
+    lib_name, _ = _resolve_platform()
 
-    from pathlib import Path
-    pkg_dir = Path(__file__).resolve().parent.parent
-    dist_path = pkg_dir / "dist" / arch_dir / lib_name
-    if dist_path.exists():
-        return str(dist_path)
+    # Sibling path — .so alongside _ffi.py (vendor-pack layout)
+    sibling_path = os.path.join(os.path.dirname(__file__), lib_name)
+    if os.path.isfile(sibling_path):
+        return sibling_path
 
     found = ctypes.util.find_library("firewall_bridge_linux")
     if found:
         return found
 
     raise FileNotFoundError(
-        f"Cannot find {lib_name}. Set FIREWALL_BRIDGE_LIB_PATH or "
-        f"place the library in dist/{arch_dir}/."
+        f"{lib_name} not found. Set FIREWALL_BRIDGE_LIB_PATH environment variable."
     )
 
 
