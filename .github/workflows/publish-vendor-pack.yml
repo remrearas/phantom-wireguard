@@ -51,7 +51,7 @@ jobs:
         run: |
           gh release create "vendor-pack-${VERSION}" \
             --title "vendor-pack ${VERSION}" \
-            --notes "" \
+            --notes "${VERSION}" \
             dist/vendor-pack-${VERSION}-linux-amd64.zip \
             dist/vendor-pack-${VERSION}-linux-arm64.zip
 
