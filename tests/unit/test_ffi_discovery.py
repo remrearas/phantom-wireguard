@@ -1,4 +1,15 @@
 """
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 Unit tests for firewall_bridge._ffi library discovery — mock-based, no .so required.
 """
 
@@ -34,19 +45,34 @@ class TestResolvePlatform:
 
 
 class TestFindLibrary:
-    @staticmethod
-    def setup_method():
-        """Reset cached lib before each test."""
+    _saved_env = None
+    _saved_lib = None
+
+    def setup_method(self):
+        """Reset cached lib before each test, save original state."""
         import firewall_bridge._ffi as ffi
+        self._saved_lib = ffi._lib
+        self._saved_env = os.environ.get("FIREWALL_BRIDGE_LIB_PATH")
         ffi._lib = None
         os.environ.pop("FIREWALL_BRIDGE_LIB_PATH", None)
 
-    def test_env_var_path(self):
+    def teardown_method(self):
+        """Restore original state after each test."""
         import firewall_bridge._ffi as ffi
-        os.environ["FIREWALL_BRIDGE_LIB_PATH"] = "/custom/lib.so"
+        ffi._lib = self._saved_lib
+        if self._saved_env is not None:
+            os.environ["FIREWALL_BRIDGE_LIB_PATH"] = self._saved_env
+        else:
+            os.environ.pop("FIREWALL_BRIDGE_LIB_PATH", None)
+
+    def test_env_var_path(self, tmp_path):
+        import firewall_bridge._ffi as ffi
+        fake_so = tmp_path / "lib.so"
+        fake_so.write_bytes(b"\x00")
+        os.environ["FIREWALL_BRIDGE_LIB_PATH"] = str(fake_so)
         try:
             path = ffi._find_library()
-            assert path == "/custom/lib.so"
+            assert path == str(fake_so)
         finally:
             os.environ.pop("FIREWALL_BRIDGE_LIB_PATH", None)
 

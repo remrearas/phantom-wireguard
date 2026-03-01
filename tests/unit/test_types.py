@@ -1,4 +1,15 @@
 """
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+WireGuard® is a registered trademark of Jason A. Donenfeld.
+
 Unit tests for firewall_bridge.types — pure Python, no .so required.
 """
 
@@ -16,11 +27,15 @@ class TestErrorCode:
                 assert code < 0
 
     def test_all_codes_present(self):
-        expected = {
-            "OK", "ALREADY_INITIALIZED", "NOT_INITIALIZED",
-            "NFT_FAILED", "NETLINK_FAILED", "INVALID_PARAM",
-            "IO_ERROR", "PERMISSION_DENIED",
-        }
+        # v1 codes
+        v1 = {"OK", "ALREADY_INITIALIZED", "NOT_INITIALIZED",
+              "NFT_FAILED", "NETLINK_FAILED", "INVALID_PARAM",
+              "IO_ERROR", "PERMISSION_DENIED"}
+        # v2 codes
+        v2 = {"DB_OPEN", "DB_QUERY", "DB_WRITE", "GROUP_NOT_FOUND",
+              "RULE_NOT_FOUND", "INVALID_STATE", "ALREADY_STARTED",
+              "NOT_STARTED", "PRESET_FAILED", "VERIFY_FAILED"}
+        expected = v1 | v2
         actual = {c.name for c in ErrorCode}
         assert actual == expected
 

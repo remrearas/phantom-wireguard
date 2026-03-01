@@ -571,3 +571,29 @@ pub fn enable_ip_forward() -> Result<(), String> {
     std::fs::write("/proc/sys/net/ipv4/ip_forward", "1")
         .map_err(|e| format!("Cannot enable ip_forward: {}", e))
 }
+
+// ---------------------------------------------------------------------------
+// Generic routing rule dispatch (v2 — DB-driven)
+// ---------------------------------------------------------------------------
+
+use crate::db::RoutingRuleRow;
+
+/// Apply a routing rule from DB row to kernel.
+pub fn apply_routing_rule(rule: &RoutingRuleRow) -> Result<(), String> {
+    match rule.rule_type.as_str() {
+        "table" => ensure_table(rule.table_id as u32, &rule.table_name),
+        "policy" => policy_add(&rule.from_network, &rule.to_network, &rule.table_name, rule.priority as u32),
+        "route" => route_add(&rule.destination, &rule.device, &rule.table_name),
+        other => Err(format!("Unknown routing rule type: {other}")),
+    }
+}
+
+/// Remove a routing rule from kernel (reverse of apply).
+pub fn remove_routing_rule(rule: &RoutingRuleRow) -> Result<(), String> {
+    match rule.rule_type.as_str() {
+        "table" => Ok(()), // tables are not removed — they persist in rt_tables
+        "policy" => policy_delete(&rule.from_network, &rule.to_network, &rule.table_name, rule.priority as u32),
+        "route" => route_delete(&rule.destination, &rule.device, &rule.table_name),
+        other => Err(format!("Unknown routing rule type: {other}")),
+    }
+}

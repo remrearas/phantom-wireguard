@@ -1,11 +1,23 @@
 """
-Error types and enums for firewall_bridge.
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+WireGuard® is a registered trademark of Jason A. Donenfeld.
+
+Error types and enums for firewall_bridge v2.
 """
 
 from enum import IntEnum
 
 
 class ErrorCode(IntEnum):
+    # v1 codes
     OK = 0
     ALREADY_INITIALIZED = -1
     NOT_INITIALIZED = -2
@@ -14,6 +26,18 @@ class ErrorCode(IntEnum):
     INVALID_PARAM = -5
     IO_ERROR = -6
     PERMISSION_DENIED = -7
+
+    # v2 codes
+    DB_OPEN = -10
+    DB_QUERY = -11
+    DB_WRITE = -12
+    GROUP_NOT_FOUND = -13
+    RULE_NOT_FOUND = -14
+    INVALID_STATE = -15
+    ALREADY_STARTED = -16
+    NOT_STARTED = -17
+    PRESET_FAILED = -18
+    VERIFY_FAILED = -19
 
 
 class AddressFamily(IntEnum):
@@ -32,7 +56,8 @@ class FirewallBridgeError(Exception):
         self.detail = detail
 
     def __str__(self) -> str:
-        msg = f"FirewallBridgeError({self.code.name if isinstance(self.code, ErrorCode) else self.code})"
+        name = self.code.name if isinstance(self.code, ErrorCode) else str(self.code)
+        msg = f"FirewallBridgeError({name})"
         if self.detail:
             msg += f": {self.detail}"
         return msg

@@ -1,19 +1,29 @@
 """
-Low-level ctypes bindings for libfirewall_bridge_linux.so.
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+WireGuard® is a registered trademark of Jason A. Donenfeld.
+
+Low-level ctypes bindings to libfirewall_bridge_linux.so (v2 API).
+c_void_p + free_string pattern matches wireguard-go-bridge v2.
 """
 
 import ctypes
 import ctypes.util
 import os
 import platform
-from pathlib import Path
 from typing import Optional
 
 _lib: Optional[ctypes.CDLL] = None
 
 
 def _resolve_platform():
-    """Resolve platform-specific library name and arch directory."""
     machine = platform.machine().lower()
     if machine in ("x86_64", "amd64"):
         arch_dir = "linux-amd64"
@@ -25,21 +35,18 @@ def _resolve_platform():
 
 
 def _find_library() -> str:
-    """Find the shared library path."""
-    # 1. Explicit env var
     env_path = os.environ.get("FIREWALL_BRIDGE_LIB_PATH")
-    if env_path:
+    if env_path and os.path.isfile(env_path):
         return env_path
 
     lib_name, arch_dir = _resolve_platform()
 
-    # 2. dist/ directory relative to package
+    from pathlib import Path
     pkg_dir = Path(__file__).resolve().parent.parent
     dist_path = pkg_dir / "dist" / arch_dir / lib_name
     if dist_path.exists():
         return str(dist_path)
 
-    # 3. System library path
     found = ctypes.util.find_library("firewall_bridge_linux")
     if found:
         return found
@@ -51,89 +58,149 @@ def _find_library() -> str:
 
 
 def get_lib() -> ctypes.CDLL:
-    """Load and return the shared library (cached)."""
     global _lib
     if _lib is not None:
         return _lib
-
     path = _find_library()
     _lib = ctypes.CDLL(path)
     _setup_signatures(_lib)
     return _lib
 
 
+c_p = ctypes.c_char_p      # input strings (Python → Rust)
+c_vp = ctypes.c_void_p     # output strings (Rust → Python, must free_string)
+c_i32 = ctypes.c_int32
+c_i64 = ctypes.c_int64
+c_u8 = ctypes.c_uint8
+c_u16 = ctypes.c_uint16
+c_u32 = ctypes.c_uint32
+
+
+# Log callback type: void(int32_t level, const char *message, void *context)
+LOG_CALLBACK_TYPE = ctypes.CFUNCTYPE(None, ctypes.c_int32, ctypes.c_char_p, ctypes.c_void_p)
+
+# Prevent GC of active callback
+_active_log_callback = None
+
+
 def _setup_signatures(lib: ctypes.CDLL) -> None:
-    """Declare function signatures for type safety."""
-    c_char_p = ctypes.c_char_p
-    c_int32 = ctypes.c_int32
-    c_uint8 = ctypes.c_uint8
-    c_uint16 = ctypes.c_uint16
-    c_uint32 = ctypes.c_uint32
+    """Define C function signatures for v2 API."""
 
-    # --- Lifecycle ---
-    lib.firewall_bridge_init.restype = c_int32
-    lib.firewall_bridge_init.argtypes = []
+    # ---- Log Callback ----
+    lib.firewall_bridge_set_log_callback.argtypes = [LOG_CALLBACK_TYPE, ctypes.c_void_p]
+    lib.firewall_bridge_set_log_callback.restype = None
 
-    lib.firewall_bridge_cleanup.restype = None
-    lib.firewall_bridge_cleanup.argtypes = []
+    # ---- Lifecycle ----
+    lib.firewall_bridge_init.argtypes = [c_p]
+    lib.firewall_bridge_init.restype = c_i32
 
-    lib.firewall_bridge_get_version.restype = c_char_p
+    lib.firewall_bridge_get_status.argtypes = []
+    lib.firewall_bridge_get_status.restype = c_vp
+
+    lib.firewall_bridge_start.argtypes = []
+    lib.firewall_bridge_start.restype = c_i32
+
+    lib.firewall_bridge_stop.argtypes = []
+    lib.firewall_bridge_stop.restype = c_i32
+
+    lib.firewall_bridge_close.argtypes = []
+    lib.firewall_bridge_close.restype = c_i32
+
+    # ---- Rule Groups ----
+    lib.fw_create_rule_group.argtypes = [c_p, c_p, c_i32]
+    lib.fw_create_rule_group.restype = c_vp
+
+    lib.fw_delete_rule_group.argtypes = [c_p]
+    lib.fw_delete_rule_group.restype = c_i32
+
+    lib.fw_enable_rule_group.argtypes = [c_p]
+    lib.fw_enable_rule_group.restype = c_i32
+
+    lib.fw_disable_rule_group.argtypes = [c_p]
+    lib.fw_disable_rule_group.restype = c_i32
+
+    lib.fw_list_rule_groups.argtypes = []
+    lib.fw_list_rule_groups.restype = c_vp
+
+    lib.fw_get_rule_group.argtypes = [c_p]
+    lib.fw_get_rule_group.restype = c_vp
+
+    # ---- Firewall Rules ----
+    lib.fw_add_rule.argtypes = [c_p, c_p, c_p, c_u8, c_p, c_u16, c_p, c_p, c_p, c_p, c_p]
+    lib.fw_add_rule.restype = c_i64
+
+    lib.fw_remove_rule.argtypes = [c_i64]
+    lib.fw_remove_rule.restype = c_i32
+
+    lib.fw_list_rules.argtypes = [c_p]
+    lib.fw_list_rules.restype = c_vp
+
+    # ---- Routing Rules ----
+    lib.rt_add_rule.argtypes = [c_p, c_p, c_p, c_p, c_p, c_u32, c_u32, c_p, c_p, c_u32]
+    lib.rt_add_rule.restype = c_i64
+
+    lib.rt_remove_rule.argtypes = [c_i64]
+    lib.rt_remove_rule.restype = c_i32
+
+    lib.rt_list_rules.argtypes = [c_p]
+    lib.rt_list_rules.restype = c_vp
+
+    # ---- Presets ----
+    lib.fw_apply_preset_vpn.argtypes = [c_p, c_p, c_u16, c_p, c_p]
+    lib.fw_apply_preset_vpn.restype = c_vp
+
+    lib.fw_apply_preset_multihop.argtypes = [c_p, c_p, c_p, c_u32, c_u32, c_p]
+    lib.fw_apply_preset_multihop.restype = c_vp
+
+    lib.fw_apply_preset_kill_switch.argtypes = [c_u16, c_u16, c_p]
+    lib.fw_apply_preset_kill_switch.restype = c_vp
+
+    lib.fw_apply_preset_dns_protection.argtypes = [c_p]
+    lib.fw_apply_preset_dns_protection.restype = c_vp
+
+    lib.fw_apply_preset_ipv6_block.argtypes = []
+    lib.fw_apply_preset_ipv6_block.restype = c_vp
+
+    lib.fw_remove_preset.argtypes = [c_p]
+    lib.fw_remove_preset.restype = c_i32
+
+    # ---- Verify ----
+    lib.fw_get_kernel_state.argtypes = []
+    lib.fw_get_kernel_state.restype = c_vp
+
+    lib.fw_verify_rules.argtypes = []
+    lib.fw_verify_rules.restype = c_vp
+
+    # ---- Utility ----
     lib.firewall_bridge_get_version.argtypes = []
+    lib.firewall_bridge_get_version.restype = c_p  # static, no free needed
 
-    lib.firewall_bridge_get_last_error.restype = c_char_p
     lib.firewall_bridge_get_last_error.argtypes = []
+    lib.firewall_bridge_get_last_error.restype = c_p  # static, no free needed
 
-    # --- Firewall: INPUT ---
-    lib.fw_add_input_accept.restype = c_int32
-    lib.fw_add_input_accept.argtypes = [c_uint8, c_char_p, c_uint16, c_char_p]
+    lib.firewall_bridge_free_string.argtypes = [c_p]
+    lib.firewall_bridge_free_string.restype = None
 
-    lib.fw_add_input_drop.restype = c_int32
-    lib.fw_add_input_drop.argtypes = [c_uint8, c_char_p, c_uint16, c_char_p]
-
-    lib.fw_del_input.restype = c_int32
-    lib.fw_del_input.argtypes = [c_uint8, c_char_p, c_uint16, c_char_p, c_char_p]
-
-    # --- Firewall: FORWARD ---
-    lib.fw_add_forward.restype = c_int32
-    lib.fw_add_forward.argtypes = [c_char_p, c_char_p, c_char_p]
-
-    lib.fw_del_forward.restype = c_int32
-    lib.fw_del_forward.argtypes = [c_char_p, c_char_p, c_char_p]
-
-    # --- Firewall: NAT ---
-    lib.fw_add_nat_masquerade.restype = c_int32
-    lib.fw_add_nat_masquerade.argtypes = [c_char_p, c_char_p]
-
-    lib.fw_del_nat_masquerade.restype = c_int32
-    lib.fw_del_nat_masquerade.argtypes = [c_char_p, c_char_p]
-
-    # --- Firewall: Query ---
-    lib.fw_list_rules.restype = c_char_p
-    lib.fw_list_rules.argtypes = []
-
-    lib.fw_flush_table.restype = c_int32
-    lib.fw_flush_table.argtypes = []
-
-    # --- Routing: Policy ---
-    lib.rt_add_policy.restype = c_int32
-    lib.rt_add_policy.argtypes = [c_char_p, c_char_p, c_char_p, c_uint32]
-
-    lib.rt_del_policy.restype = c_int32
-    lib.rt_del_policy.argtypes = [c_char_p, c_char_p, c_char_p, c_uint32]
-
-    # --- Routing: Routes ---
-    lib.rt_add_route.restype = c_int32
-    lib.rt_add_route.argtypes = [c_char_p, c_char_p, c_char_p]
-
-    lib.rt_del_route.restype = c_int32
-    lib.rt_del_route.argtypes = [c_char_p, c_char_p, c_char_p]
-
-    # --- Routing: Table management ---
-    lib.rt_ensure_table.restype = c_int32
-    lib.rt_ensure_table.argtypes = [c_uint32, c_char_p]
-
-    lib.rt_flush_cache.restype = c_int32
     lib.rt_flush_cache.argtypes = []
+    lib.rt_flush_cache.restype = c_i32
 
-    lib.rt_enable_ip_forward.restype = c_int32
     lib.rt_enable_ip_forward.argtypes = []
+    lib.rt_enable_ip_forward.restype = c_i32
+
+    lib.fw_flush_table.argtypes = []
+    lib.fw_flush_table.restype = c_i32
+
+
+def _read_and_free(ptr) -> str:
+    """Read a Rust-allocated C string and free it."""
+    if not ptr:
+        return ""
+    s = ctypes.cast(ptr, ctypes.c_char_p)
+    text = s.value.decode("utf-8") if s.value else ""
+    get_lib().firewall_bridge_free_string(s)
+    return text
+
+
+def get_version() -> str:
+    result = get_lib().firewall_bridge_get_version()
+    return result.decode("utf-8") if result else "unknown"

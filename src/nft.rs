@@ -134,7 +134,7 @@ const TABLE: &str = "inet phantom";
 // High-level firewall operations
 // ---------------------------------------------------------------------------
 
-/// Ensure the phantom table and base chains exist.
+/// Ensure the phantom table and all base chains exist (v2: +output chain).
 pub fn ensure_table(nft: &NftContext) -> Result<(), String> {
     // Create table (idempotent with "add")
     nft.run(&format!("add table {TABLE}")).map(|_| ())?;
@@ -142,6 +142,9 @@ pub fn ensure_table(nft: &NftContext) -> Result<(), String> {
     // Base chains — "add" is idempotent; won't fail if they already exist
     nft.run(&format!(
         "add chain {TABLE} input {{ type filter hook input priority 0; policy accept; }}"
+    )).map(|_| ())?;
+    nft.run(&format!(
+        "add chain {TABLE} output {{ type filter hook output priority 0; policy accept; }}"
     )).map(|_| ())?;
     nft.run(&format!(
         "add chain {TABLE} forward {{ type filter hook forward priority 0; policy accept; }}"
@@ -336,6 +339,141 @@ fn find_forward_handle(json: &str, in_iface: &str, out_iface: &str, state_match:
     }
 
     None
+}
+
+// ---------------------------------------------------------------------------
+// Generic rule application (v2 — DB-driven)
+// ---------------------------------------------------------------------------
+
+use crate::db::FirewallRuleRow;
+
+/// Apply a firewall rule from DB row to kernel. Returns nft_handle on success.
+pub fn apply_rule(nft: &NftContext, rule: &FirewallRuleRow) -> Result<u64, String> {
+    let cmd = build_rule_cmd(rule)?;
+
+    // Enable HANDLE output to get the handle of the newly added rule
+    nft.run(&cmd)?;
+
+    // Query chain to find our rule by its comment tag
+    let comment_tag = format!("phantom-rule-{}", rule.id);
+    let chain_json = nft.run_json(&format!("list chain {TABLE} {}", rule.chain))?;
+
+    // Try comment-based lookup first, fall back to max handle
+    if let Some(h) = find_handle_by_comment(&chain_json, &comment_tag) {
+        return Ok(h);
+    }
+
+    // Fallback: return the highest handle in this chain (most recently added)
+    find_max_handle(&chain_json).ok_or_else(|| {
+        format!("Rule applied but handle not found for rule {}", rule.id)
+    })
+}
+
+/// Remove a rule by its nft handle from a specific chain.
+pub fn remove_rule_by_handle(nft: &NftContext, chain: &str, handle: u64) -> Result<(), String> {
+    nft.run(&format!("delete rule {TABLE} {chain} handle {handle}")).map(|_| ())
+}
+
+/// Build nft add rule command from a FirewallRuleRow.
+fn build_rule_cmd(rule: &FirewallRuleRow) -> Result<String, String> {
+    let mut parts = Vec::new();
+
+    // Family prefix for source/dest matching
+    let fam = if rule.family == libc::AF_INET6 as i32 { "ip6" } else { "ip" };
+
+    // Interface matches
+    if !rule.in_iface.is_empty() {
+        parts.push(format!("iifname \"{}\"", rule.in_iface));
+    }
+    if !rule.out_iface.is_empty() {
+        parts.push(format!("oifname \"{}\"", rule.out_iface));
+    }
+
+    // Source/destination
+    if !rule.source.is_empty() {
+        parts.push(format!("{fam} saddr {}", rule.source));
+    }
+    if !rule.destination.is_empty() {
+        parts.push(format!("{fam} daddr {}", rule.destination));
+    }
+
+    // Protocol + port
+    if !rule.proto.is_empty() && (rule.dport > 0 || rule.sport > 0) {
+        if rule.dport > 0 {
+            parts.push(format!("{} dport {}", rule.proto, rule.dport));
+        }
+        if rule.sport > 0 {
+            parts.push(format!("{} sport {}", rule.proto, rule.sport));
+        }
+    }
+
+    // Conntrack state
+    if !rule.state_match.is_empty() {
+        parts.push(format!("ct state {}", rule.state_match.to_lowercase()));
+    }
+
+    // Action first, then comment (nft syntax: action must come before comment)
+    parts.push(rule.rule_type.clone());
+
+    // Comment tag (for handle lookup) — must come after action
+    let comment_tag = format!("phantom-rule-{}", rule.id);
+    parts.push(format!("comment \"{}\"", comment_tag));
+
+    let match_expr = parts.join(" ");
+    Ok(format!("add rule {TABLE} {} {}", rule.chain, match_expr))
+}
+
+/// Find a rule handle by its comment tag in JSON output.
+/// Comment can be at rule level or inside expr array (nft version dependent).
+fn find_handle_by_comment(json: &str, comment: &str) -> Option<u64> {
+    let parsed: serde_json::Value = serde_json::from_str(json).ok()?;
+    let nftables = parsed.get("nftables")?.as_array()?;
+
+    for item in nftables {
+        if let Some(rule) = item.get("rule") {
+            let handle = rule.get("handle")?.as_u64()?;
+
+            // Check rule-level comment first (nft >= 1.0.6)
+            if let Some(c) = rule.get("comment").and_then(|c| c.as_str()) {
+                if c == comment {
+                    return Some(handle);
+                }
+            }
+
+            // Check expr-level comment (fallback)
+            if let Some(expr) = rule.get("expr").and_then(|e| e.as_array()) {
+                for e in expr {
+                    if let Some(c) = e.get("comment").and_then(|c| c.as_str()) {
+                        if c == comment {
+                            return Some(handle);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Find the highest handle in a chain (most recently added rule).
+fn find_max_handle(json: &str) -> Option<u64> {
+    let parsed: serde_json::Value = serde_json::from_str(json).ok()?;
+    let nftables = parsed.get("nftables")?.as_array()?;
+    let mut max_handle = 0u64;
+    let mut found = false;
+
+    for item in nftables {
+        if let Some(rule) = item.get("rule") {
+            if let Some(h) = rule.get("handle").and_then(|h| h.as_u64()) {
+                if h > max_handle {
+                    max_handle = h;
+                    found = true;
+                }
+            }
+        }
+    }
+
+    if found { Some(max_handle) } else { None }
 }
 
 fn find_nat_handle(json: &str, source_network: &str, out_iface: &str) -> Option<u64> {
