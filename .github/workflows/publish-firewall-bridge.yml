@@ -3,7 +3,7 @@ name: Publish firewall-bridge
 on:
   push:
     tags:
-      - 'firewall-bridge-release-v*'
+      - 'publish-vendor-firewall-bridge-v*'
 
 permissions:
   contents: read
@@ -22,8 +22,8 @@ jobs:
     permissions:
       contents: read
 
-  package:
-    name: Package and release
+  publish:
+    name: Publish to dev/vendor
     needs: [build]
     runs-on: ubuntu-latest
     permissions:
@@ -34,9 +34,10 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Checkout
+      - name: Checkout dev/vendor
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          ref: dev/vendor
           persist-credentials: false
 
       - name: Download amd64 artifact
@@ -56,51 +57,64 @@ jobs:
         env:
           REF_NAME: ${{ github.ref_name }}
         run: |
-          VERSION="${REF_NAME#firewall-bridge-release-}"
+          VERSION="${REF_NAME#publish-vendor-firewall-bridge-}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "archive=firewall-bridge-${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Package linux/amd64
+      - name: Organize vendor directory
         env:
-          ARCHIVE: ${{ steps.version.outputs.archive }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          mkdir -p staging/firewall_bridge
-          cp artifacts/linux-amd64/libfirewall_bridge_linux.so staging/
-          cp artifacts/linux-amd64/libfirewall_bridge_linux.so.sha256 staging/
-          cp artifacts/linux-amd64/firewall_bridge_linux.h staging/
-          cp artifacts/linux-amd64/firewall_bridge/*.py staging/firewall_bridge/
-          cd staging && zip -r "../${ARCHIVE}-linux-amd64.zip" .
+          rm -rf firewall-bridge
+          mkdir -p firewall-bridge/linux-amd64/firewall_bridge \
+                   firewall-bridge/linux-arm64/firewall_bridge
 
-      - name: Package linux/arm64
-        env:
-          ARCHIVE: ${{ steps.version.outputs.archive }}
-        run: |
-          rm -rf staging
-          mkdir -p staging/firewall_bridge
-          cp artifacts/linux-arm64/libfirewall_bridge_linux.so staging/
-          cp artifacts/linux-arm64/libfirewall_bridge_linux.so.sha256 staging/
-          cp artifacts/linux-arm64/firewall_bridge_linux.h staging/
-          cp artifacts/linux-arm64/firewall_bridge/*.py staging/firewall_bridge/
-          cd staging && zip -r "../${ARCHIVE}-linux-arm64.zip" .
+          # amd64
+          cp artifacts/linux-amd64/libfirewall_bridge_linux.so \
+             artifacts/linux-amd64/libfirewall_bridge_linux.so.sha256 \
+             artifacts/linux-amd64/firewall_bridge_linux.h \
+             firewall-bridge/linux-amd64/
+          cp artifacts/linux-amd64/firewall_bridge/*.py \
+             firewall-bridge/linux-amd64/firewall_bridge/
 
-      - name: Create release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-          ARCHIVE: ${{ steps.version.outputs.archive }}
+          # arm64
+          cp artifacts/linux-arm64/libfirewall_bridge_linux.so \
+             artifacts/linux-arm64/libfirewall_bridge_linux.so.sha256 \
+             artifacts/linux-arm64/firewall_bridge_linux.h \
+             firewall-bridge/linux-arm64/
+          cp artifacts/linux-arm64/firewall_bridge/*.py \
+             firewall-bridge/linux-arm64/firewall_bridge/
+
+          rm -rf artifacts
+
+          # Write version file
+          echo "${VERSION}" > firewall-bridge/VERSION
+
+      - name: Verify checksums
         run: |
-          gh release create "${TAG}" \
-            --generate-notes \
-            "${ARCHIVE}-linux-amd64.zip" \
-            "${ARCHIVE}-linux-arm64.zip"
+          echo "--- linux/amd64 ---"
+          cd firewall-bridge/linux-amd64 && sha256sum -c libfirewall_bridge_linux.so.sha256 && cd ../..
+          echo "--- linux/arm64 ---"
+          cd firewall-bridge/linux-arm64 && sha256sum -c libfirewall_bridge_linux.so.sha256 && cd ../..
+
+      - name: Push to dev/vendor
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git add -f firewall-bridge/
+          git commit -m "Vendor: firewall-bridge ${VERSION}"
+          git push origin dev/vendor
 
       - name: Summary
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          AMD64_SHA=$(cut -d' ' -f1 artifacts/linux-amd64/libfirewall_bridge_linux.so.sha256)
-          ARM64_SHA=$(cut -d' ' -f1 artifacts/linux-arm64/libfirewall_bridge_linux.so.sha256)
-          echo "## firewall-bridge ${VERSION} Released" >> "$GITHUB_STEP_SUMMARY"
+          AMD64_SHA=$(cut -d' ' -f1 firewall-bridge/linux-amd64/libfirewall_bridge_linux.so.sha256)
+          ARM64_SHA=$(cut -d' ' -f1 firewall-bridge/linux-arm64/libfirewall_bridge_linux.so.sha256)
+          echo "## firewall-bridge ${VERSION} → dev/vendor" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Platform | SHA256 |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|--------|" >> "$GITHUB_STEP_SUMMARY"
