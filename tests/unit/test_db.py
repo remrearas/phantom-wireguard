@@ -9,39 +9,42 @@
 Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 
-Unit tests for wstunnel_bridge.db — in-memory SQLite, no native library needed.
+Unit tests for wstunnel_bridge.db — schema, config CRUD, state transitions.
 """
+
+import os
+import tempfile
 
 import pytest
 
-from wstunnel_bridge.db import WstunnelDB, SCHEMA_VERSION
+from wstunnel_bridge.db import WstunnelDB
+from wstunnel_bridge.models import ServerConfig
 
 
 @pytest.fixture
 def db():
+    """In-memory WstunnelDB instance."""
     d = WstunnelDB(":memory:")
-    d.init_config()
     yield d
     d.close()
 
 
-class TestOpenAndMigrate:
-    """Database opens, migrates schema, sets user_version."""
+@pytest.fixture
+def db_file():
+    """File-backed WstunnelDB for persistence tests."""
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    d = WstunnelDB(path)
+    yield d, path
+    d.close()
+    for ext in ("", "-wal", "-shm"):
+        p = path + ext
+        if os.path.exists(p):
+            os.remove(p)
 
-    def test_tables_created(self, db):
-        cur = db._conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' "
-            "AND name NOT LIKE 'sqlite_%' ORDER BY name"
-        )
-        tables = [r[0] for r in cur.fetchall()]
-        assert tables == [
-            "client_config", "config", "http_headers",
-            "server_config", "server_restrictions", "tunnels",
-        ]
 
-    def test_user_version(self, db):
-        ver = db._conn.execute("PRAGMA user_version").fetchone()[0]
-        assert ver == SCHEMA_VERSION
+class TestSchema:
+    """Schema creation and migration."""
 
     def test_wal_mode(self, tmp_path):
         d = WstunnelDB(str(tmp_path / "test.db"))
@@ -49,214 +52,176 @@ class TestOpenAndMigrate:
         assert mode == "wal"
         d.close()
 
-    def test_idempotent_migration(self):
-        d = WstunnelDB(":memory:")
-        d.init_config()
-        # Second open on same connection should not fail
-        d._migrate()
-        ver = d._conn.execute("PRAGMA user_version").fetchone()[0]
-        assert ver == SCHEMA_VERSION
-        d.close()
+    def test_config_table_exists(self, db):
+        row = db._conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='config'"
+        ).fetchone()
+        assert row is not None
 
+    def test_singleton_row_created(self, db):
+        row = db._conn.execute("SELECT id FROM config WHERE id = 1").fetchone()
+        assert row is not None
 
-class TestConfig:
-    """Singleton config row lifecycle."""
+    def test_singleton_constraint(self, db):
+        with pytest.raises(Exception):
+            db._conn.execute(
+                "INSERT INTO config (id, bind_url, updated_at) VALUES (2, '', 0)"
+            )
 
-    def test_init_creates_config(self, db):
+    def test_default_values(self, db):
         cfg = db.get_config()
-        assert cfg["state"] == "initialized"
-        assert cfg["mode"] == "client"
+        assert cfg.bind_url == ""
+        assert cfg.restrict_to == ""
+        assert cfg.restrict_path_prefix == ""
+        assert cfg.tls_certificate == ""
+        assert cfg.tls_private_key == ""
+        assert cfg.state == "stopped"
 
-    def test_set_state(self, db):
-        db.set_state("started")
-        assert db.get_config()["state"] == "started"
+    def test_no_old_tables(self, db):
+        tables = [r[0] for r in db._conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()]
+        assert "client_config" not in tables
+        assert "tunnels" not in tables
+        assert "server_restrictions" not in tables
+        assert "http_headers" not in tables
+        assert "server_config" not in tables
 
-    def test_set_mode(self, db):
-        db.set_mode("server")
-        assert db.get_config()["mode"] == "server"
+    def test_schema_loaded_from_file(self, db):
+        """Schema is loaded from schemas/schema.sql, not inline DDL."""
+        from wstunnel_bridge.db import _SCHEMA_PATH
+        assert _SCHEMA_PATH.exists()
+        assert _SCHEMA_PATH.name == "schema.sql"
 
-    def test_init_idempotent(self, db):
-        db.set_state("started")
-        db.init_config()  # OR IGNORE — should not reset
-        assert db.get_config()["state"] == "started"
-
-    def test_get_config_before_init_raises(self):
-        d = WstunnelDB(":memory:")
-        with pytest.raises(LookupError):
-            d.get_config()
-        d.close()
-
-    def test_get_client_config_before_init_raises(self):
-        d = WstunnelDB(":memory:")
-        with pytest.raises(LookupError):
-            d.get_client_config()
-        d.close()
-
-    def test_get_server_config_before_init_raises(self):
-        d = WstunnelDB(":memory:")
-        with pytest.raises(LookupError):
-            d.get_server_config()
-        d.close()
-
-    def test_updated_at_changes(self, db):
-        ts1 = db.get_config()["updated_at"]
-        db.set_state("stopped")
-        ts2 = db.get_config()["updated_at"]
-        assert ts2 >= ts1
+    def test_idempotent_init(self, db):
+        db._ensure_config()
+        cfg = db.get_config()
+        assert cfg.state == "stopped"
 
 
-class TestClientConfig:
-    """Client config singleton — partial update pattern."""
+class TestReturnType:
+    """get_config() returns ServerConfig dataclass."""
 
-    def test_defaults(self, db):
-        cfg = db.get_client_config()
-        assert cfg["remote_url"] == ""
-        assert cfg["http_upgrade_path_prefix"] == "v1"
-        assert cfg["tls_verify"] == 0
-        assert cfg["websocket_ping_frequency"] == 30
-        assert cfg["connection_retry_max_backoff"] == 300
-        assert cfg["worker_threads"] == 2
+    def test_returns_server_config(self, db):
+        cfg = db.get_config()
+        assert isinstance(cfg, ServerConfig)
 
-    def test_partial_update(self, db):
-        db.set_client_config(remote_url="wss://vpn.example.com:443")
-        cfg = db.get_client_config()
-        assert cfg["remote_url"] == "wss://vpn.example.com:443"
-        assert cfg["http_upgrade_path_prefix"] == "v1"  # unchanged
+    def test_dataclass_fields(self, db):
+        cfg = db.get_config()
+        assert hasattr(cfg, "bind_url")
+        assert hasattr(cfg, "restrict_to")
+        assert hasattr(cfg, "restrict_path_prefix")
+        assert hasattr(cfg, "tls_certificate")
+        assert hasattr(cfg, "tls_private_key")
+        assert hasattr(cfg, "state")
+        assert hasattr(cfg, "updated_at")
 
-    def test_multi_field_update(self, db):
-        db.set_client_config(
-            remote_url="wss://vpn.example.com:443",
-            tls_verify=1,
-            worker_threads=4,
+
+class TestConfigCRUD:
+    """set_config / get_config."""
+
+    def test_set_bind_url(self, db):
+        db.set_config(bind_url="wss://[::]:443")
+        cfg = db.get_config()
+        assert cfg.bind_url == "wss://[::]:443"
+
+    def test_set_multiple_fields(self, db):
+        db.set_config(
+            bind_url="wss://0.0.0.0:8443",
+            restrict_to="127.0.0.1:51820",
+            restrict_path_prefix="secret",
         )
-        cfg = db.get_client_config()
-        assert cfg["remote_url"] == "wss://vpn.example.com:443"
-        assert cfg["tls_verify"] == 1
-        assert cfg["worker_threads"] == 4
+        cfg = db.get_config()
+        assert cfg.bind_url == "wss://0.0.0.0:8443"
+        assert cfg.restrict_to == "127.0.0.1:51820"
+        assert cfg.restrict_path_prefix == "secret"
 
-    def test_unknown_column_raises(self, db):
-        with pytest.raises(ValueError, match="Unknown columns"):
-            db.set_client_config(nonexistent_field="bad")
-
-    def test_empty_update_noop(self, db):
-        ts1 = db.get_client_config()["updated_at"]
-        db.set_client_config()  # no kwargs
-        ts2 = db.get_client_config()["updated_at"]
-        assert ts2 == ts1
-
-
-class TestServerConfig:
-    """Server config singleton — partial update pattern."""
-
-    def test_defaults(self, db):
-        cfg = db.get_server_config()
-        assert cfg["bind_url"] == ""
-        assert cfg["tls_certificate"] == ""
-        assert cfg["tls_private_key"] == ""
-        assert cfg["worker_threads"] == 2
-
-    def test_partial_update(self, db):
-        db.set_server_config(
-            bind_url="wss://0.0.0.0:443",
+    def test_set_tls_fields(self, db):
+        db.set_config(
             tls_certificate="/certs/cert.pem",
             tls_private_key="/certs/key.pem",
         )
-        cfg = db.get_server_config()
-        assert cfg["bind_url"] == "wss://0.0.0.0:443"
-        assert cfg["tls_certificate"] == "/certs/cert.pem"
-        assert cfg["tls_private_key"] == "/certs/key.pem"
-        assert cfg["tls_client_ca_certs"] == ""  # unchanged
+        cfg = db.get_config()
+        assert cfg.tls_certificate == "/certs/cert.pem"
+        assert cfg.tls_private_key == "/certs/key.pem"
+
+    def test_partial_update(self, db):
+        db.set_config(bind_url="wss://[::]:443", restrict_to="a:1")
+        db.set_config(restrict_to="b:2")
+        cfg = db.get_config()
+        assert cfg.bind_url == "wss://[::]:443"
+        assert cfg.restrict_to == "b:2"
+
+    def test_empty_update_noop(self, db):
+        db.set_config(bind_url="wss://test")
+        db.set_config()  # no-op
+        cfg = db.get_config()
+        assert cfg.bind_url == "wss://test"
 
     def test_unknown_column_raises(self, db):
         with pytest.raises(ValueError, match="Unknown columns"):
-            db.set_server_config(remote_url="wss://bad")
+            db.set_config(nonexistent="value")
+
+    def test_updated_at_changes(self, db):
+        cfg1 = db.get_config()
+        ts1 = cfg1.updated_at
+        db.set_config(bind_url="wss://new")
+        cfg2 = db.get_config()
+        assert cfg2.updated_at >= ts1
 
 
-class TestTunnels:
-    """Multi-row tunnel CRUD."""
+class TestState:
+    """get_state / set_state."""
 
-    def test_add_and_list(self, db):
-        tid = db.add_tunnel("udp", "127.0.0.1", 51820, "127.0.0.1", 51820)
-        assert tid > 0
-        tunnels = db.list_tunnels()
-        assert len(tunnels) == 1
-        assert tunnels[0]["tunnel_type"] == "udp"
-        assert tunnels[0]["local_port"] == 51820
+    def test_default_state(self, db):
+        assert db.get_state() == "stopped"
 
-    def test_multiple_tunnels(self, db):
-        db.add_tunnel("udp", "127.0.0.1", 51820, "127.0.0.1", 51820)
-        db.add_tunnel("tcp", "127.0.0.1", 8080, "10.0.0.1", 80)
-        db.add_tunnel("socks5", "127.0.0.1", 1080)
-        assert len(db.list_tunnels()) == 3
+    def test_set_started(self, db):
+        db.set_state("started")
+        assert db.get_state() == "started"
 
-    def test_delete(self, db):
-        tid = db.add_tunnel("udp", "127.0.0.1", 51820, "127.0.0.1", 51820)
-        db.delete_tunnel(tid)
-        assert len(db.list_tunnels()) == 0
+    def test_set_stopped(self, db):
+        db.set_state("started")
+        db.set_state("stopped")
+        assert db.get_state() == "stopped"
 
-    def test_clear(self, db):
-        db.add_tunnel("udp", "127.0.0.1", 51820, "127.0.0.1", 51820)
-        db.add_tunnel("tcp", "127.0.0.1", 8080, "10.0.0.1", 80)
-        db.clear_tunnels()
-        assert len(db.list_tunnels()) == 0
-
-    def test_timeout_secs(self, db):
-        db.add_tunnel("udp", "127.0.0.1", 51820, "127.0.0.1", 51820, timeout_secs=60)
-        t = db.list_tunnels()[0]
-        assert t["timeout_secs"] == 60
+    def test_state_reflects_in_config(self, db):
+        db.set_state("started")
+        cfg = db.get_config()
+        assert cfg.state == "started"
 
 
-class TestServerRestrictions:
-    """Multi-row server restriction CRUD."""
+class TestPersistence:
+    """File-backed DB persistence across reopen."""
 
-    def test_add_target(self, db):
-        rid = db.add_restriction("target", "127.0.0.1:51820")
-        assert rid > 0
-        rests = db.list_restrictions()
-        assert len(rests) == 1
-        assert rests[0]["restriction_type"] == "target"
-        assert rests[0]["value"] == "127.0.0.1:51820"
+    def test_config_persists(self, db_file):
+        d, path = db_file
+        d.set_config(
+            bind_url="wss://[::]:443",
+            restrict_to="127.0.0.1:51820",
+            restrict_path_prefix="secret",
+            tls_certificate="/certs/cert.pem",
+            tls_private_key="/certs/key.pem",
+        )
+        d.set_state("started")
+        d.close()
 
-    def test_add_path_prefix(self, db):
-        db.add_restriction("path_prefix", "secret-path")
-        rests = db.list_restrictions()
-        assert rests[0]["restriction_type"] == "path_prefix"
-
-    def test_delete(self, db):
-        rid = db.add_restriction("target", "127.0.0.1:51820")
-        db.delete_restriction(rid)
-        assert len(db.list_restrictions()) == 0
-
-    def test_clear(self, db):
-        db.add_restriction("target", "127.0.0.1:51820")
-        db.add_restriction("path_prefix", "secret")
-        db.clear_restrictions()
-        assert len(db.list_restrictions()) == 0
+        d2 = WstunnelDB(path)
+        cfg = d2.get_config()
+        assert cfg.bind_url == "wss://[::]:443"
+        assert cfg.restrict_to == "127.0.0.1:51820"
+        assert cfg.restrict_path_prefix == "secret"
+        assert cfg.tls_certificate == "/certs/cert.pem"
+        assert cfg.tls_private_key == "/certs/key.pem"
+        assert cfg.state == "started"
+        d2.close()
 
 
-class TestHttpHeaders:
-    """Multi-row HTTP header CRUD."""
+class TestClose:
+    """close() releases connection."""
 
-    def test_add_and_list(self, db):
-        hid = db.add_http_header("X-Custom", "value1")
-        assert hid > 0
-        headers = db.list_http_headers()
-        assert len(headers) == 1
-        assert headers[0]["name"] == "X-Custom"
-        assert headers[0]["value"] == "value1"
-
-    def test_multiple(self, db):
-        db.add_http_header("X-First", "a")
-        db.add_http_header("X-Second", "b")
-        assert len(db.list_http_headers()) == 2
-
-    def test_delete(self, db):
-        hid = db.add_http_header("X-Delete", "val")
-        db.delete_http_header(hid)
-        assert len(db.list_http_headers()) == 0
-
-    def test_clear(self, db):
-        db.add_http_header("X-A", "1")
-        db.add_http_header("X-B", "2")
-        db.clear_http_headers()
-        assert len(db.list_http_headers()) == 0
+    def test_close_then_query_fails(self):
+        d = WstunnelDB(":memory:")
+        d.close()
+        with pytest.raises(Exception):
+            d.get_config()

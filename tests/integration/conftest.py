@@ -9,117 +9,86 @@
 Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 
-Integration test fixtures for wstunnel-bridge v2.
-
-Provides fresh WstunnelState instances, cert paths, and cleanup helpers.
-All integration tests run inside Docker container with real .so library.
+Integration test helpers — runs inside Docker container.
+Docker socket mounted for cross-container communication.
+All command output streams live to stdout via Rich Console.
 """
 
-import os
 import subprocess
-import tempfile
-import time
-import uuid
 
-import pytest
+from rich.console import Console
+from rich.panel import Panel
 
-from wstunnel_bridge.state import WstunnelState
-from wstunnel_bridge.types import WstunnelError
+console = Console(no_color=True)
 
+CLIENT_CONTAINER = "ws-client"
 
-@pytest.fixture(autouse=True)
-def _ensure_lib_loaded():
-    """Ensure .so is loaded and env var is intact before each test."""
-    import wstunnel_bridge._ffi as ffi
-    env_path = os.environ.get("WSTUNNEL_BRIDGE_LIB_PATH", "")
-    if ffi._lib is None and env_path and os.path.isfile(env_path):
-        ffi.get_lib()
+ACTORS = {
+    "bridge":  "BRIDGE  ",
+    "exit":    "EXIT    ",
+    "client":  "CLIENT  ",
+    "verify":  "VERIFY  ",
+    "db":      "DB      ",
+}
 
 
-@pytest.fixture
-def uid():
-    return uuid.uuid4().hex[:8]
+def _log(actor: str, msg: str) -> None:
+    console.print(f"  {ACTORS[actor]} {msg}")
 
 
-@pytest.fixture
-def certs():
-    """Self-signed certificate paths (created by Dockerfile)."""
-    return {
-        "cert": "/workspace/certs/cert.pem",
-        "key": "/workspace/certs/key.pem",
-    }
+def phase_banner(num: int, title: str) -> None:
+    console.print()
+    console.print(Panel(title, title=f"PHASE {num}", width=64))
+    console.print()
 
 
-@pytest.fixture
-def wstunnel_state(uid):
-    """Function-scoped WstunnelState with fresh DB."""
-    db_path = os.path.join(tempfile.gettempdir(), f"ws_{uid}.db")
-    state = WstunnelState()
-    state.init(db_path)
-    yield state
-    try:
-        state.close()
-    except (WstunnelError, OSError):
-        pass
-    for ext in ("", "-wal", "-shm"):
-        path = db_path + ext
-        if os.path.exists(path):
-            os.remove(path)
+def result_banner(passed: bool = True) -> None:
+    text = "ALL PHASES PASSED" if passed else "FAILED"
+    console.print()
+    console.print(Panel(text, width=64))
+    console.print()
 
 
-def wait_for_port(port: int, timeout: int = 10) -> bool:
-    """Wait until a TCP port is accepting connections."""
-    for _ in range(timeout):
-        try:
-            result = subprocess.run(
-                ["ncat", "-z", "127.0.0.1", str(port)],
-                capture_output=True, timeout=2,
-            )
-            if result.returncode == 0:
-                return True
-        except subprocess.TimeoutExpired:
-            pass
-        time.sleep(1)
-    return False
+# ---- Local shell (live output) ----
+
+def sh(cmd: str, check: bool = True) -> subprocess.CompletedProcess:
+    console.print(f"  $ {cmd}")
+    r = subprocess.run(
+        cmd, shell=True, capture_output=True, text=True, check=False,
+    )
+    if r.stdout and r.stdout.strip():
+        for line in r.stdout.strip().splitlines():
+            console.print(f"    > {line}")
+    if r.stderr and r.stderr.strip():
+        for line in r.stderr.strip().splitlines():
+            console.print(f"    ERR> {line}")
+    if check and r.returncode != 0:
+        console.print(f"  exit={r.returncode}")
+    return r
 
 
-def start_echo_server(protocol: str, port: int) -> subprocess.Popen:
-    """Start socat echo server (UDP or TCP)."""
-    if protocol == "udp":
-        cmd = f"socat UDP-LISTEN:{port},fork EXEC:cat"
-    else:
-        cmd = f"socat TCP-LISTEN:{port},reuseaddr,fork EXEC:cat"
-    return subprocess.Popen(cmd, shell=True)
+# ---- Remote exec on client container via Docker SDK ----
+
+def _get_docker_client():
+    import docker
+    return docker.from_env()
 
 
-def start_wstunnel_server(
-    bind_url: str, cert: str, key: str, restrict_to: str = ""
-) -> subprocess.Popen:
-    """Start wstunnel CLI server as background process."""
-    cmd = [
-        "wstunnel", "server", bind_url,
-        "--tls-certificate", cert,
-        "--tls-private-key", key,
-    ]
-    if restrict_to:
-        cmd.extend(["--restrict-to", restrict_to])
-    return subprocess.Popen(cmd)
+def client_exec(cmd: str, check: bool = True) -> tuple[int, str]:
+    console.print(f"  CLIENT $ {cmd}")
+    dc = _get_docker_client()
+    container = dc.containers.get(CLIENT_CONTAINER)
+    r = container.exec_run(["sh", "-c", cmd])
+    output = r.output.decode("utf-8", errors="replace")
+    if output.strip():
+        for line in output.strip().splitlines():
+            console.print(f"    CLIENT > {line}")
+    if check and r.exit_code != 0:
+        console.print(f"  CLIENT exit={r.exit_code}")
+    return r.exit_code, output
 
 
-def start_wstunnel_client(
-    remote_url: str, tunnel: str
-) -> subprocess.Popen:
-    """Start wstunnel CLI client as background process."""
-    cmd = ["wstunnel", "client", remote_url, "-L", tunnel]
-    return subprocess.Popen(cmd)
-
-
-def cleanup_processes(*procs: subprocess.Popen):
-    """Terminate and wait for background processes."""
-    for p in procs:
-        if p and p.poll() is None:
-            p.terminate()
-            try:
-                p.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                p.kill()
+def client_write_file(path: str, content: str) -> None:
+    import base64
+    encoded = base64.b64encode(content.encode()).decode()
+    client_exec(f"echo {encoded} | base64 -d > {path}")

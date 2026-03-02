@@ -39,11 +39,12 @@ wstunnel-bridge/
 │   └── wstunnel_bridge/
 │       ├── __init__.py
 │       ├── _ffi.py
-│       ├── client.py
+│       ├── bridge.py
 │       ├── db.py
-│       ├── server.py
-│       ├── state.py
-│       └── types.py
+│       ├── models.py
+│       ├── types.py
+│       └── schemas/
+│           └── schema.sql
 └── linux-arm64/
     ├── libwstunnel_bridge_linux.so
     ├── libwstunnel_bridge_linux.so.sha256

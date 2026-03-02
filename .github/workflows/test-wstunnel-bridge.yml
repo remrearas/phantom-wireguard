@@ -33,7 +33,7 @@ jobs:
         run: pip install --require-hashes -r requirements.txt
 
       - name: Run test_runner.py (unit + integration)
-        run: python test_runner.py --force-build
+        run: python test_runner.py
 
       - name: Upload test results
         if: always()

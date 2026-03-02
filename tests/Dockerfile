@@ -3,43 +3,33 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
-    socat \
-    ncat \
-    openssl \
+    wireguard-tools \
+    iproute2 \
+    iptables \
+    iputils-ping \
     procps \
+    openssl \
+    sqlite3 \
     bash \
-    tar \
     && rm -rf /var/lib/apt/lists/*
-
-RUN pip3 install --break-system-packages pytest==9.0.2 pytest-cov==7.0.0
 
 WORKDIR /workspace
 
-# Copy both arch wstunnel binaries, install matching one
-COPY test/artifacts/wstunnel_10.5.2_linux_amd64.tar.gz /tmp/
-COPY test/artifacts/wstunnel_10.5.2_linux_arm64.tar.gz /tmp/
-RUN ARCH=$(dpkg --print-architecture) && \
-    tar xzf /tmp/wstunnel_10.5.2_linux_${ARCH}.tar.gz -C /usr/local/bin/ wstunnel && \
-    chmod +x /usr/local/bin/wstunnel && \
-    rm /tmp/wstunnel_10.5.2_linux_*.tar.gz && \
-    wstunnel --version
+COPY requirements.txt /workspace/requirements.txt
+RUN pip3 install --break-system-packages -r requirements.txt
 
-# Copy matching .so for runtime arch
-COPY dist/linux-amd64/libwstunnel_bridge_linux.so /tmp/lib-amd64.so
-COPY dist/linux-arm64/libwstunnel_bridge_linux.so /tmp/lib-arm64.so
-RUN ARCH=$(dpkg --print-architecture) && \
-    cp /tmp/lib-${ARCH}.so /workspace/libwstunnel_bridge_linux.so && \
-    rm /tmp/lib-*.so
+# .so (FFI library — wstunnel server runs via FFI, no CLI binary needed)
+COPY dist/ /tmp/dist/
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; \
+    elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
+    cp /tmp/dist/linux-${ARCH}/libwstunnel_bridge_linux.so /workspace/ && \
+    rm -rf /tmp/dist
 
-# Python package + tests
-COPY wstunnel_bridge/ /workspace/wstunnel_bridge/
-COPY tests/ /workspace/tests/
-COPY pytest.ini /workspace/pytest.ini
-
-# Self-signed certificate for integration tests
-RUN mkdir -p /workspace/certs && \
+# Self-signed TLS cert
+RUN mkdir -p /certs && \
     openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
-    -keyout /workspace/certs/key.pem -out /workspace/certs/cert.pem \
+    -keyout /certs/key.pem -out /certs/cert.pem \
     -days 365 -nodes -subj "/CN=localhost" 2>/dev/null
 
 ENV WSTUNNEL_BRIDGE_LIB_PATH=/workspace/libwstunnel_bridge_linux.so

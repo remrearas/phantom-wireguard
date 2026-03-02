@@ -62,7 +62,7 @@ class TestResolvePlatform:
 
 
 class TestFindLibrary:
-    """_find_library() resolves library path via env var or system search."""
+    """_find_library() resolves library path via env var, sibling, or system search."""
 
     @patch.dict(os.environ, {"WSTUNNEL_BRIDGE_LIB_PATH": "/opt/lib/libwstunnel_bridge_linux.so"})
     @patch("wstunnel_bridge._ffi.os.path.isfile", return_value=True)

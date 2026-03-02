@@ -62,12 +62,16 @@ jobs:
              wstunnel-bridge/linux-amd64/
           cp source/wstunnel_bridge/*.py \
              wstunnel-bridge/linux-amd64/wstunnel_bridge/
+          cp -r source/wstunnel_bridge/schemas \
+             wstunnel-bridge/linux-amd64/wstunnel_bridge/
 
           # arm64
           cp source/dist/linux-arm64/libwstunnel_bridge_linux.so \
              source/dist/linux-arm64/libwstunnel_bridge_linux.so.sha256 \
              wstunnel-bridge/linux-arm64/
           cp source/wstunnel_bridge/*.py \
+             wstunnel-bridge/linux-arm64/wstunnel_bridge/
+          cp -r source/wstunnel_bridge/schemas \
              wstunnel-bridge/linux-arm64/wstunnel_bridge/
 
           rm -rf source
