@@ -14,6 +14,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
+    wireguard-tools \
     nftables \
     iproute2 \
     iptables \
@@ -23,14 +24,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages pytest==9.0.2 pytest-cov==7.0.0
-
 WORKDIR /workspace
 
+COPY requirements.txt /workspace/requirements.txt
+RUN pip3 install --break-system-packages -r requirements.txt
+
 COPY --from=builder /libfirewall_bridge_linux.so /workspace/libfirewall_bridge_linux.so
-COPY firewall_bridge/ /workspace/firewall_bridge/
-COPY tests/ /workspace/tests/
-COPY pytest.ini /workspace/pytest.ini
 
 ENV FIREWALL_BRIDGE_LIB_PATH=/workspace/libfirewall_bridge_linux.so
 ENV PYTHONPATH=/workspace

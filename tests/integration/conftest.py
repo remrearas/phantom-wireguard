@@ -10,58 +10,86 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Integration test fixtures for firewall-bridge v2.
+Integration test helpers — runs inside Docker container.
+Docker socket mounted for cross-container communication.
+All command output streams live to stdout via Rich Console.
 """
 
-import os
-import tempfile
-import uuid
+import subprocess
 
-import pytest
+from rich.console import Console
+from rich.panel import Panel
 
-from firewall_bridge.client import FirewallClient
-from firewall_bridge.types import FirewallBridgeError
+console = Console(no_color=True)
 
+CLIENT_CONTAINER = "fw-client"
 
-@pytest.fixture(autouse=True)
-def _ensure_lib_loaded():
-    """Ensure .so is loaded and env var is intact before each integration test.
-
-    Unit tests may clear _lib and env var — this restores them.
-    """
-    import firewall_bridge._ffi as ffi
-    env_path = os.environ.get("FIREWALL_BRIDGE_LIB_PATH", "")
-    if ffi._lib is None and env_path and os.path.isfile(env_path):
-        ffi.get_lib()
+ACTORS = {
+    "bridge": "BRIDGE  ",
+    "exit":   "EXIT    ",
+    "client": "CLIENT  ",
+    "verify": "VERIFY  ",
+    "db":     "DB      ",
+}
 
 
-@pytest.fixture
-def uid():
-    return uuid.uuid4().hex[:8]
+def _log(actor: str, msg: str) -> None:
+    console.print(f"  {ACTORS[actor]} {msg}")
 
 
-@pytest.fixture
-def new_firewall(uid):
-    """Function-scoped firewall client — fresh per test."""
-    db_path = os.path.join(tempfile.gettempdir(), f"fw_{uid}.db")
-    client = FirewallClient(db_path)
-    yield client
-    try:
-        client.stop()
-    except FirewallBridgeError:
-        pass
-    try:
-        client.close()
-    except FirewallBridgeError:
-        pass
-    for ext in ("", "-wal", "-shm"):
-        path = db_path + ext
-        if os.path.exists(path):
-            os.remove(path)
+def phase_banner(num: int, title: str) -> None:
+    console.print()
+    console.print(Panel(title, title=f"PHASE {num}", width=64))
+    console.print()
 
 
-@pytest.fixture
-def started_firewall(new_firewall):
-    """Firewall client in started state."""
-    new_firewall.start()
-    return new_firewall
+def result_banner(passed: bool = True) -> None:
+    text = "ALL PHASES PASSED" if passed else "FAILED"
+    console.print()
+    console.print(Panel(text, width=64))
+    console.print()
+
+
+# ---- Local shell (live output) ----
+
+def sh(cmd: str, check: bool = True) -> subprocess.CompletedProcess:
+    console.print(f"  $ {cmd}")
+    r = subprocess.run(
+        cmd, shell=True, capture_output=True, text=True, check=False,
+    )
+    if r.stdout and r.stdout.strip():
+        for line in r.stdout.strip().splitlines():
+            console.print(f"    > {line}")
+    if r.stderr and r.stderr.strip():
+        for line in r.stderr.strip().splitlines():
+            console.print(f"    ERR> {line}")
+    if check and r.returncode != 0:
+        console.print(f"  exit={r.returncode}")
+    return r
+
+
+# ---- Remote exec on client container via Docker SDK ----
+
+def _get_docker_client():
+    import docker
+    return docker.from_env()
+
+
+def client_exec(cmd: str, check: bool = True) -> tuple[int, str]:
+    console.print(f"  CLIENT $ {cmd}")
+    dc = _get_docker_client()
+    container = dc.containers.get(CLIENT_CONTAINER)
+    r = container.exec_run(["sh", "-c", cmd])
+    output = r.output.decode("utf-8", errors="replace")
+    if output.strip():
+        for line in output.strip().splitlines():
+            console.print(f"    CLIENT > {line}")
+    if check and r.exit_code != 0:
+        console.print(f"  CLIENT exit={r.exit_code}")
+    return r.exit_code, output
+
+
+def client_write_file(path: str, content: str) -> None:
+    import base64
+    encoded = base64.b64encode(content.encode()).decode()
+    client_exec(f"echo {encoded} | base64 -d > {path}")

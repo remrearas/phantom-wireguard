@@ -51,7 +51,8 @@ jobs:
           mkdir -p artifact/firewall_bridge
           cp target/x86_64-unknown-linux-gnu/release/libfirewall_bridge_linux.so artifact/
           cp include/firewall_bridge_linux.h artifact/
-          cp firewall_bridge/__init__.py firewall_bridge/_ffi.py firewall_bridge/client.py firewall_bridge/models.py firewall_bridge/types.py artifact/firewall_bridge/
+          cp firewall_bridge/*.py artifact/firewall_bridge/
+          cp -r firewall_bridge/schemas artifact/firewall_bridge/
           cd artifact && sha256sum libfirewall_bridge_linux.so > libfirewall_bridge_linux.so.sha256
           echo "=== Build Info ==="
           ls -lh libfirewall_bridge_linux.so
@@ -103,7 +104,8 @@ jobs:
           mkdir -p artifact/firewall_bridge
           cp target/aarch64-unknown-linux-gnu/release/libfirewall_bridge_linux.so artifact/
           cp include/firewall_bridge_linux.h artifact/
-          cp firewall_bridge/__init__.py firewall_bridge/_ffi.py firewall_bridge/client.py firewall_bridge/models.py firewall_bridge/types.py artifact/firewall_bridge/
+          cp firewall_bridge/*.py artifact/firewall_bridge/
+          cp -r firewall_bridge/schemas artifact/firewall_bridge/
           cd artifact && sha256sum libfirewall_bridge_linux.so > libfirewall_bridge_linux.so.sha256
           echo "=== Build Info ==="
           ls -lh libfirewall_bridge_linux.so

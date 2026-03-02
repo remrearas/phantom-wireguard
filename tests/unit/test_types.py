@@ -1,111 +1,87 @@
 """
-██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
-██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
-██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
-██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
-██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
-╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
-
-Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
-Licensed under AGPL-3.0 - see LICENSE file for details
-WireGuard® is a registered trademark of Jason A. Donenfeld.
-
-Unit tests for firewall_bridge.types — pure Python, no .so required.
+Unit tests for native exception hierarchy and check_result — v2.1.0
 """
 
 import pytest
-from firewall_bridge.types import ErrorCode, AddressFamily, FirewallBridgeError, check_error
+
+from firewall_bridge.types import (
+    BridgeError,
+    NftablesError,
+    NetlinkError,
+    InvalidParamError,
+    IoError,
+    PermissionDeniedError,
+    GroupNotFoundError,
+    RuleNotFoundError,
+    AlreadyStartedError,
+    NotStartedError,
+    check_result,
+)
 
 
-class TestErrorCode:
-    def test_ok_is_zero(self):
-        assert ErrorCode.OK == 0
+class TestExceptionHierarchy:
+    def test_all_inherit_from_bridge_error(self):
+        for cls in (
+            NftablesError, NetlinkError, InvalidParamError,
+            IoError, PermissionDeniedError,
+            GroupNotFoundError, RuleNotFoundError,
+            AlreadyStartedError, NotStartedError,
+        ):
+            assert issubclass(cls, BridgeError)
 
-    def test_error_codes_are_negative(self):
-        for code in ErrorCode:
-            if code != ErrorCode.OK:
-                assert code < 0
+    def test_bridge_error_is_exception(self):
+        assert issubclass(BridgeError, Exception)
 
-    def test_all_codes_present(self):
-        # v1 codes
-        v1 = {"OK", "ALREADY_INITIALIZED", "NOT_INITIALIZED",
-              "NFT_FAILED", "NETLINK_FAILED", "INVALID_PARAM",
-              "IO_ERROR", "PERMISSION_DENIED"}
-        # v2 codes
-        v2 = {"DB_OPEN", "DB_QUERY", "DB_WRITE", "GROUP_NOT_FOUND",
-              "RULE_NOT_FOUND", "INVALID_STATE", "ALREADY_STARTED",
-              "NOT_STARTED", "PRESET_FAILED", "VERIFY_FAILED"}
-        expected = v1 | v2
-        actual = {c.name for c in ErrorCode}
-        assert actual == expected
+    def test_catch_specific(self):
+        with pytest.raises(NftablesError):
+            raise NftablesError("nft failed")
 
-    def test_specific_values(self):
-        assert ErrorCode.ALREADY_INITIALIZED == -1
-        assert ErrorCode.NOT_INITIALIZED == -2
-        assert ErrorCode.NFT_FAILED == -3
-        assert ErrorCode.NETLINK_FAILED == -4
-        assert ErrorCode.INVALID_PARAM == -5
-        assert ErrorCode.IO_ERROR == -6
-        assert ErrorCode.PERMISSION_DENIED == -7
+    def test_catch_base(self):
+        with pytest.raises(BridgeError):
+            raise GroupNotFoundError("not found")
+
+    def test_message_preserved(self):
+        err = PermissionDeniedError("need CAP_NET_ADMIN")
+        assert "need CAP_NET_ADMIN" in str(err)
+        assert err.message == "need CAP_NET_ADMIN"
 
 
-class TestAddressFamily:
-    def test_inet_value(self):
-        assert AddressFamily.INET == 2
+class TestCheckResult:
+    def test_zero_passes(self):
+        check_result(0)
 
-    def test_inet6_value(self):
-        assert AddressFamily.INET6 == 10
+    def test_positive_passes(self):
+        check_result(1)
+        check_result(42)
 
+    def test_nftables_error(self):
+        with pytest.raises(NftablesError):
+            check_result(-3, "nft fail")
 
-class TestFirewallBridgeError:
-    def test_known_code(self):
-        err = FirewallBridgeError(-3)
-        assert err.code == ErrorCode.NFT_FAILED
-        assert "NFT_FAILED" in str(err)
+    def test_netlink_error(self):
+        with pytest.raises(NetlinkError):
+            check_result(-4, "netlink fail")
 
-    def test_known_code_with_detail(self):
-        err = FirewallBridgeError(-4, "socket failed")
-        assert err.code == ErrorCode.NETLINK_FAILED
-        assert "socket failed" in str(err)
+    def test_invalid_param(self):
+        with pytest.raises(InvalidParamError):
+            check_result(-5, "bad param")
 
-    def test_unknown_code(self):
-        err = FirewallBridgeError(-99)
-        assert err.code == -99
-        assert "FirewallBridgeError" in str(err)
+    def test_io_error(self):
+        with pytest.raises(IoError):
+            check_result(-6, "io fail")
 
-    def test_is_exception(self):
-        assert issubclass(FirewallBridgeError, Exception)
+    def test_permission_denied(self):
+        with pytest.raises(PermissionDeniedError):
+            check_result(-7, "no perm")
 
-    def test_raise_and_catch(self):
-        with pytest.raises(FirewallBridgeError) as exc_info:
-            raise FirewallBridgeError(-7, "need CAP_NET_ADMIN")
-        assert exc_info.value.code == ErrorCode.PERMISSION_DENIED
+    def test_unknown_code_raises_base(self):
+        from unittest.mock import patch
+        with patch("firewall_bridge._ffi.get_last_error", return_value=""):
+            with pytest.raises(BridgeError, match="FFI error code: -99"):
+                check_result(-99)
 
-
-class TestCheckError:
-    def test_ok_passes(self):
-        check_error(0)  # Should not raise
-
-    def test_error_raises(self):
-        from unittest.mock import patch, MagicMock
-
-        mock_lib = MagicMock()
-        mock_lib.firewall_bridge_get_last_error.return_value = b"test error"
-
-        with patch("firewall_bridge._ffi.get_lib", return_value=mock_lib):
-            with pytest.raises(FirewallBridgeError) as exc_info:
-                check_error(-3)
-            assert exc_info.value.code == ErrorCode.NFT_FAILED
-            assert "test error" in exc_info.value.detail
-
-    def test_error_no_detail(self):
-        from unittest.mock import patch, MagicMock
-
-        mock_lib = MagicMock()
-        mock_lib.firewall_bridge_get_last_error.return_value = None
-
-        with patch("firewall_bridge._ffi.get_lib", return_value=mock_lib):
-            with pytest.raises(FirewallBridgeError) as exc_info:
-                check_error(-1)
-            assert exc_info.value.code == ErrorCode.ALREADY_INITIALIZED
-            assert exc_info.value.detail == ""
+    def test_ffi_detail_fetch(self):
+        from unittest.mock import patch
+        with patch("firewall_bridge._ffi.get_last_error", return_value="rust error msg"):
+            with pytest.raises(NftablesError, match="rust error msg"):
+                check_result(-3)

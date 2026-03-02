@@ -75,6 +75,8 @@ jobs:
              firewall-bridge/linux-amd64/
           cp artifacts/linux-amd64/firewall_bridge/*.py \
              firewall-bridge/linux-amd64/firewall_bridge/
+          cp -r artifacts/linux-amd64/firewall_bridge/schemas \
+             firewall-bridge/linux-amd64/firewall_bridge/
 
           # arm64
           cp artifacts/linux-arm64/libfirewall_bridge_linux.so \
@@ -82,6 +84,8 @@ jobs:
              artifacts/linux-arm64/firewall_bridge_linux.h \
              firewall-bridge/linux-arm64/
           cp artifacts/linux-arm64/firewall_bridge/*.py \
+             firewall-bridge/linux-arm64/firewall_bridge/
+          cp -r artifacts/linux-arm64/firewall_bridge/schemas \
              firewall-bridge/linux-arm64/firewall_bridge/
 
           rm -rf artifacts

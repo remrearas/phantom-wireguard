@@ -22,11 +22,11 @@ Vendor tag (publish-vendor-firewall-bridge-v*):
 
 ## Artifacts
 
-| Name                          | Contents                                     | Retention |
-|-------------------------------|----------------------------------------------|-----------|
-| `test-results`                | pytest output, coverage                      | 30 days   |
-| `firewall-bridge-linux-amd64` | .so, .h, .sha256, firewall_bridge/*.py       | 90 days   |
-| `firewall-bridge-linux-arm64` | .so, .h, .sha256, firewall_bridge/*.py       | 90 days   |
+| Name                          | Contents                                         | Retention |
+|-------------------------------|--------------------------------------------------|-----------|
+| `test-results`                | pytest output, coverage                          | 30 days   |
+| `firewall-bridge-linux-amd64` | .so, .h, .sha256, firewall_bridge/*.py, schemas/ | 90 days   |
+| `firewall-bridge-linux-arm64` | .so, .h, .sha256, firewall_bridge/*.py, schemas/ | 90 days   |
 
 ## Vendor Directory Structure (dev/vendor branch)
 
@@ -40,9 +40,14 @@ firewall-bridge/
 │   └── firewall_bridge/
 │       ├── __init__.py
 │       ├── _ffi.py
-│       ├── client.py
+│       ├── bridge.py
+│       ├── db.py
 │       ├── models.py
-│       └── types.py
+│       ├── presets.py
+│       ├── schema.py
+│       ├── types.py
+│       └── schemas/
+│           └── schema.sql
 └── linux-arm64/
     ├── libfirewall_bridge_linux.so
     ├── libfirewall_bridge_linux.so.sha256

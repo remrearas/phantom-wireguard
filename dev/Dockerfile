@@ -12,7 +12,6 @@
 #   dev/build.sh          # build image
 #   dev/shell.sh          # interactive shell (source mounted)
 #   dev/cargo.sh test     # run cargo commands inside container
-#   dev/pytest.sh         # run Python tests inside container
 
 FROM rust:1.85-bookworm
 
