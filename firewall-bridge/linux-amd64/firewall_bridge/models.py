@@ -10,26 +10,25 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Dataclass models for firewall-bridge v2.
+Dataclass models for firewall_bridge — Group, FirewallRule, RoutingRule.
+
+Mutable (frozen=False) — db.py may update fields after SQL operations.
+Default values match schema.sql column defaults.
 """
 
-from dataclasses import dataclass, field, fields
+from __future__ import annotations
 
-
-def _to_dataclass(cls, data: dict):
-    """Convert dict to dataclass, ignoring unknown keys."""
-    known = {f.name for f in fields(cls)}
-    return cls(**{k: v for k, v in data.items() if k in known})
+from dataclasses import dataclass, field
 
 
 @dataclass
-class RuleGroup:
+class Group:
     id: int = 0
     name: str = ""
     group_type: str = "custom"
     enabled: bool = True
     priority: int = 100
-    metadata: str = "{}"
+    metadata: dict = field(default_factory=dict)
     created_at: int = 0
     updated_at: int = 0
 
@@ -39,11 +38,10 @@ class FirewallRule:
     id: int = 0
     group_id: int = 0
     chain: str = ""
-    rule_type: str = ""
+    action: str = ""
     family: int = 2
     proto: str = ""
     dport: int = 0
-    sport: int = 0
     source: str = ""
     destination: str = ""
     in_iface: str = ""
@@ -68,22 +66,5 @@ class RoutingRule:
     priority: int = 0
     destination: str = ""
     device: str = ""
-    fwmark: int = 0
     applied: bool = False
     created_at: int = 0
-
-
-@dataclass
-class FirewallStatus:
-    status: str = "uninitialized"
-    enabled_groups: int = 0
-    firewall_rules: dict = field(default_factory=lambda: {"total": 0, "applied": 0})
-    routing_rules: dict = field(default_factory=lambda: {"total": 0, "applied": 0})
-    last_error: str = ""
-
-
-@dataclass
-class VerifyResult:
-    in_sync: bool = True
-    firewall: dict = field(default_factory=dict)
-    routing: dict = field(default_factory=dict)

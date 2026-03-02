@@ -10,64 +10,91 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Error types and enums for firewall_bridge v2.
+Native exception hierarchy for firewall_bridge v2.1.0
+
+Rust FFI error codes (negative) → kernel operation exceptions.
+Python-side errors (DB, state) → Python exceptions.
 """
 
-from enum import IntEnum
+
+class BridgeError(Exception):
+    """Base exception for all firewall bridge errors."""
+
+    def __init__(self, message: str = ""):
+        self.message = message
+        super().__init__(message)
 
 
-class ErrorCode(IntEnum):
-    # v1 codes
-    OK = 0
-    ALREADY_INITIALIZED = -1
-    NOT_INITIALIZED = -2
-    NFT_FAILED = -3
-    NETLINK_FAILED = -4
-    INVALID_PARAM = -5
-    IO_ERROR = -6
-    PERMISSION_DENIED = -7
+# ---- Rust FFI errors (kernel operations) ----
 
-    # v2 codes
-    DB_OPEN = -10
-    DB_QUERY = -11
-    DB_WRITE = -12
-    GROUP_NOT_FOUND = -13
-    RULE_NOT_FOUND = -14
-    INVALID_STATE = -15
-    ALREADY_STARTED = -16
-    NOT_STARTED = -17
-    PRESET_FAILED = -18
-    VERIFY_FAILED = -19
+class NftablesError(BridgeError):
+    """nftables operation failed."""
 
 
-class AddressFamily(IntEnum):
-    INET = 2     # AF_INET  (IPv4)
-    INET6 = 10   # AF_INET6 (IPv6)
+class NetlinkError(BridgeError):
+    """Netlink routing operation failed."""
 
 
-class FirewallBridgeError(Exception):
-    """Raised when a firewall bridge operation fails."""
-
-    def __init__(self, code: int, detail: str = ""):
-        try:
-            self.code = ErrorCode(code)
-        except ValueError:
-            self.code = code  # type: ignore[assignment]
-        self.detail = detail
-
-    def __str__(self) -> str:
-        name = self.code.name if isinstance(self.code, ErrorCode) else str(self.code)
-        msg = f"FirewallBridgeError({name})"
-        if self.detail:
-            msg += f": {self.detail}"
-        return msg
+class InvalidParamError(BridgeError):
+    """Invalid parameter passed to FFI."""
 
 
-def check_error(rc: int) -> None:
-    """Raise FirewallBridgeError if rc is not OK."""
-    if rc != 0:
-        from ._ffi import get_lib
-        lib = get_lib()
-        detail_ptr = lib.firewall_bridge_get_last_error()
-        detail = detail_ptr.decode("utf-8") if detail_ptr else ""
-        raise FirewallBridgeError(rc, detail)
+class IoError(BridgeError):
+    """I/O error (file, proc, sysctl)."""
+
+
+class PermissionDeniedError(BridgeError):
+    """Permission denied — need CAP_NET_ADMIN."""
+
+
+# ---- Python-side errors (DB, state, groups) ----
+
+class GroupNotFoundError(BridgeError):
+    """Rule group not found."""
+
+
+class RuleNotFoundError(BridgeError):
+    """Firewall or routing rule not found."""
+
+
+class AlreadyStartedError(BridgeError):
+    """Bridge already started."""
+
+
+class NotStartedError(BridgeError):
+    """Bridge not started."""
+
+
+class PresetValidationError(BridgeError):
+    """Preset schema validation failed."""
+
+    def __init__(self, field: str, reason: str, value: object = None):
+        self.field = field
+        self.reason = reason
+        self.value = value
+        msg = f"{field}: {reason}"
+        if value is not None:
+            msg += f" (got {value!r})"
+        super().__init__(msg)
+
+
+# FFI error code → exception class mapping (Rust kernel ops only)
+_ERROR_MAP: dict[int, type[BridgeError]] = {
+    -3: NftablesError,
+    -4: NetlinkError,
+    -5: InvalidParamError,
+    -6: IoError,
+    -7: PermissionDeniedError,
+}
+
+
+def check_result(rc: int, detail: str = "") -> None:
+    """Raise specific exception if rc is negative (Rust FFI error)."""
+    if rc >= 0:
+        return
+    if not detail:
+        from ._ffi import get_last_error
+        detail = get_last_error()
+    exc_cls = _ERROR_MAP.get(rc, BridgeError)
+    msg = detail if detail else f"FFI error code: {rc}"
+    raise exc_cls(msg)
