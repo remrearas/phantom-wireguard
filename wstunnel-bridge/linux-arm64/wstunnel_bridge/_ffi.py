@@ -9,8 +9,7 @@
 Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 
-Low-level ctypes bindings to libwstunnel_bridge_linux.so.
-All other modules use this as the FFI foundation.
+Low-level ctypes bindings — server-only FFI.
 """
 
 import ctypes
@@ -83,7 +82,7 @@ _WS_LOG_CALLBACK_TYPE = ctypes.CFUNCTYPE(
 
 
 def _setup_signatures(lib: ctypes.CDLL) -> None:
-    """Define C function signatures for type safety."""
+    """Define C function signatures for type safety — server only."""
 
     # --- Logging ---
     lib.wstunnel_set_log_callback.argtypes = [_WS_LOG_CALLBACK_TYPE, ctypes.c_void_p]
@@ -91,83 +90,6 @@ def _setup_signatures(lib: ctypes.CDLL) -> None:
 
     lib.wstunnel_init_logging.argtypes = [ctypes.c_int32]
     lib.wstunnel_init_logging.restype = None
-
-    # --- Config Builder ---
-    lib.wstunnel_config_new.argtypes = []
-    lib.wstunnel_config_new.restype = ctypes.c_void_p
-
-    lib.wstunnel_config_free.argtypes = [ctypes.c_void_p]
-    lib.wstunnel_config_free.restype = None
-
-    lib.wstunnel_config_set_remote_url.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-    lib.wstunnel_config_set_remote_url.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_http_upgrade_path_prefix.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-    lib.wstunnel_config_set_http_upgrade_path_prefix.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_http_upgrade_credentials.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-    lib.wstunnel_config_set_http_upgrade_credentials.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_tls_verify.argtypes = [ctypes.c_void_p, ctypes.c_bool]
-    lib.wstunnel_config_set_tls_verify.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_tls_sni_override.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-    lib.wstunnel_config_set_tls_sni_override.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_tls_sni_disable.argtypes = [ctypes.c_void_p, ctypes.c_bool]
-    lib.wstunnel_config_set_tls_sni_disable.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_websocket_ping_frequency.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
-    lib.wstunnel_config_set_websocket_ping_frequency.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_websocket_mask_frame.argtypes = [ctypes.c_void_p, ctypes.c_bool]
-    lib.wstunnel_config_set_websocket_mask_frame.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_connection_min_idle.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
-    lib.wstunnel_config_set_connection_min_idle.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_connection_retry_max_backoff.argtypes = [ctypes.c_void_p, ctypes.c_uint64]
-    lib.wstunnel_config_set_connection_retry_max_backoff.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_http_proxy.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-    lib.wstunnel_config_set_http_proxy.restype = ctypes.c_int32
-
-    lib.wstunnel_config_add_http_header.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-    lib.wstunnel_config_add_http_header.restype = ctypes.c_int32
-
-    lib.wstunnel_config_set_worker_threads.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
-    lib.wstunnel_config_set_worker_threads.restype = ctypes.c_int32
-
-    # --- Tunnel Rules ---
-    lib.wstunnel_config_add_tunnel_udp.argtypes = [
-        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint16,
-        ctypes.c_char_p, ctypes.c_uint16, ctypes.c_uint64,
-    ]
-    lib.wstunnel_config_add_tunnel_udp.restype = ctypes.c_int32
-
-    lib.wstunnel_config_add_tunnel_tcp.argtypes = [
-        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint16,
-        ctypes.c_char_p, ctypes.c_uint16,
-    ]
-    lib.wstunnel_config_add_tunnel_tcp.restype = ctypes.c_int32
-
-    lib.wstunnel_config_add_tunnel_socks5.argtypes = [
-        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint16, ctypes.c_uint64,
-    ]
-    lib.wstunnel_config_add_tunnel_socks5.restype = ctypes.c_int32
-
-    # --- Client Control ---
-    lib.wstunnel_client_start.argtypes = [ctypes.c_void_p]
-    lib.wstunnel_client_start.restype = ctypes.c_int32
-
-    lib.wstunnel_client_stop.argtypes = []
-    lib.wstunnel_client_stop.restype = ctypes.c_int32
-
-    lib.wstunnel_client_is_running.argtypes = []
-    lib.wstunnel_client_is_running.restype = ctypes.c_int32
-
-    lib.wstunnel_client_get_last_error.argtypes = []
-    lib.wstunnel_client_get_last_error.restype = ctypes.c_char_p
 
     lib.wstunnel_get_version.argtypes = []
     lib.wstunnel_get_version.restype = ctypes.c_char_p
@@ -188,23 +110,11 @@ def _setup_signatures(lib: ctypes.CDLL) -> None:
     lib.wstunnel_server_config_set_tls_private_key.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     lib.wstunnel_server_config_set_tls_private_key.restype = ctypes.c_int32
 
-    lib.wstunnel_server_config_set_tls_client_ca_certs.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-    lib.wstunnel_server_config_set_tls_client_ca_certs.restype = ctypes.c_int32
-
     lib.wstunnel_server_config_add_restrict_to.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     lib.wstunnel_server_config_add_restrict_to.restype = ctypes.c_int32
 
     lib.wstunnel_server_config_add_restrict_path_prefix.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     lib.wstunnel_server_config_add_restrict_path_prefix.restype = ctypes.c_int32
-
-    lib.wstunnel_server_config_set_websocket_ping_frequency.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
-    lib.wstunnel_server_config_set_websocket_ping_frequency.restype = ctypes.c_int32
-
-    lib.wstunnel_server_config_set_websocket_mask_frame.argtypes = [ctypes.c_void_p, ctypes.c_bool]
-    lib.wstunnel_server_config_set_websocket_mask_frame.restype = ctypes.c_int32
-
-    lib.wstunnel_server_config_set_worker_threads.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
-    lib.wstunnel_server_config_set_worker_threads.restype = ctypes.c_int32
 
     # --- Server Control ---
     lib.wstunnel_server_start.argtypes = [ctypes.c_void_p]
@@ -224,13 +134,13 @@ def _setup_signatures(lib: ctypes.CDLL) -> None:
 
 _log = logging.getLogger("wstunnel_bridge")
 
-# Rust → Python level mapping
+# Rust -> Python level mapping
 _LEVEL_MAP = {
     0: logging.ERROR,    # WS_LOG_ERROR
     1: logging.WARNING,  # WS_LOG_WARN
     2: logging.INFO,     # WS_LOG_INFO
     3: logging.DEBUG,    # WS_LOG_DEBUG
-    4: logging.DEBUG,    # WS_LOG_TRACE → DEBUG (Python has no TRACE)
+    4: logging.DEBUG,    # WS_LOG_TRACE -> DEBUG (Python has no TRACE)
 }
 
 # Prevent GC of active callback
@@ -239,7 +149,7 @@ _log_callback_registered = False
 
 
 def _setup_log_callback() -> None:
-    """Register Rust→Python log bridge (once). Called by Client/Server init."""
+    """Register Rust->Python log bridge (once)."""
     global _active_log_callback, _log_callback_registered
     if _log_callback_registered:
         return
