@@ -17,8 +17,8 @@ combined into a flat layout where _ffi.py finds the .so via sibling path.
 Output goes to dist/ directory.
 
 Usage:
-    python packager.py v1.0.0
-    python packager.py v1.0.0 --dry-run
+    python packager.py
+    python packager.py --dry-run
 """
 
 import argparse
@@ -92,7 +92,7 @@ def verify_checksums(arch):
     return errors
 
 
-def build_zip(version, arch, dry_run=False):
+def build_zip(arch, dry_run=False):
     """
     Build vendor-pack zip for given architecture.
 
@@ -104,7 +104,7 @@ def build_zip(version, arch, dry_run=False):
             <lib>.so.sha256
             <extras>
     """
-    zip_name = f"vendor-pack-{version}-{arch}.zip"
+    zip_name = f"vendor-pack-{arch}.zip"
     zip_path = DIST_DIR / zip_name
 
     if dry_run:
@@ -159,16 +159,10 @@ def print_zip_contents(zip_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Build vendor-pack zip files")
-    parser.add_argument("version", help="Pack version (e.g. v1.0.0)")
     parser.add_argument("--dry-run", action="store_true", help="Validate only")
     args = parser.parse_args()
 
-    version = args.version
-    if not version.startswith("v"):
-        print(f"Error: version must start with 'v' (got: {version})")
-        sys.exit(1)
-
-    print(f"Vendor pack {version}")
+    print("Vendor pack")
     print("=" * 50)
 
     # Validate
@@ -197,7 +191,7 @@ def main():
 
     for arch in ARCHITECTURES:
         print(f"\nBuilding {arch}...")
-        zip_path = build_zip(version, arch, dry_run=args.dry_run)
+        zip_path = build_zip(arch, dry_run=args.dry_run)
         if not args.dry_run:
             print_zip_contents(zip_path)
             size_mb = zip_path.stat().st_size / (1024 * 1024)

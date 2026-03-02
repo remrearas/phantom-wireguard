@@ -3,7 +3,7 @@ name: Publish vendor-pack
 on:
   push:
     tags:
-      - 'publish-vendor-pack-v*'
+      - 'publish-vendor-pack'
 
 permissions:
   contents: read
@@ -31,43 +31,28 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Extract version
-        id: version
-        env:
-          REF_NAME: ${{ github.ref_name }}
-        run: |
-          VERSION="${REF_NAME#publish-vendor-pack-}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-
       - name: Build vendor-pack
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: python packager.py "${VERSION}"
+        run: python packager.py
 
       - name: Push to dev/vendor
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          mkdir -p dist/${VERSION}
-          mv dist/vendor-pack-${VERSION}-*.zip dist/${VERSION}/
-          git add -f dist/${VERSION}/
-          git commit -m "Vendor-pack: ${VERSION}"
+          git add -f dist/
+          git commit -m "Vendor-pack updated"
           git push origin dev/vendor
 
       - name: Summary
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          echo "## vendor-pack ${VERSION} → dev/vendor" >> "$GITHUB_STEP_SUMMARY"
+          echo "## vendor-pack → dev/vendor" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Platform | File | Size |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|----------|------|------|" >> "$GITHUB_STEP_SUMMARY"
-          for zip in dist/${VERSION}/*.zip; do
+          echo "| File | Size |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
+          for zip in dist/*.zip; do
             NAME=$(basename "$zip")
             SIZE=$(du -h "$zip" | cut -f1)
-            echo "| ${NAME##*-linux-} | \`${NAME}\` | ${SIZE} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| \`${NAME}\` | ${SIZE} |" >> "$GITHUB_STEP_SUMMARY"
           done
