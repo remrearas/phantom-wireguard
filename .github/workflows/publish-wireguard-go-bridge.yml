@@ -110,8 +110,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
           git add -f wireguard-go-bridge/
-          git commit -m "Vendor: wireguard-go-bridge ${VERSION}"
-          git push origin dev/vendor
+          if git diff --cached --quiet; then
+            echo "No changes — force push existing state"
+            git push origin dev/vendor
+          else
+            git commit -m "Vendor: wireguard-go-bridge ${VERSION}"
+            git push origin dev/vendor
+          fi
 
       - name: Summary
         env:
