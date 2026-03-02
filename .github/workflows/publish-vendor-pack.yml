@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   publish:
-    name: Build and release vendor-pack
+    name: Build and publish vendor-pack
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -44,26 +44,30 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: python packager.py "${VERSION}"
 
-      - name: Create release
+      - name: Push to dev/vendor
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "vendor-pack-${VERSION}" \
-            --title "vendor-pack ${VERSION}" \
-            --notes "${VERSION}" \
-            dist/vendor-pack-${VERSION}-linux-amd64.zip \
-            dist/vendor-pack-${VERSION}-linux-arm64.zip
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          mkdir -p dist/${VERSION}
+          mv dist/vendor-pack-${VERSION}-*.zip dist/${VERSION}/
+          git add -f dist/${VERSION}/
+          git commit -m "Vendor-pack: ${VERSION}"
+          git push origin dev/vendor
 
       - name: Summary
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          AMD64_SIZE=$(du -h "dist/vendor-pack-${VERSION}-linux-amd64.zip" | cut -f1)
-          ARM64_SIZE=$(du -h "dist/vendor-pack-${VERSION}-linux-arm64.zip" | cut -f1)
-          echo "## vendor-pack ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "## vendor-pack ${VERSION} → dev/vendor" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Platform | Size |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|----------|------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| linux/amd64 | ${AMD64_SIZE} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| linux/arm64 | ${ARM64_SIZE} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Platform | File | Size |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|------|------|" >> "$GITHUB_STEP_SUMMARY"
+          for zip in dist/${VERSION}/*.zip; do
+            NAME=$(basename "$zip")
+            SIZE=$(du -h "$zip" | cut -f1)
+            echo "| ${NAME##*-linux-} | \`${NAME}\` | ${SIZE} |" >> "$GITHUB_STEP_SUMMARY"
+          done

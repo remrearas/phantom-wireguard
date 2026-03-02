@@ -71,6 +71,8 @@ def validate_sources(arch):
             errors.append(f"Missing: {pkg}")
         elif not list(pkg.glob("*.py")):
             errors.append(f"No .py files in: {pkg}")
+        elif not (pkg / "__init__.py").is_file():
+            errors.append(f"Missing __init__.py in: {pkg}")
     return errors
 
 
@@ -131,10 +133,11 @@ def build_zip(version, arch, dry_run=False):
             for extra in spec["extras"]:
                 zf.write(base / extra, f"{pkg_name}/{extra}")
 
-            # Python files
+            # Package contents (*.py + subdirectories)
             pkg_dir = base / pkg_name
-            for py_file in sorted(pkg_dir.glob("*.py")):
-                zf.write(py_file, f"{pkg_name}/{py_file.name}")
+            for item in sorted(pkg_dir.rglob("*")):
+                if item.is_file():
+                    zf.write(item, f"{pkg_name}/{item.relative_to(pkg_dir)}")
 
     return zip_path
 
