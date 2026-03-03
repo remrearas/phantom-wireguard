@@ -48,6 +48,8 @@ jobs:
           git push origin dev/vendor
 
       - name: Generate directory indexes
+        env:
+          TZ: Europe/Istanbul
         run: python .github/scripts/generate_directory_indexes.py dist
 
       - name: Prepare deployment artifact
