@@ -12,8 +12,7 @@
 FROM python:3.12-slim AS vendor-fetch
 
 ARG TARGETARCH=amd64
-ARG VENDOR_REPO=ARAS-Workspace/phantom-wg
-ARG VENDOR_BRANCH=dev/vendor
+ARG VENDOR_URL=https://vendor-artifacts.phantom.tc
 ARG VENDOR_DIR=/opt/phantom/vendor
 
 RUN apt-get update \
@@ -22,12 +21,11 @@ RUN apt-get update \
 
 RUN set -e; \
     case "${TARGETARCH}" in \
-        amd64) ARCH_LABEL="amd64" ;; \
-        arm64) ARCH_LABEL="arm64" ;; \
-        *)     echo "Unsupported arch: ${TARGETARCH}" && exit 1 ;; \
+        amd64|arm64) ;; \
+        *) echo "Unsupported arch: ${TARGETARCH}" && exit 1 ;; \
     esac; \
-    ZIP_NAME="vendor-pack-linux-${ARCH_LABEL}.zip"; \
-    URL="https://raw.githubusercontent.com/${VENDOR_REPO}/${VENDOR_BRANCH}/dist/${ZIP_NAME}"; \
+    ZIP_NAME="vendor-pack-linux-${TARGETARCH}.zip"; \
+    URL="${VENDOR_URL}/${ZIP_NAME}"; \
     echo "Fetching ${URL}"; \
     curl -fSL -o /tmp/vendor-pack.zip "${URL}"; \
     mkdir -p "${VENDOR_DIR}"; \
