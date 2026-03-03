@@ -14,7 +14,7 @@ FROM python:3.12-slim AS base
 # ── Build args ───────────────────────────────────────────────────
 # TARGETARCH is auto-set by BuildKit (amd64 | arm64).
 # Manual override: --build-arg TARGETARCH=arm64
-ARG TARGETARCH=amd64
+ARG TARGETARCH
 
 ARG VENDOR_URL=https://vendor-artifacts.phantom.tc
 ARG VENDOR_DIR=/opt/phantom/vendor

@@ -16,6 +16,7 @@
 -r requirements.in
 pytest==9.0.2
 pytest-cov==7.0.0
+pytest-dependency==0.6.0
 httpx==0.28.1
 docker==7.1.0
 rich==14.3.3

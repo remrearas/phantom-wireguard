@@ -26,9 +26,14 @@ services:
     secrets:
       - wg_private_key
       - wg_public_key
-      - db_encryption_key
     environment:
       - PYTHONUNBUFFERED=1
+      - PHANTOM_DB_DIR=/var/lib/phantom
+      - WIREGUARD_LISTEN_PORT=51820
+      - WIREGUARD_MTU=1420
+      - WIREGUARD_KEEPALIVE=25
+      - WIREGUARD_ENDPOINT_V4=
+      - WIREGUARD_ENDPOINT_V6=
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -40,8 +45,6 @@ secrets:
     file: ./container-data/secrets/production/wg_private_key
   wg_public_key:
     file: ./container-data/secrets/production/wg_public_key
-  db_encryption_key:
-    file: ./container-data/secrets/production/db_encryption_key
 
 volumes:
   phantom-sock:

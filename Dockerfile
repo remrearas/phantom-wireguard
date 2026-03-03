@@ -11,7 +11,7 @@
 # ── Stage 1: vendor fetch ────────────────────────────────────────
 FROM python:3.12-slim AS vendor-fetch
 
-ARG TARGETARCH=amd64
+ARG TARGETARCH
 ARG VENDOR_URL=https://vendor-artifacts.phantom.tc
 ARG VENDOR_DIR=/opt/phantom/vendor
 

@@ -28,10 +28,14 @@ services:
     secrets:
       - wg_private_key
       - wg_public_key
-      - db_encryption_key
     environment:
       - PYTHONUNBUFFERED=1
       - PHANTOM_DB_DIR=/var/lib/phantom/db
+      - WIREGUARD_LISTEN_PORT=51820
+      - WIREGUARD_MTU=1420
+      - WIREGUARD_KEEPALIVE=25
+      - WIREGUARD_ENDPOINT_V4=
+      - WIREGUARD_ENDPOINT_V6=
 
   gateway:
     image: alpine/socat:latest
@@ -50,8 +54,6 @@ secrets:
     file: ./container-data/secrets/development/wg_private_key
   wg_public_key:
     file: ./container-data/secrets/development/wg_public_key
-  db_encryption_key:
-    file: ./container-data/secrets/development/db_encryption_key
 
 volumes:
   phantom-sock:

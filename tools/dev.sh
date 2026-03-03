@@ -52,8 +52,7 @@ cmd_rebuild() {
     bold "Rebuilding..."
     $COMPOSE down
     $COMPOSE build --no-cache
-    $COMPOSE up -d
-    green "Rebuilt & started. Gateway: http://localhost:${GATEWAY_PORT}"
+    green "Rebuilt. Run './tools/dev.sh up' to start."
 }
 
 cmd_logs() {
@@ -62,7 +61,7 @@ cmd_logs() {
 
 cmd_test() {
     bold "Running pytest (ASGI mode)..."
-    $COMPOSE exec "$DAEMON" python -m pytest tests/ -v "$@"
+    $COMPOSE exec "$DAEMON" python -m pytest tests/ -v -s "$@"
 }
 
 cmd_test_uds() {

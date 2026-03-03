@@ -1,6 +1,7 @@
 # IDE
 .idea/
 .vscode/
+vendor_pack/
 *.swp
 *.swo
 
@@ -30,6 +31,9 @@ container-data/db/*
 .coverage
 htmlcov/
 test_results/
+
+# SQLite
+*.sqlite
 
 # OS
 .DS_Store

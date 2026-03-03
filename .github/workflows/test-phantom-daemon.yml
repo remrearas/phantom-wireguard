@@ -28,7 +28,6 @@ jobs:
           mkdir -p container-data/secrets/development
           echo "ci-placeholder" > container-data/secrets/development/wg_private_key
           echo "ci-placeholder" > container-data/secrets/development/wg_public_key
-          echo "ci-placeholder" > container-data/secrets/development/db_encryption_key
 
       - name: Build & start dev stack
         run: ./tools/dev.sh up

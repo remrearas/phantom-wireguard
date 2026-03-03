@@ -35,7 +35,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 @pytest.fixture()
 def app() -> FastAPI:
-    return create_app()
+    return create_app(lifespan_func=None)
 
 
 @pytest.fixture()
