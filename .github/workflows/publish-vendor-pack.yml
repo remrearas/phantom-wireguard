@@ -97,5 +97,5 @@ jobs:
           projectName: vendor-artifacts-phantom
           directory: deployment/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.head_ref || github.ref_name }}
+          branch: main
           wranglerVersion: '3'
