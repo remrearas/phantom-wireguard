@@ -364,17 +364,13 @@ def generate_table(items):
             f"</td>"
         )
 
-        rows.append(
-            f"<tr>{icon}{name_display}</td>"
-            if False
-            else f"""
+        rows.append(f"""
             <tr>
                 <td>{icon}{name_display}</td>
                 {size_cell}
                 {hash_cell}
                 {date_cell}
-            </tr>"""
-        )
+            </tr>""")
 
     return f"""
         <div class="table-wrapper">
