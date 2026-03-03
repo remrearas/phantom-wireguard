@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      artifact_name: ${{ steps.prepare.outputs.artifact_name }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
@@ -45,6 +47,22 @@ jobs:
           git commit -m "Vendor-pack updated"
           git push origin dev/vendor
 
+      - name: Generate directory indexes
+        run: python .github/scripts/generate_directory_indexes.py dist
+
+      - name: Prepare deployment artifact
+        id: prepare
+        run: |
+          ARTIFACT_NAME="vendor-artifacts-$(echo "$GITHUB_SHA" | cut -c1-8)"
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.prepare.outputs.artifact_name }}
+          path: dist/
+          retention-days: 7
+
       - name: Summary
         run: |
           echo "## vendor-pack → dev/vendor" >> "$GITHUB_STEP_SUMMARY"
@@ -56,3 +74,28 @@ jobs:
             SIZE=$(du -h "$zip" | cut -f1)
             echo "| \`${NAME}\` | ${SIZE} |" >> "$GITHUB_STEP_SUMMARY"
           done
+
+  deploy:
+    name: Deploy to Cloudflare Pages
+    needs: publish
+    if: success()
+    runs-on: self-hosted
+    permissions:
+      deployments: write
+    steps:
+      - name: Download deployment artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ needs.publish.outputs.artifact_name }}
+          path: deployment/dist
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@f0a1cd58cd66095dee69bfa18fa5efd1dde93bca # v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: vendor-artifacts-phantom
+          directory: deployment/dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref || github.ref_name }}
+          wranglerVersion: '3'
