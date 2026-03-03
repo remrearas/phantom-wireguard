@@ -2,7 +2,7 @@
 # ──────────────────────────────────────────────────────────────────
 # phantom-daemon  ·  WireGuard Server Keypair Generator
 # ──────────────────────────────────────────────────────────────────
-# Generates wg_private_key + wg_public_key using the production
+# Generates wg_private_key + wg_public_key using the matching
 # Docker image (wireguard_go_bridge FFI). Keys are written to
 # container-data/secrets/<env>/.
 #
@@ -14,7 +14,6 @@
 
 set -euo pipefail
 
-IMAGE="phantom-daemon:latest"
 ENV="${1:-development}"
 FORCE=false
 
@@ -36,6 +35,16 @@ fi
 
 SECRETS_DIR="container-data/secrets/${ENV}"
 
+# ── Image / Dockerfile per environment ─────────────────────────
+
+if [[ "$ENV" == "development" ]]; then
+    IMAGE="phantom-wg-dev-daemon:latest"
+    DOCKERFILE="dev.Dockerfile"
+else
+    IMAGE="phantom-daemon:latest"
+    DOCKERFILE="Dockerfile"
+fi
+
 # ── Check existing keys ──────────────────────────────────────────
 
 if [[ -s "${SECRETS_DIR}/wg_private_key" && -s "${SECRETS_DIR}/wg_public_key" ]]; then
@@ -51,7 +60,7 @@ fi
 
 if ! docker image inspect "$IMAGE" &>/dev/null; then
     bold "Image $IMAGE not found. Building..."
-    docker build -t "$IMAGE" -f Dockerfile .
+    docker build -t "$IMAGE" -f "$DOCKERFILE" .
 fi
 
 # ── Generate keypair via bridge FFI ──────────────────────────────

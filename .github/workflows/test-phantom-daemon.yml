@@ -23,11 +23,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Create dev secrets (placeholders)
-        run: |
-          mkdir -p container-data/secrets/development
-          echo "ci-placeholder" > container-data/secrets/development/wg_private_key
-          echo "ci-placeholder" > container-data/secrets/development/wg_public_key
+      - name: Generate dev secrets
+        run: ./tools/gen-keys.sh development
 
       - name: Build & start dev stack
         run: ./tools/dev.sh up
