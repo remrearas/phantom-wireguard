@@ -6,14 +6,24 @@
 
 # Claude Code
 .claude/
+.playground/
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
+.venv/
 dist/
 build/
+
+# Container data
+container-data/secrets/production/*
+!container-data/secrets/production/.gitkeep
+container-data/secrets/development/*
+!container-data/secrets/development/.gitkeep
+container-data/db/*
+!container-data/db/.gitkeep
 
 # Test
 .pytest_cache/

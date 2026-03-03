@@ -1,0 +1,48 @@
+# ──────────────────────────────────────────────────────────────────
+# phantom-daemon  ·  Production Compose
+# ──────────────────────────────────────────────────────────────────
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f daemon
+#   docker compose exec daemon python -c "import phantom_daemon; print(phantom_daemon.__version__)"
+#
+# UDS test:
+#   docker compose exec daemon \
+#     curl --unix-socket /var/run/phantom/daemon.sock http://localhost/api/core/hello
+# ──────────────────────────────────────────────────────────────────
+
+services:
+  daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: phantom-daemon
+    restart: unless-stopped
+    volumes:
+      # UDS socket
+      - phantom-sock:/var/run/phantom
+      # Persistent data
+      - phantom-data:/var/lib/phantom
+    secrets:
+      - wg_private_key
+      - wg_public_key
+      - db_encryption_key
+    environment:
+      - PYTHONUNBUFFERED=1
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    sysctls:
+      - net.ipv4.ip_forward=1
+
+secrets:
+  wg_private_key:
+    file: ./container-data/secrets/production/wg_private_key
+  wg_public_key:
+    file: ./container-data/secrets/production/wg_public_key
+  db_encryption_key:
+    file: ./container-data/secrets/production/db_encryption_key
+
+volumes:
+  phantom-sock:
+  phantom-data:

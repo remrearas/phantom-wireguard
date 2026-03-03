@@ -1,0 +1,57 @@
+# ──────────────────────────────────────────────────────────────────
+# phantom-daemon  ·  Development Compose
+# ──────────────────────────────────────────────────────────────────
+# Usage:
+#   docker compose -f docker-compose-dev.yml up -d
+#   docker compose -f docker-compose-dev.yml logs -f
+#
+# Postman / curl:
+#   http://localhost:9080/api/core/hello
+#
+# gateway (socat) UDS → TCP wrapper:
+#   daemon.sock ← socat → :9080
+# ──────────────────────────────────────────────────────────────────
+
+services:
+  daemon:
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    container_name: phantom-daemon-dev
+    restart: unless-stopped
+    command: ["python", "-m", "phantom_daemon.main", "/var/run/phantom/daemon.sock"]
+    volumes:
+      - phantom-sock:/var/run/phantom
+      - ./phantom_daemon:/app/phantom_daemon:ro
+      - ./tests:/app/tests:ro
+      - ./container-data/db:/var/lib/phantom/db
+    secrets:
+      - wg_private_key
+      - wg_public_key
+      - db_encryption_key
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PHANTOM_DB_DIR=/var/lib/phantom/db
+
+  gateway:
+    image: alpine/socat:latest
+    container_name: phantom-gateway
+    restart: unless-stopped
+    depends_on:
+      - daemon
+    command: TCP-LISTEN:9080,fork,reuseaddr UNIX-CONNECT:/var/run/phantom/daemon.sock
+    ports:
+      - "9080:9080"
+    volumes:
+      - phantom-sock:/var/run/phantom
+
+secrets:
+  wg_private_key:
+    file: ./container-data/secrets/development/wg_private_key
+  wg_public_key:
+    file: ./container-data/secrets/development/wg_public_key
+  db_encryption_key:
+    file: ./container-data/secrets/development/db_encryption_key
+
+volumes:
+  phantom-sock:

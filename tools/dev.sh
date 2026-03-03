@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────────
+# phantom-daemon  ·  Development Tools
+# ──────────────────────────────────────────────────────────────────
+# Usage: ./tools/dev.sh <command>
+#
+# Commands:
+#   up          Build & start dev stack (daemon + gateway)
+#   down        Stop dev stack
+#   restart     Restart daemon (keep gateway)
+#   rebuild     Full rebuild & start
+#   logs        Follow daemon logs
+#   test        Run pytest inside container (ASGI mode)
+#   test-uds    Run pytest over UDS (integration)
+#   shell       Open shell in daemon container
+#   curl <path> Query endpoint via gateway (e.g. ./tools/dev.sh curl /api/core/hello)
+#   status      Show running containers
+#   db-ls       List db/ contents (local)
+#   db-ls-r     List db/ contents (container)
+#   db-reset    Wipe db/ directory
+# ──────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+COMPOSE="docker compose -f docker-compose-dev.yml"
+DAEMON="daemon"
+GATEWAY_PORT=9080
+
+red()   { printf "\033[31m%s\033[0m\n" "$*"; }
+green() { printf "\033[32m%s\033[0m\n" "$*"; }
+bold()  { printf "\033[1m%s\033[0m\n" "$*"; }
+
+cmd_up() {
+    bold "Starting dev stack..."
+    $COMPOSE up -d --build
+    green "Gateway: http://localhost:${GATEWAY_PORT}"
+}
+
+cmd_down() {
+    bold "Stopping dev stack..."
+    $COMPOSE down
+    green "Stopped."
+}
+
+cmd_restart() {
+    bold "Restarting daemon..."
+    $COMPOSE restart daemon
+    green "Restarted."
+}
+
+cmd_rebuild() {
+    bold "Rebuilding..."
+    $COMPOSE down
+    $COMPOSE build --no-cache
+    $COMPOSE up -d
+    green "Rebuilt & started. Gateway: http://localhost:${GATEWAY_PORT}"
+}
+
+cmd_logs() {
+    $COMPOSE logs -f daemon
+}
+
+cmd_test() {
+    bold "Running pytest (ASGI mode)..."
+    $COMPOSE exec "$DAEMON" python -m pytest tests/ -v "$@"
+}
+
+cmd_test_uds() {
+    bold "Running pytest (UDS mode)..."
+    $COMPOSE exec "$DAEMON" python -m pytest tests/ -v --uds /var/run/phantom/daemon.sock "$@"
+}
+
+cmd_shell() {
+    $COMPOSE exec "$DAEMON" /bin/bash
+}
+
+cmd_curl() {
+    local path="${1:-/api/core/hello}"
+    curl -s "http://localhost:${GATEWAY_PORT}${path}" | python3 -m json.tool
+}
+
+cmd_status() {
+    $COMPOSE ps
+}
+
+cmd_db_ls() {
+    bold "Local db/ contents:"
+    ls -lah container-data/db/ 2>/dev/null || red "db/ is empty or missing"
+}
+
+cmd_db_ls_r() {
+    bold "Container db/ contents:"
+    $COMPOSE exec "$DAEMON" ls -lah /var/lib/phantom/db/ 2>/dev/null || red "No db files in container"
+}
+
+cmd_db_reset() {
+    bold "Wiping db/..."
+    rm -rf container-data/db/*
+    green "db/ cleared."
+}
+
+cmd_help() {
+    sed -n '/^# Commands:/,/^# ─/p' "$0" | head -n -1 | sed 's/^# //'
+}
+
+# ── Main ─────────────────────────────────────────────────────────
+
+case "${1:-help}" in
+    up)       cmd_up ;;
+    down)     cmd_down ;;
+    restart)  cmd_restart ;;
+    rebuild)  cmd_rebuild ;;
+    logs)     cmd_logs ;;
+    test)     shift; cmd_test "$@" ;;
+    test-uds) shift; cmd_test_uds "$@" ;;
+    shell)    cmd_shell ;;
+    curl)     shift; cmd_curl "$@" ;;
+    status)   cmd_status ;;
+    db-ls)    cmd_db_ls ;;
+    db-ls-r)  cmd_db_ls_r ;;
+    db-reset) cmd_db_reset ;;
+    help|*)   cmd_help ;;
+esac

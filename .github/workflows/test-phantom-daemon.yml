@@ -1,0 +1,45 @@
+name: Test phantom-daemon
+
+on:
+  push:
+    branches:
+      - dev/daemon
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Run pytest (container)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Create dev secrets (placeholders)
+        run: |
+          mkdir -p container-data/secrets/development
+          echo "ci-placeholder" > container-data/secrets/development/wg_private_key
+          echo "ci-placeholder" > container-data/secrets/development/wg_public_key
+          echo "ci-placeholder" > container-data/secrets/development/db_encryption_key
+
+      - name: Build & start dev stack
+        run: ./tools/dev.sh up
+
+      - name: Run tests
+        run: ./tools/dev.sh test
+
+      - name: Logs on failure
+        if: failure()
+        run: ./tools/dev.sh logs
+
+      - name: Stop dev stack
+        if: always()
+        run: ./tools/dev.sh down
