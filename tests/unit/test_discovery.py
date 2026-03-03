@@ -23,16 +23,16 @@ class TestModuleToPrefix:
 
 
 class TestSetupRouters:
-    def test_discovers_hello_router(self) -> None:
+    def test_discovers_routers(self) -> None:
         app = FastAPI()
         count = setup_routers(app)
         assert count >= 1
 
-    def test_hello_route_registered(self) -> None:
+    def test_clients_route_registered(self) -> None:
         app = FastAPI()
         setup_routers(app)
         paths = [r.path for r in app.routes if isinstance(r, Route)]
-        assert "/api/core/hello" in paths
+        assert "/api/core/clients" in paths
 
     def test_returns_router_count(self) -> None:
         app = FastAPI()

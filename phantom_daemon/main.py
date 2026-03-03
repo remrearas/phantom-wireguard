@@ -23,10 +23,13 @@ from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
 from phantom_daemon import __version__
 from phantom_daemon.base import (
     StartupError,
+    WalletError,
+    WalletFullError,
     load_env,
     load_secrets,
     open_wallet,
@@ -70,7 +73,26 @@ def create_app(
         lifespan=lifespan_func,
     )
     setup_routers(app)
+    _register_error_handlers(app)
     return app
+
+
+def _register_error_handlers(app: FastAPI) -> None:
+    """Register global exception handlers for wallet errors."""
+
+    @app.exception_handler(WalletFullError)
+    async def _wallet_full(request, exc):  # noqa: ARG001
+        return JSONResponse(
+            status_code=409,
+            content={"error": "pool_exhausted", "detail": str(exc)},
+        )
+
+    @app.exception_handler(WalletError)
+    async def _wallet_error(request, exc):  # noqa: ARG001
+        return JSONResponse(
+            status_code=400,
+            content={"error": "wallet_error", "detail": str(exc)},
+        )
 
 
 def main() -> None:
