@@ -55,7 +55,7 @@ func newPersistentDevice(ifname string, mtu int, dbPath string) (*persistentDevi
 		return nil, fmt.Errorf("create tun: %w", err)
 	}
 
-	logger := device.NewLogger(device.LogLevelError, "("+ifname+") ")
+	logger := newFilteredLogger(ifname)
 	dev := device.NewDevice(tunDev, conn.NewDefaultBind(), logger)
 	if dev == nil {
 		_ = tunDev.Close()
@@ -139,4 +139,21 @@ func (pd *persistentDevice) restore() error {
 func (pd *persistentDevice) close() {
 	pd.dev.Close()
 	_ = pd.db.Close()
+}
+
+// newFilteredLogger creates an error-level logger that silently drops
+// "no known endpoint for peer" messages. These fire continuously for
+// peers that haven't connected yet — expected in a hub-spoke model
+// where the server has no initial endpoint for its clients.
+func newFilteredLogger(ifname string) *device.Logger {
+	base := device.NewLogger(device.LogLevelError, "("+ifname+") ")
+	origErr := base.Errorf
+	base.Errorf = func(format string, args ...any) {
+		msg := fmt.Sprintf(format, args...)
+		if strings.Contains(msg, "no known endpoint") {
+			return
+		}
+		origErr(format, args...)
+	}
+	return base
 }
