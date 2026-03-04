@@ -1,30 +1,16 @@
 #!/usr/bin/env bash
-# ──────────────────────────────────────────────────────────────────
-# phantom-daemon  ·  Development Tools
+# ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+# ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+# ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+# ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+# ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+# ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
 #
-# SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 # Licensed under AGPL-3.0 - see LICENSE file for details
 # WireGuard® is a registered trademark of Jason A. Donenfeld.
 # ──────────────────────────────────────────────────────────────────
-# Usage: ./tools/dev.sh <command>
-#
-# Commands:
-#   up          Build & start dev stack (daemon + gateway)
-#   down        Stop dev stack
-#   restart     Restart daemon (keep gateway)
-#   rebuild     Full rebuild & start
-#   logs        Follow daemon logs
-#   test        Run pytest inside container (ASGI mode)
-#   test-uds    Run pytest over UDS (integration)
-#   shell       Open shell in daemon container
-#   curl <path> Query endpoint via gateway (e.g. ./tools/dev.sh curl /api/core/hello)
-#   status      Show running containers
-#   db-ls       List db/ contents (local)
-#   db-ls-r     List db/ contents (container)
-#   db-reset    Wipe db/ directory
-#   state-reset Wipe state/db/ directory
-#   stubs       Generate .pyi type stubs from vendor packages
+# phantom-daemon  ·  Development Tools
 # ──────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -120,7 +106,7 @@ cmd_state_reset() {
 }
 
 cmd_stubs() {
-    local image="phantom-wg-dev-daemon:latest"
+    local image="phantom-daemon-dev:latest"
     local dockerfile="dev.Dockerfile"
     local out_dir="typings"
     local vendor_dir="/opt/phantom/vendor"
@@ -147,7 +133,25 @@ cmd_stubs() {
 }
 
 cmd_help() {
-    sed -n '/^# Commands:/,/^# ─/p' "$0" | head -n -1 | sed 's/^# //'
+    cat <<'HELP'
+Usage: ./tools/dev.sh <command>
+
+  up          Build & start dev stack
+  down        Stop dev stack
+  restart     Restart daemon container
+  rebuild     Full rebuild (no-cache)
+  logs        Follow daemon logs
+  test        Run pytest (ASGI)
+  test-uds    Run pytest (UDS)
+  shell       Open shell in daemon
+  curl <path> Query via gateway
+  status      Show containers
+  db-ls       List db/ (local)
+  db-ls-r     List db/ (container)
+  db-reset    Wipe db/
+  state-reset Wipe state/db/
+  stubs       Generate .pyi vendor stubs
+HELP
 }
 
 # ── Main ─────────────────────────────────────────────────────────

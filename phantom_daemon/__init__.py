@@ -10,7 +10,7 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Phantom WireGuard Daemon root package definition.
+Phantom-WG Daemon root package definition.
 """
 
 __version__ = "2.0.0"

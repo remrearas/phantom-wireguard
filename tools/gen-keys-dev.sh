@@ -10,18 +10,18 @@
 # Licensed under AGPL-3.0 - see LICENSE file for details
 # WireGuard® is a registered trademark of Jason A. Donenfeld.
 # ──────────────────────────────────────────────────────────────────
-# Production WireGuard Server Keypair Generator
+# Development WireGuard Server Keypair Generator
 #
 # Usage:
-#   ./tools/gen-keys.sh        Generate production keys
-#   ./tools/gen-keys.sh -f     Overwrite existing keys
+#   ./tools/gen-keys-dev.sh        Generate development keys
+#   ./tools/gen-keys-dev.sh -f     Overwrite existing keys
 # ──────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
-IMAGE="phantom-daemon:latest"
-DOCKERFILE="Dockerfile"
-SECRETS_DIR="container-data/secrets/production"
+IMAGE="phantom-daemon-dev:latest"
+DOCKERFILE="dev.Dockerfile"
+SECRETS_DIR="container-data/secrets/development"
 FORCE=false
 
 [[ "${1:-}" == "-f" || "${1:-}" == "--force" ]] && FORCE=true
@@ -50,7 +50,7 @@ fi
 
 # ── Generate keypair via bridge FFI ──────────────────────────────
 
-bold "Generating keypair (production)..."
+bold "Generating keypair (development)..."
 
 KEYS=$(docker run --rm "$IMAGE" python -c "
 from wireguard_go_bridge.keys import generate_private_key, derive_public_key

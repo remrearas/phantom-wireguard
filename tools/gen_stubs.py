@@ -180,6 +180,7 @@ def _generate_stub(source: str) -> str:
     for node in ast.iter_child_nodes(tree):
         # Imports
         if isinstance(node, ast.Import):
+            # noinspection PyUnresolvedReferences
             names = ", ".join(
                 f"{alias.name} as {alias.asname}" if alias.asname else alias.name
                 for alias in node.names
