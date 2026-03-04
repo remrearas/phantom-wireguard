@@ -21,7 +21,9 @@ ARG VENDOR_DIR=/opt/phantom/vendor
 
 # ── System deps ──────────────────────────────────────────────────
 RUN apt-get update \
- && apt-get install -y --no-install-recommends curl unzip \
+ && apt-get install -y --no-install-recommends \
+    curl unzip \
+    libnftables1 nftables iproute2 \
  && rm -rf /var/lib/apt/lists/*
 
 # ── Download & unpack vendor pack ────────────────────────────────

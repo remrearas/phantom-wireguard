@@ -1,0 +1,149 @@
+"""Tests for phantom_daemon.base.services.wireguard.ipc — IPC pure functions."""
+
+from __future__ import annotations
+
+from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME
+from phantom_daemon.base.services.wireguard.ipc import (
+    build_full_config,
+    build_peer_config,
+    build_peer_remove_config,
+    build_server_config,
+    parse_ipc_peers,
+)
+
+
+class TestConstants:
+    def test_interface_name(self):
+        assert WG_INTERFACE_NAME == "wg_phantom_main"
+
+    def test_interface_name_type(self):
+        assert isinstance(WG_INTERFACE_NAME, str)
+
+
+class TestBuildServerConfig:
+    def test_format(self):
+        cfg = build_server_config("abcd1234", 51820)
+        assert cfg == "private_key=abcd1234\nlisten_port=51820\n"
+
+    def test_ends_with_newline(self):
+        cfg = build_server_config("ff", 1234)
+        assert cfg.endswith("\n")
+
+    def test_contains_key_and_port(self):
+        cfg = build_server_config("deadbeef", 9999)
+        assert "private_key=deadbeef" in cfg
+        assert "listen_port=9999" in cfg
+
+
+class TestBuildPeerConfig:
+    def test_dual_stack_allowed_ips(self):
+        cfg = build_peer_config(
+            public_key_hex="aabb",
+            preshared_key_hex="ccdd",
+            ipv4_address="10.8.0.2",
+            ipv6_address="fd00:70:68::2",
+            keepalive=25,
+        )
+        assert "allowed_ip=10.8.0.2/32" in cfg
+        assert "allowed_ip=fd00:70:68::2/128" in cfg
+
+    def test_keepalive(self):
+        cfg = build_peer_config("a", "b", "1.2.3.4", "::1", 10)
+        assert "persistent_keepalive_interval=10" in cfg
+
+    def test_preshared_key(self):
+        cfg = build_peer_config("a", "psk_hex", "1.2.3.4", "::1", 25)
+        assert "preshared_key=psk_hex" in cfg
+
+    def test_format_lines(self):
+        cfg = build_peer_config("pub", "psk", "10.0.0.1", "fd00::1", 30)
+        lines = cfg.strip().split("\n")
+        assert len(lines) == 5
+
+
+class TestBuildFullConfig:
+    def test_empty_clients(self):
+        cfg = build_full_config("key", 51820, [], 25)
+        assert "private_key=key" in cfg
+        assert "replace_peers=true" in cfg
+        assert "public_key=" not in cfg
+
+    def test_with_clients(self):
+        clients = [
+            {
+                "public_key_hex": "pub1",
+                "preshared_key_hex": "psk1",
+                "ipv4_address": "10.8.0.2",
+                "ipv6_address": "fd00::2",
+            },
+            {
+                "public_key_hex": "pub2",
+                "preshared_key_hex": "psk2",
+                "ipv4_address": "10.8.0.3",
+                "ipv6_address": "fd00::3",
+            },
+        ]
+        cfg = build_full_config("skey", 51820, clients, 25)
+        assert cfg.count("public_key=") == 2
+        assert "public_key=pub1" in cfg
+        assert "public_key=pub2" in cfg
+
+    def test_replace_peers_before_peers(self):
+        clients = [
+            {
+                "public_key_hex": "pub1",
+                "preshared_key_hex": "psk1",
+                "ipv4_address": "10.8.0.2",
+                "ipv6_address": "fd00::2",
+            },
+        ]
+        cfg = build_full_config("skey", 51820, clients, 25)
+        rp_pos = cfg.index("replace_peers=true")
+        pk_pos = cfg.index("public_key=pub1")
+        assert rp_pos < pk_pos
+
+
+class TestBuildPeerRemoveConfig:
+    def test_format(self):
+        cfg = build_peer_remove_config("deadbeef")
+        assert cfg == "public_key=deadbeef\nremove=true\n"
+
+    def test_ends_with_newline(self):
+        cfg = build_peer_remove_config("abc")
+        assert cfg.endswith("\n")
+
+    def test_contains_remove(self):
+        cfg = build_peer_remove_config("xyz")
+        assert "remove=true" in cfg
+        assert "public_key=xyz" in cfg
+
+
+class TestParseIpcPeers:
+    def test_empty(self):
+        assert parse_ipc_peers("") == set()
+
+    def test_server_only(self):
+        ipc = "private_key=abc\nlisten_port=51820\n"
+        assert parse_ipc_peers(ipc) == set()
+
+    def test_single_peer(self):
+        ipc = (
+            "private_key=abc\n"
+            "listen_port=51820\n"
+            "public_key=peer1\n"
+            "preshared_key=psk\n"
+            "allowed_ip=10.8.0.2/32\n"
+        )
+        assert parse_ipc_peers(ipc) == {"peer1"}
+
+    def test_multiple_peers(self):
+        ipc = (
+            "private_key=abc\n"
+            "public_key=peer1\n"
+            "allowed_ip=10.8.0.2/32\n"
+            "public_key=peer2\n"
+            "allowed_ip=10.8.0.3/32\n"
+            "public_key=peer3\n"
+            "allowed_ip=10.8.0.4/32\n"
+        )
+        assert parse_ipc_peers(ipc) == {"peer1", "peer2", "peer3"}

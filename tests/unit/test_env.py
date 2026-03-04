@@ -12,6 +12,7 @@ class TestLoadEnv:
         # Clear all relevant env vars
         for var in (
             "PHANTOM_DB_DIR",
+            "PHANTOM_STATE_DIR",
             "WIREGUARD_LISTEN_PORT",
             "WIREGUARD_MTU",
             "WIREGUARD_KEEPALIVE",
@@ -22,6 +23,7 @@ class TestLoadEnv:
 
         env = load_env()
         assert env.db_dir == "/var/lib/phantom/db"
+        assert env.state_dir == "/var/lib/phantom/state/db"
         assert env.listen_port == 51820
         assert env.mtu == 1420
         assert env.keepalive == 25
@@ -30,6 +32,7 @@ class TestLoadEnv:
 
     def test_custom_values(self, monkeypatch):
         monkeypatch.setenv("PHANTOM_DB_DIR", "/tmp/test-db")
+        monkeypatch.setenv("PHANTOM_STATE_DIR", "/tmp/test-state")
         monkeypatch.setenv("WIREGUARD_LISTEN_PORT", "12345")
         monkeypatch.setenv("WIREGUARD_MTU", "1500")
         monkeypatch.setenv("WIREGUARD_KEEPALIVE", "10")
@@ -38,6 +41,7 @@ class TestLoadEnv:
 
         env = load_env()
         assert env.db_dir == "/tmp/test-db"
+        assert env.state_dir == "/tmp/test-state"
         assert env.listen_port == 12345
         assert env.mtu == 1500
         assert env.keepalive == 10
@@ -47,6 +51,7 @@ class TestLoadEnv:
     def test_frozen(self, monkeypatch):
         for var in (
             "PHANTOM_DB_DIR",
+            "PHANTOM_STATE_DIR",
             "WIREGUARD_LISTEN_PORT",
             "WIREGUARD_MTU",
             "WIREGUARD_KEEPALIVE",
@@ -63,6 +68,7 @@ class TestLoadEnv:
     def test_instance_type(self, monkeypatch):
         for var in (
             "PHANTOM_DB_DIR",
+            "PHANTOM_STATE_DIR",
             "WIREGUARD_LISTEN_PORT",
             "WIREGUARD_MTU",
             "WIREGUARD_KEEPALIVE",

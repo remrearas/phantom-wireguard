@@ -20,17 +20,23 @@ services:
     container_name: phantom-daemon-dev
     restart: unless-stopped
     command: ["python", "-m", "phantom_daemon.main", "/var/run/phantom/daemon.sock"]
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
     volumes:
       - phantom-sock:/var/run/phantom
       - ./phantom_daemon:/app/phantom_daemon:ro
       - ./tests:/app/tests:ro
       - ./container-data/db:/var/lib/phantom/db
+      - ./container-data/state/db:/var/lib/phantom/state/db
     secrets:
       - wg_private_key
       - wg_public_key
     environment:
       - PYTHONUNBUFFERED=1
       - PHANTOM_DB_DIR=/var/lib/phantom/db
+      - PHANTOM_STATE_DIR=/var/lib/phantom/state/db
       - WIREGUARD_LISTEN_PORT=51820
       - WIREGUARD_MTU=1420
       - WIREGUARD_KEEPALIVE=25

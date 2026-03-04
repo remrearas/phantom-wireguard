@@ -32,7 +32,9 @@ from phantom_daemon.base import (
     WalletFullError,
     load_env,
     load_secrets,
+    open_firewall,
     open_wallet,
+    open_wireguard,
 )
 from phantom_daemon.modules import setup_routers
 
@@ -50,15 +52,38 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         env = load_env()
         wallet = open_wallet(db_dir=env.db_dir)
 
+        # Phase 3a: WireGuard bridge
+        wg = open_wireguard(state_dir=env.state_dir, mtu=env.mtu)
+        wg.fast_sync(wallet=wallet, server_keys=server_keys, env=env)
+        wg.up()
+
+        # Phase 3a+: OS-level interface setup
+        wg.apply_interface(
+            ipv4_subnet=wallet.get_config("ipv4_subnet"),
+            ipv6_subnet=wallet.get_config("ipv6_subnet"),
+        )
+
+        # Phase 3b: Firewall bridge
+        fw = open_firewall(state_dir=env.state_dir)
+        if not fw.list_groups():
+            fw.bootstrap(env=env, wallet=wallet)
+        fw.start()
+
         app.state.server_keys = server_keys
         app.state.env = env
         app.state.wallet = wallet
+        app.state.wg = wg
+        app.state.fw = fw
     except StartupError as exc:
         log.critical("Startup failed: %s", exc)
         sys.exit(1)
 
     yield
 
+    fw.stop()
+    fw.close()
+    wg.down()
+    wg.close()
     wallet.close()
 
 
@@ -81,14 +106,14 @@ def _register_error_handlers(app: FastAPI) -> None:
     """Register global exception handlers for wallet errors."""
 
     @app.exception_handler(WalletFullError)
-    async def _wallet_full(request, exc):  # noqa: ARG001
+    async def _wallet_full(_request, exc):
         return JSONResponse(
             status_code=409,
             content={"error": "pool_exhausted", "detail": str(exc)},
         )
 
     @app.exception_handler(WalletError)
-    async def _wallet_error(request, exc):  # noqa: ARG001
+    async def _wallet_error(_request, exc):
         return JSONResponse(
             status_code=400,
             content={"error": "wallet_error", "detail": str(exc)},

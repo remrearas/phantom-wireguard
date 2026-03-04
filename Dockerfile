@@ -44,6 +44,11 @@ FROM python:3.12-slim AS runtime
 
 ARG VENDOR_DIR=/opt/phantom/vendor
 
+# nftables runtime library (required by firewall bridge)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libnftables1 nftables iproute2 \
+ && rm -rf /var/lib/apt/lists/*
+
 # Copy vendor artifacts (no curl/unzip in final image)
 COPY --from=vendor-fetch ${VENDOR_DIR} ${VENDOR_DIR}
 

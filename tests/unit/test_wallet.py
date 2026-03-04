@@ -64,7 +64,7 @@ class TestWalletCreate:
         with open_wallet(str(tmp_path)) as w:
             rows = w._conn.execute(
                 "SELECT ipv4_address, ipv6_address FROM users "
-                "ORDER BY rowid ASC"
+                "ORDER BY rowid "
             ).fetchall()
             # First usable IP (index 2)
             assert rows[0] == ("10.8.0.2", "fd00:70:68::2")

@@ -18,6 +18,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from phantom_daemon.base.errors import WalletError
 from phantom_daemon.modules.core._errors import ErrorResponse
 
 
@@ -68,7 +69,15 @@ router = APIRouter(tags=["clients"])
 )
 async def assign_client(body: AssignClientRequest, request: Request) -> ClientRecord:
     wallet = request.app.state.wallet
+    wg = request.app.state.wg
+    env = request.app.state.env
+
     result = wallet.assign_client(body.name)
+    try:
+        wg.add_peer(result, env.keepalive)
+    except Exception:
+        wallet.revoke_client(body.name)
+        raise
     return ClientRecord(**result)
 
 
@@ -110,5 +119,17 @@ async def get_client(name: str, request: Request) -> ClientRecord:
 )
 async def revoke_client(name: str, request: Request) -> dict:
     wallet = request.app.state.wallet
-    wallet.revoke_client(name)
+    wg = request.app.state.wg
+    env = request.app.state.env
+
+    client = wallet.get_client(name)
+    if client is None:
+        raise WalletError(f"Client not found: {name}")
+
+    wg.remove_peer(client["public_key_hex"])
+    try:
+        wallet.revoke_client(name)
+    except Exception:
+        wg.add_peer(client, env.keepalive)
+        raise
     return {"status": "revoked"}

@@ -25,6 +25,8 @@ container-data/secrets/development/*
 !container-data/secrets/development/.gitkeep
 container-data/db/*
 !container-data/db/.gitkeep
+container-data/state/db/*
+!container-data/state/db/.gitkeep
 
 # Test
 .pytest_cache/

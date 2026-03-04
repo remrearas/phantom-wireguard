@@ -18,6 +18,7 @@
 #   db-ls       List db/ contents (local)
 #   db-ls-r     List db/ contents (container)
 #   db-reset    Wipe db/ directory
+#   state-reset Wipe state/db/ directory
 # ──────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -61,12 +62,20 @@ cmd_logs() {
 
 cmd_test() {
     bold "Running pytest (ASGI mode)..."
-    $COMPOSE exec "$DAEMON" python -m pytest tests/ -v -s "$@"
+    if [ $# -eq 0 ]; then
+        $COMPOSE exec "$DAEMON" python -m pytest tests/ -v -s
+    else
+        $COMPOSE exec "$DAEMON" python -m pytest -v -s "$@"
+    fi
 }
 
 cmd_test_uds() {
     bold "Running pytest (UDS mode)..."
-    $COMPOSE exec "$DAEMON" python -m pytest tests/ -v --uds /var/run/phantom/daemon.sock "$@"
+    if [ $# -eq 0 ]; then
+        $COMPOSE exec "$DAEMON" python -m pytest tests/ -v --uds /var/run/phantom/daemon.sock
+    else
+        $COMPOSE exec "$DAEMON" python -m pytest -v --uds /var/run/phantom/daemon.sock "$@"
+    fi
 }
 
 cmd_shell() {
@@ -98,6 +107,12 @@ cmd_db_reset() {
     green "db/ cleared."
 }
 
+cmd_state_reset() {
+    bold "Wiping state/db/..."
+    rm -rf container-data/state/db/*
+    green "state/db cleared."
+}
+
 cmd_help() {
     sed -n '/^# Commands:/,/^# ─/p' "$0" | head -n -1 | sed 's/^# //'
 }
@@ -117,6 +132,7 @@ case "${1:-help}" in
     status)   cmd_status ;;
     db-ls)    cmd_db_ls ;;
     db-ls-r)  cmd_db_ls_r ;;
-    db-reset) cmd_db_reset ;;
-    help|*)   cmd_help ;;
+    db-reset)    cmd_db_reset ;;
+    state-reset) cmd_state_reset ;;
+    help|*)      cmd_help ;;
 esac

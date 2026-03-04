@@ -30,3 +30,11 @@ class WalletError(StartupError):
 
 class WalletFullError(WalletError):
     """IP pool is exhausted, no free slots available."""
+
+
+class WireGuardError(StartupError):
+    """Failed to initialise or sync WireGuard bridge."""
+
+
+class FirewallError(StartupError):
+    """Failed to initialise or configure firewall bridge."""
