@@ -123,7 +123,9 @@ def _read_schema() -> str:
 
 def _connect(db_path: Path) -> sqlite3.Connection:
     """Open an existing wallet database."""
-    return sqlite3.connect(str(db_path))
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("PRAGMA wal_autocheckpoint = 1")
+    return conn
 
 
 def _create_wallet(db_path: Path) -> sqlite3.Connection:
@@ -133,6 +135,7 @@ def _create_wallet(db_path: Path) -> sqlite3.Connection:
         # Apply schema
         schema = _read_schema()
         conn.executescript(schema)
+        conn.execute("PRAGMA wal_autocheckpoint = 1")
 
         # Config defaults
         ipv4_str, ipv6_str, _capacity, _host_bits = _calculate_terazi(

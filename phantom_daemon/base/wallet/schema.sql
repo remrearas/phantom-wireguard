@@ -1,6 +1,6 @@
 -- phantom-daemon wallet.db — Schema v0.5
 --
--- WAL mode, foreign keys ON
+-- WAL mode (autocheckpoint=1 set at connection level), foreign keys ON
 --
 -- Server identity (keys) → Docker secrets (/run/secrets/)
 -- Operational params (port, mtu, keepalive) → environment variables
