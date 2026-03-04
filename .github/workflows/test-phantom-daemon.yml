@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
 
       - name: Generate dev secrets
-        run: ./tools/gen-keys.sh development
+        run: ./tools/gen-keys-dev.sh
 
       - name: Build & start dev stack
         run: ./tools/dev.sh up
