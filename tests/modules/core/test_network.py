@@ -14,7 +14,9 @@ class TestNetworkEndpoints:
     def test_get_status(self, client, wallet):
         resp = client.get("/api/core/network")
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
 
         # Structure
         assert "ipv4_subnet" in data
@@ -33,15 +35,19 @@ class TestNetworkEndpoints:
     def test_validate_pool(self, client):
         resp = client.get("/api/core/network/validate")
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["valid"] is True
         assert data["errors"] == []
 
     @pytest.mark.dependency()
     def test_change_cidr(self, client, wallet):
-        resp = client.put("/api/core/network/cidr", json={"prefix": 22})
+        resp = client.post("/api/core/network/cidr", json={"prefix": 22})
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["ipv4_subnet"] == "10.8.0.0/22"
         assert data["ipv6_subnet"] == "fd00:70:68::/118"
         assert data["pool"]["total"] == 1021
@@ -54,7 +60,7 @@ class TestNetworkEndpoints:
     @pytest.mark.dependency(depends=["TestNetworkEndpoints::test_change_cidr"])
     def test_get_status_after_cidr(self, client, wallet):
         resp = client.get("/api/core/network")
-        data = resp.json()
+        data = resp.json()["data"]
         assert data["ipv4_subnet"] == "10.8.0.0/22"
         assert data["ipv6_subnet"] == "fd00:70:68::/118"
         assert data["pool"]["total"] == wallet.count_users()
@@ -63,14 +69,16 @@ class TestNetworkEndpoints:
     @pytest.mark.dependency(depends=["TestNetworkEndpoints::test_change_cidr"])
     def test_validate_after_cidr(self, client):
         resp = client.get("/api/core/network/validate")
-        data = resp.json()
+        data = resp.json()["data"]
         assert data["valid"] is True
         assert data["errors"] == []
 
     def test_invalid_prefix_low(self, client):
-        resp = client.put("/api/core/network/cidr", json={"prefix": 8})
+        resp = client.post("/api/core/network/cidr", json={"prefix": 8})
         assert resp.status_code == 422
+        assert resp.json()["ok"] is False
 
     def test_invalid_prefix_high(self, client):
-        resp = client.put("/api/core/network/cidr", json={"prefix": 31})
+        resp = client.post("/api/core/network/cidr", json={"prefix": 31})
         assert resp.status_code == 422
+        assert resp.json()["ok"] is False

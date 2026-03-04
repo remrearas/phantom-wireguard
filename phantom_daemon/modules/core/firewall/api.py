@@ -17,13 +17,21 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from phantom_daemon.modules.core._errors import ErrorResponse
+from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
 # ── Models ───────────────────────────────────────────────────────
+
+
+class GroupNameRequest(BaseModel):
+    name: str
+
+
+class GroupFilterRequest(BaseModel):
+    group: Optional[str] = None
 
 
 class GroupRecord(BaseModel):
@@ -77,50 +85,44 @@ class RoutingRuleRecord(BaseModel):
 router = APIRouter(tags=["firewall"])
 
 
-@router.get("/groups", response_model=list[GroupRecord])
-async def list_groups(request: Request) -> list[GroupRecord]:
+@router.get("/groups/list", response_model=ApiOk[list[GroupRecord]])
+async def list_groups(request: Request):
     fw = request.app.state.fw
-    return [GroupRecord(**vars(g)) for g in fw.list_groups()]
+    return ApiOk(data=[GroupRecord(**vars(g)) for g in fw.list_groups()])
 
 
-@router.get(
-    "/groups/{name}",
-    response_model=GroupRecord,
-    responses={404: {"model": ErrorResponse}},
+@router.post(
+    "/groups/get",
+    response_model=ApiOk[GroupRecord],
+    responses={404: {"model": ApiErr}},
 )
-async def get_group(name: str, request: Request) -> GroupRecord:
+async def get_group(body: GroupNameRequest, request: Request):
     from firewall_bridge import GroupNotFoundError
 
     fw = request.app.state.fw
     try:
-        g = fw.get_group(name)
+        g = fw.get_group(body.name)
     except GroupNotFoundError:
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=404, detail=f"Group not found: {name}")
-    return GroupRecord(**vars(g))
+        raise HTTPException(status_code=404, detail=f"Group not found: {body.name}")
+    return ApiOk(data=GroupRecord(**vars(g)))
 
 
-@router.get("/rules", response_model=list[FirewallRuleRecord])
-async def list_firewall_rules(
-    request: Request, group: Optional[str] = None,
-) -> list[FirewallRuleRecord]:
+@router.post("/rules/list", response_model=ApiOk[list[FirewallRuleRecord]])
+async def list_firewall_rules(body: GroupFilterRequest, request: Request):
     fw = request.app.state.fw
-    return [FirewallRuleRecord(**vars(r)) for r in fw.list_firewall_rules(group)]
+    return ApiOk(data=[FirewallRuleRecord(**vars(r)) for r in fw.list_firewall_rules(body.group)])
 
 
-@router.get("/routing", response_model=list[RoutingRuleRecord])
-async def list_routing_rules(
-    request: Request, group: Optional[str] = None,
-) -> list[RoutingRuleRecord]:
+@router.post("/routing/list", response_model=ApiOk[list[RoutingRuleRecord]])
+async def list_routing_rules(body: GroupFilterRequest, request: Request):
     fw = request.app.state.fw
-    return [RoutingRuleRecord(**vars(r)) for r in fw.list_routing_rules(group)]
+    return ApiOk(data=[RoutingRuleRecord(**vars(r)) for r in fw.list_routing_rules(body.group)])
 
 
-@router.get("/table")
-async def list_table(request: Request) -> dict:
+@router.get("/table", response_model=ApiOk[dict])
+async def list_table(request: Request):
     import json
 
     fw = request.app.state.fw
     raw = fw.list_table()
-    return json.loads(raw) if raw else {}
+    return ApiOk(data=json.loads(raw) if raw else {})

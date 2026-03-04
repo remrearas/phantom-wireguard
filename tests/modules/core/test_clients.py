@@ -6,16 +6,25 @@ Tests are ordered via pytest-dependency within the class.
 
 from __future__ import annotations
 
+import base64
+
 import pytest
+from starlette.testclient import TestClient
+
+from phantom_daemon.base.env import DaemonEnv
+from phantom_daemon.main import create_app
+from wireguard_go_bridge.keys import hex_to_base64
 
 
 class TestClientEndpoints:
 
     @pytest.mark.dependency()
     def test_assign_first(self, client, wallet):
-        resp = client.post("/api/core/clients", json={"name": "alice"})
+        resp = client.post("/api/core/clients/assign", json={"name": "alice"})
         assert resp.status_code == 201
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["name"] == "alice"
         assert "ipv4_address" in data
         assert "private_key_hex" in data
@@ -33,18 +42,20 @@ class TestClientEndpoints:
 
     @pytest.mark.dependency(depends=["TestClientEndpoints::test_assign_first"])
     def test_assign_second(self, client, wallet):
-        resp = client.post("/api/core/clients", json={"name": "bob"})
+        resp = client.post("/api/core/clients/assign", json={"name": "bob"})
         assert resp.status_code == 201
-        assert resp.json()["name"] == "bob"
+        assert resp.json()["data"]["name"] == "bob"
 
         # DB state
         assert wallet.count_assigned() == 2
 
     @pytest.mark.dependency(depends=["TestClientEndpoints::test_assign_second"])
     def test_list_all(self, client, wallet):
-        resp = client.get("/api/core/clients")
+        resp = client.get("/api/core/clients/list")
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["total"] == 2
         names = {c["name"] for c in data["clients"]}
         assert names == {"alice", "bob"}
@@ -60,9 +71,11 @@ class TestClientEndpoints:
 
     @pytest.mark.dependency(depends=["TestClientEndpoints::test_assign_first"])
     def test_get_detail(self, client, wallet):
-        resp = client.get("/api/core/clients/alice")
+        resp = client.post("/api/core/clients/get", json={"name": "alice"})
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["name"] == "alice"
         assert "private_key_hex" in data
         assert "preshared_key_hex" in data
@@ -74,46 +87,210 @@ class TestClientEndpoints:
             assert data[key] == db[key], f"Mismatch on {key}"
 
     def test_get_nonexistent(self, client):
-        resp = client.get("/api/core/clients/ghost")
+        resp = client.post("/api/core/clients/get", json={"name": "ghost"})
         assert resp.status_code == 404
+        assert resp.json()["ok"] is False
 
     @pytest.mark.dependency(depends=["TestClientEndpoints::test_assign_first"])
     def test_assign_duplicate(self, client):
-        resp = client.post("/api/core/clients", json={"name": "alice"})
+        resp = client.post("/api/core/clients/assign", json={"name": "alice"})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "wallet_error"
+        body = resp.json()
+        assert body["ok"] is False
+        assert "error" in body
 
     def test_assign_invalid_name(self, client):
-        resp = client.post("/api/core/clients", json={"name": "bad name!"})
+        resp = client.post("/api/core/clients/assign", json={"name": "bad name!"})
         assert resp.status_code == 422
+        assert resp.json()["ok"] is False
 
     def test_assign_empty_name(self, client):
-        resp = client.post("/api/core/clients", json={"name": ""})
+        resp = client.post("/api/core/clients/assign", json={"name": ""})
         assert resp.status_code == 422
+        assert resp.json()["ok"] is False
 
     @pytest.mark.dependency(depends=["TestClientEndpoints::test_list_all"])
     def test_revoke(self, client, wallet):
-        resp = client.delete("/api/core/clients/alice")
+        resp = client.post("/api/core/clients/revoke", json={"name": "alice"})
         assert resp.status_code == 200
-        assert resp.json()["status"] == "revoked"
+        body = resp.json()
+        assert body["ok"] is True
+        assert body["data"]["status"] == "revoked"
 
         # DB state
         assert wallet.get_client("alice") is None
 
     @pytest.mark.dependency(depends=["TestClientEndpoints::test_revoke"])
     def test_revoke_already_revoked(self, client):
-        resp = client.delete("/api/core/clients/alice")
+        resp = client.post("/api/core/clients/revoke", json={"name": "alice"})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "wallet_error"
+        body = resp.json()
+        assert body["ok"] is False
+        assert "error" in body
 
     @pytest.mark.dependency(depends=["TestClientEndpoints::test_revoke"])
     def test_list_after_revoke(self, client, wallet):
-        resp = client.get("/api/core/clients")
+        resp = client.get("/api/core/clients/list")
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["total"] == 1
         assert data["clients"][0]["name"] == "bob"
 
         # DB state
         assert wallet.count_assigned() == 1
         assert wallet.count_free() == wallet.count_users() - 1
+
+
+class TestConfigExport:
+    """Integration tests for POST /api/core/clients/config."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, wallet, wg, env, server_keys):
+        """Ensure a test client exists and provide endpoint-configured client."""
+        self._wallet = wallet
+        self._server_keys = server_keys
+        # Ensure 'charlie' exists for config tests
+        if wallet.get_client("charlie") is None:
+            result = wallet.assign_client("charlie")
+            wg.add_peer(result, env.keepalive)
+
+    def _make_client(self, endpoint_v4: str = "", endpoint_v6: str = "",
+                     wallet=None, wg=None, server_keys=None):
+        """Create a TestClient with custom endpoint config."""
+        env = DaemonEnv(
+            db_dir="/var/lib/phantom/db/tests",
+            state_dir="/var/lib/phantom/state/db/tests",
+            listen_port=51820,
+            mtu=1420,
+            keepalive=25,
+            endpoint_v4=endpoint_v4,
+            endpoint_v6=endpoint_v6,
+        )
+        app = create_app(lifespan_func=None)
+        app.state.wallet = wallet or self._wallet
+        app.state.wg = wg
+        app.state.env = env
+        app.state.server_keys = server_keys or self._server_keys
+        return TestClient(app)
+
+    def test_export_v4_config(self, wg):
+        tc = self._make_client(endpoint_v4="vpn.example.com", wg=wg)
+        resp = tc.post(
+            "/api/core/clients/config",
+            json={"name": "charlie", "version": "v4"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ok"] is True
+        conf = base64.b64decode(body["data"]).decode()
+
+        # Sections
+        assert "[Interface]" in conf
+        assert "[Peer]" in conf
+
+        # Address — IPv4 only
+        client_data = self._wallet.get_client("charlie")
+        assert f"Address = {client_data['ipv4_address']}/32" in conf
+        assert client_data["ipv6_address"] not in conf
+
+        # Keys are base64
+        assert hex_to_base64(client_data["private_key_hex"]) in conf
+        assert hex_to_base64(self._server_keys.public_key_hex) in conf
+        assert hex_to_base64(client_data["preshared_key_hex"]) in conf
+
+        # Endpoint
+        assert "Endpoint = vpn.example.com:51820" in conf
+
+        # AllowedIPs — v4 only
+        assert "AllowedIPs = 0.0.0.0/0" in conf
+        assert "::/0" not in conf
+
+    def test_export_v6_config(self, wg):
+        tc = self._make_client(endpoint_v6="vpn6.example.com", wg=wg)
+        resp = tc.post(
+            "/api/core/clients/config",
+            json={"name": "charlie", "version": "v6"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ok"] is True
+        conf = base64.b64decode(body["data"]).decode()
+
+        client_data = self._wallet.get_client("charlie")
+        assert f"Address = {client_data['ipv6_address']}/128" in conf
+        assert client_data["ipv4_address"] not in conf
+        assert "AllowedIPs = ::/0" in conf
+        assert "0.0.0.0/0" not in conf
+        assert "Endpoint = vpn6.example.com:51820" in conf
+
+    def test_export_hybrid_config(self, wg):
+        tc = self._make_client(
+            endpoint_v4="vpn.example.com",
+            endpoint_v6="vpn6.example.com",
+            wg=wg,
+        )
+        resp = tc.post(
+            "/api/core/clients/config",
+            json={"name": "charlie", "version": "hybrid"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ok"] is True
+        conf = base64.b64decode(body["data"]).decode()
+        print(conf)
+
+        client_data = self._wallet.get_client("charlie")
+        assert (
+            f"Address = {client_data['ipv4_address']}/32, "
+            f"{client_data['ipv6_address']}/128"
+        ) in conf
+        assert "AllowedIPs = 0.0.0.0/0, ::/0" in conf
+        # hybrid uses v4 endpoint
+        assert "Endpoint = vpn.example.com:51820" in conf
+
+    def test_export_not_found(self, wg):
+        tc = self._make_client(endpoint_v4="vpn.example.com", wg=wg)
+        resp = tc.post(
+            "/api/core/clients/config",
+            json={"name": "ghost", "version": "v4"},
+        )
+        assert resp.status_code == 404
+        assert resp.json()["ok"] is False
+
+    def test_export_missing_endpoint_v4(self, wg):
+        tc = self._make_client(endpoint_v4="", wg=wg)
+        resp = tc.post(
+            "/api/core/clients/config",
+            json={"name": "charlie", "version": "v4"},
+        )
+        assert resp.status_code == 400
+        assert resp.json()["ok"] is False
+
+    def test_export_missing_endpoint_v6(self, wg):
+        tc = self._make_client(endpoint_v6="", wg=wg)
+        resp = tc.post(
+            "/api/core/clients/config",
+            json={"name": "charlie", "version": "v6"},
+        )
+        assert resp.status_code == 400
+        assert resp.json()["ok"] is False
+
+    def test_export_hybrid_missing_v4(self, wg):
+        tc = self._make_client(endpoint_v4="", endpoint_v6="vpn6.example.com", wg=wg)
+        resp = tc.post(
+            "/api/core/clients/config",
+            json={"name": "charlie", "version": "hybrid"},
+        )
+        assert resp.status_code == 400
+        assert resp.json()["ok"] is False
+
+    def test_export_hybrid_missing_v6(self, wg):
+        tc = self._make_client(endpoint_v4="vpn.example.com", endpoint_v6="", wg=wg)
+        resp = tc.post(
+            "/api/core/clients/config",
+            json={"name": "charlie", "version": "hybrid"},
+        )
+        assert resp.status_code == 400
+        assert resp.json()["ok"] is False

@@ -22,6 +22,8 @@ services:
     command: ["python", "-m", "phantom_daemon.main", "/var/run/phantom/daemon.sock"]
     cap_add:
       - NET_ADMIN
+    ports:
+      - "51820:51820/udp"
     devices:
       - /dev/net/tun:/dev/net/tun
     volumes:

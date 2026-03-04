@@ -20,7 +20,7 @@ import json
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
-from phantom_daemon.modules.core._errors import ErrorResponse
+from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
 # ── Models ───────────────────────────────────────────────────────
@@ -65,13 +65,13 @@ class ValidatePoolResponse(BaseModel):
 router = APIRouter(tags=["network"])
 
 
-@router.get("", response_model=NetworkStatus)
-async def network_status(request: Request) -> NetworkStatus:
+@router.get("", response_model=ApiOk[NetworkStatus])
+async def network_status(request: Request):
     wallet = request.app.state.wallet
     config = wallet.get_all_config()
     dns_v4 = json.loads(config["dns_v4"])
     dns_v6 = json.loads(config["dns_v6"])
-    return NetworkStatus(
+    return ApiOk(data=NetworkStatus(
         ipv4_subnet=config["ipv4_subnet"],
         ipv6_subnet=config["ipv6_subnet"],
         dns_v4=DnsDetail(**dns_v4),
@@ -81,19 +81,19 @@ async def network_status(request: Request) -> NetworkStatus:
             assigned=wallet.count_assigned(),
             free=wallet.count_free(),
         ),
-    )
+    ))
 
 
-@router.put(
+@router.post(
     "/cidr",
-    response_model=ChangeCidrResponse,
-    responses={400: {"model": ErrorResponse}},
+    response_model=ApiOk[ChangeCidrResponse],
+    responses={400: {"model": ApiErr}},
 )
-async def change_cidr(body: ChangeCidrRequest, request: Request) -> ChangeCidrResponse:
+async def change_cidr(body: ChangeCidrRequest, request: Request):
     wallet = request.app.state.wallet
     wallet.change_cidr(body.prefix)
     config = wallet.get_all_config()
-    return ChangeCidrResponse(
+    return ApiOk(data=ChangeCidrResponse(
         ipv4_subnet=config["ipv4_subnet"],
         ipv6_subnet=config["ipv6_subnet"],
         pool=PoolStats(
@@ -101,11 +101,11 @@ async def change_cidr(body: ChangeCidrRequest, request: Request) -> ChangeCidrRe
             assigned=wallet.count_assigned(),
             free=wallet.count_free(),
         ),
-    )
+    ))
 
 
-@router.get("/validate", response_model=ValidatePoolResponse)
-async def validate_pool(request: Request) -> ValidatePoolResponse:
+@router.get("/validate", response_model=ApiOk[ValidatePoolResponse])
+async def validate_pool(request: Request):
     wallet = request.app.state.wallet
     errors = wallet.validate_pool()
-    return ValidatePoolResponse(valid=len(errors) == 0, errors=errors)
+    return ApiOk(data=ValidatePoolResponse(valid=len(errors) == 0, errors=errors))

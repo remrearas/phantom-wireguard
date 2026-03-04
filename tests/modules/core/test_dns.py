@@ -12,29 +12,36 @@ import pytest
 class TestDnsEndpoints:
 
     def test_get_v4_default(self, client):
-        resp = client.get("/api/core/dns/v4")
+        resp = client.post("/api/core/dns/get", json={"family": "v4"})
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["family"] == "v4"
         assert data["primary"] == "9.9.9.9"
         assert data["secondary"] == "149.112.112.112"
 
     def test_get_v6_default(self, client):
-        resp = client.get("/api/core/dns/v6")
+        resp = client.post("/api/core/dns/get", json={"family": "v6"})
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["family"] == "v6"
         assert data["primary"] == "2620:fe::fe"
         assert data["secondary"] == "2620:fe::9"
 
     @pytest.mark.dependency()
     def test_change_v4(self, client, wallet):
-        resp = client.put("/api/core/dns/v4", json={
+        resp = client.post("/api/core/dns/change", json={
+            "family": "v4",
             "primary": "1.1.1.1",
             "secondary": "1.0.0.1",
         })
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["family"] == "v4"
         assert data["primary"] == "1.1.1.1"
         assert data["secondary"] == "1.0.0.1"
@@ -46,19 +53,22 @@ class TestDnsEndpoints:
 
     @pytest.mark.dependency(depends=["TestDnsEndpoints::test_change_v4"])
     def test_get_v4_after_change(self, client):
-        resp = client.get("/api/core/dns/v4")
-        data = resp.json()
+        resp = client.post("/api/core/dns/get", json={"family": "v4"})
+        data = resp.json()["data"]
         assert data["primary"] == "1.1.1.1"
         assert data["secondary"] == "1.0.0.1"
 
     @pytest.mark.dependency()
     def test_change_v6(self, client, wallet):
-        resp = client.put("/api/core/dns/v6", json={
+        resp = client.post("/api/core/dns/change", json={
+            "family": "v6",
             "primary": "2001:4860:4860::8888",
             "secondary": "2001:4860:4860::8844",
         })
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
         assert data["primary"] == "2001:4860:4860::8888"
         assert data["secondary"] == "2001:4860:4860::8844"
 
@@ -69,19 +79,23 @@ class TestDnsEndpoints:
 
     @pytest.mark.dependency(depends=["TestDnsEndpoints::test_change_v6"])
     def test_get_v6_after_change(self, client):
-        resp = client.get("/api/core/dns/v6")
-        data = resp.json()
+        resp = client.post("/api/core/dns/get", json={"family": "v6"})
+        data = resp.json()["data"]
         assert data["primary"] == "2001:4860:4860::8888"
         assert data["secondary"] == "2001:4860:4860::8844"
 
     def test_invalid_family(self, client):
-        resp = client.get("/api/core/dns/v5")
+        resp = client.post("/api/core/dns/get", json={"family": "v5"})
         assert resp.status_code == 422
+        assert resp.json()["ok"] is False
 
     def test_change_invalid_ip(self, client):
-        resp = client.put("/api/core/dns/v4", json={
+        resp = client.post("/api/core/dns/change", json={
+            "family": "v4",
             "primary": "not-an-ip",
             "secondary": "1.0.0.1",
         })
         assert resp.status_code == 400
-        assert resp.json()["error"] == "wallet_error"
+        body = resp.json()
+        assert body["ok"] is False
+        assert "error" in body

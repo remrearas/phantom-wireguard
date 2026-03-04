@@ -22,7 +22,8 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from phantom_daemon import __version__
@@ -103,20 +104,34 @@ def create_app(
 
 
 def _register_error_handlers(app: FastAPI) -> None:
-    """Register global exception handlers for wallet errors."""
+    """Register global exception handlers — all errors return ApiErr envelope."""
+
+    @app.exception_handler(HTTPException)
+    async def _http_error(_request, exc):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"ok": False, "error": exc.detail},
+        )
 
     @app.exception_handler(WalletFullError)
     async def _wallet_full(_request, exc):
         return JSONResponse(
             status_code=409,
-            content={"error": "pool_exhausted", "detail": str(exc)},
+            content={"ok": False, "error": str(exc)},
         )
 
     @app.exception_handler(WalletError)
     async def _wallet_error(_request, exc):
         return JSONResponse(
             status_code=400,
-            content={"error": "wallet_error", "detail": str(exc)},
+            content={"ok": False, "error": str(exc)},
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation(_request, exc):
+        return JSONResponse(
+            status_code=422,
+            content={"ok": False, "error": str(exc)},
         )
 
 

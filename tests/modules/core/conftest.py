@@ -20,9 +20,11 @@ import pytest
 from starlette.testclient import TestClient
 
 from phantom_daemon.base.env import DaemonEnv
+from phantom_daemon.base.secrets.secrets import ServerKeys
 from phantom_daemon.base.wallet import Wallet, open_wallet
 from phantom_daemon.base.services.wireguard.service import open_wireguard
 from phantom_daemon.main import create_app
+from wireguard_go_bridge.keys import generate_private_key, derive_public_key
 
 # noinspection PyShadowingBuiltins
 print = functools.partial(print, flush=True)
@@ -79,12 +81,21 @@ def wg(env):
     svc.close()
 
 
+@pytest.fixture(scope="session")
+def server_keys():
+    """Session-scoped server key pair for config export tests."""
+    priv = generate_private_key()
+    pub = derive_public_key(priv)
+    return ServerKeys(private_key_hex=priv, public_key_hex=pub)
+
+
 @pytest.fixture()
-def client(wallet, wg, env):
-    """ASGI test client with wallet + wg + env on app.state."""
+def client(wallet, wg, env, server_keys):
+    """ASGI test client with wallet + wg + env + server_keys on app.state."""
     app = create_app(lifespan_func=None)
     app.state.wallet = wallet
     app.state.wg = wg
     app.state.env = env
+    app.state.server_keys = server_keys
     with TestClient(app) as c:
         yield c

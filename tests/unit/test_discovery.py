@@ -32,7 +32,7 @@ class TestSetupRouters:
         app = FastAPI()
         setup_routers(app)
         paths = [r.path for r in app.routes if isinstance(r, Route)]
-        assert "/api/core/clients" in paths
+        assert any(p.startswith("/api/core/clients/") for p in paths)
 
     def test_returns_router_count(self) -> None:
         app = FastAPI()

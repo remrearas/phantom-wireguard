@@ -20,10 +20,14 @@ from typing import Literal
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from phantom_daemon.modules.core._errors import ErrorResponse
+from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
 # ── Models ───────────────────────────────────────────────────────
+
+
+class DnsFamilyRequest(BaseModel):
+    family: Literal["v4", "v6"]
 
 
 class DnsRecord(BaseModel):
@@ -33,6 +37,7 @@ class DnsRecord(BaseModel):
 
 
 class ChangeDnsRequest(BaseModel):
+    family: Literal["v4", "v6"]
     primary: str
     secondary: str
 
@@ -42,24 +47,20 @@ class ChangeDnsRequest(BaseModel):
 router = APIRouter(tags=["dns"])
 
 
-@router.get("/{family}", response_model=DnsRecord)
-async def get_dns(family: Literal["v4", "v6"], request: Request) -> DnsRecord:
+@router.post("/get", response_model=ApiOk[DnsRecord])
+async def get_dns(body: DnsFamilyRequest, request: Request):
     wallet = request.app.state.wallet
-    dns = wallet.get_dns(family)
-    return DnsRecord(family=family, **dns)
+    dns = wallet.get_dns(body.family)
+    return ApiOk(data=DnsRecord(family=body.family, **dns))
 
 
-@router.put(
-    "/{family}",
-    response_model=DnsRecord,
-    responses={400: {"model": ErrorResponse}},
+@router.post(
+    "/change",
+    response_model=ApiOk[DnsRecord],
+    responses={400: {"model": ApiErr}},
 )
-async def change_dns(
-    family: Literal["v4", "v6"],
-    body: ChangeDnsRequest,
-    request: Request,
-) -> DnsRecord:
+async def change_dns(body: ChangeDnsRequest, request: Request):
     wallet = request.app.state.wallet
-    wallet.change_dns(family, body.primary, body.secondary)
-    dns = wallet.get_dns(family)
-    return DnsRecord(family=family, **dns)
+    wallet.change_dns(body.family, body.primary, body.secondary)
+    dns = wallet.get_dns(body.family)
+    return ApiOk(data=DnsRecord(family=body.family, **dns))

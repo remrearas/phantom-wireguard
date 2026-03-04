@@ -39,7 +39,7 @@ CORE_PRESET_NAME = "core"
 
 # ── Pure Functions ────────────────────────────────────────────────
 
-_TEMPLATE_EXACT = re.compile(r"^\{(\w+)\}$")
+_TEMPLATE_EXACT = re.compile(r"^\{(\w+)}$")
 
 
 def _resolve_templates(spec: dict, context: dict) -> dict:

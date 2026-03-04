@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────
 # phantom-daemon  ·  Development Tools
+#
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+# Licensed under AGPL-3.0 - see LICENSE file for details
+# WireGuard® is a registered trademark of Jason A. Donenfeld.
 # ──────────────────────────────────────────────────────────────────
 # Usage: ./tools/dev.sh <command>
 #
@@ -19,6 +24,7 @@
 #   db-ls-r     List db/ contents (container)
 #   db-reset    Wipe db/ directory
 #   state-reset Wipe state/db/ directory
+#   stubs       Generate .pyi type stubs from vendor packages
 # ──────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -113,6 +119,33 @@ cmd_state_reset() {
     green "state/db cleared."
 }
 
+cmd_stubs() {
+    local image="phantom-wg-dev-daemon:latest"
+    local dockerfile="dev.Dockerfile"
+    local out_dir="typings"
+    local vendor_dir="/opt/phantom/vendor"
+
+    # Ensure image exists
+    if ! docker image inspect "$image" &>/dev/null; then
+        bold "Image $image not found. Building..."
+        docker build -t "$image" -f "$dockerfile" .
+    fi
+
+    # Prepare output directory
+    rm -rf "$out_dir"
+    mkdir -p "$out_dir"
+
+    # Generate stubs inside container
+    bold "Generating type stubs from vendor packages..."
+    docker run --rm \
+        -v "$(pwd)/tools/gen_stubs.py:/tmp/gen_stubs.py:ro" \
+        -v "$(pwd)/$out_dir:/out" \
+        "$image" \
+        python /tmp/gen_stubs.py "$vendor_dir" /out
+
+    green "Stubs written to ${out_dir}/"
+}
+
 cmd_help() {
     sed -n '/^# Commands:/,/^# ─/p' "$0" | head -n -1 | sed 's/^# //'
 }
@@ -134,5 +167,6 @@ case "${1:-help}" in
     db-ls-r)  cmd_db_ls_r ;;
     db-reset)    cmd_db_reset ;;
     state-reset) cmd_state_reset ;;
+    stubs)       cmd_stubs ;;
     help|*)      cmd_help ;;
 esac

@@ -1,7 +1,6 @@
 # IDE
 .idea/
 .vscode/
-vendor_pack/
 *.swp
 *.swo
 
@@ -27,6 +26,9 @@ container-data/db/*
 !container-data/db/.gitkeep
 container-data/state/db/*
 !container-data/state/db/.gitkeep
+
+# Type stubs (generated)
+typings/
 
 # Test
 .pytest_cache/
