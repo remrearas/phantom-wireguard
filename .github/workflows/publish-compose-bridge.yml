@@ -18,6 +18,10 @@ on:
         required: true
       APPLE_ID_PASSWORD:
         required: true
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
 
 concurrency:
   group: publish-compose-bridge-${{ github.ref }}
@@ -183,20 +187,27 @@ jobs:
           security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
           rm -f "$P12_PATH"
 
-  # ── 4. Package & Push to dist ──────────────────────────────
+  # ── 4. Package ─────────────────────────────────────────────
   package:
     name: Package dist
     runs-on: ubuntu-latest
     needs: [extract-version, build-linux, build-macos]
     permissions:
-      contents: write
+      contents: read
     env:
       VERSION: ${{ needs.extract-version.outputs.version }}
+    outputs:
+      artifact_name: ${{ steps.prepare.outputs.artifact_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
 
       - name: Download all artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -208,18 +219,14 @@ jobs:
           set -euo pipefail
           PKG="dist/${VERSION}/compose_bridge"
 
-          # Copy Python package
           mkdir -p "$PKG"
           cp compose_bridge/__init__.py "$PKG/"
           cp compose_bridge/_ffi.py "$PKG/"
           cp compose_bridge/bridge.py "$PKG/"
           cp compose_bridge/types.py "$PKG/"
-          cp compose_bridge/VERSION "$PKG/"
 
-          # Write version
           echo "$VERSION" > "$PKG/VERSION"
 
-          # Copy binaries into package
           cp artifacts/compose_bridge-linux-amd64/compose_bridge.so \
             "$PKG/compose_bridge-linux-amd64.so"
           cp artifacts/compose_bridge-linux-arm64/compose_bridge.so \
@@ -227,9 +234,8 @@ jobs:
           cp artifacts/compose_bridge-darwin-arm64/compose_bridge.dylib \
             "$PKG/compose_bridge-darwin-arm64.dylib"
 
-          # Create zip
-          cd dist/${VERSION}
-          zip -r ../compose-bridge-${VERSION}.zip compose_bridge/
+          cd "dist/${VERSION}"
+          zip -r "../compose-bridge-${VERSION}.zip" compose_bridge/
           cd ../..
 
           echo "--- Package contents ---"
@@ -237,17 +243,60 @@ jobs:
           echo "--- Zip ---"
           ls -lh "dist/compose-bridge-${VERSION}.zip"
 
-      - name: Upload zip artifact
+      - name: Generate directory indexes
+        env:
+          TZ: Europe/Istanbul
+        run: python .github/scripts/generate_directory_indexes.py dist
+
+      - name: Prepare deployment artifact
+        id: prepare
+        run: |
+          ARTIFACT_NAME="compose-bridge-artifacts-$(echo "$GITHUB_SHA" | cut -c1-8)"
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload deployment artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: compose-bridge-${{ env.VERSION }}
-          path: dist/compose-bridge-${{ env.VERSION }}.zip
-          retention-days: 90
+          name: ${{ steps.prepare.outputs.artifact_name }}
+          path: dist/
+          retention-days: 7
 
-      - name: Commit dist to branch
+      - name: Summary
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f dist/
-          git commit -m "Build: compose-bridge v${VERSION}"
-          git push
+          echo "## compose-bridge v${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| File | Size |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
+          for f in dist/${VERSION}/compose_bridge/compose_bridge-*; do
+            NAME=$(basename "$f")
+            SIZE=$(du -h "$f" | cut -f1)
+            echo "| \`${NAME}\` | ${SIZE} |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          ZIP_SIZE=$(du -h "dist/compose-bridge-${VERSION}.zip" | cut -f1)
+          echo "| \`compose-bridge-${VERSION}.zip\` | ${ZIP_SIZE} |" >> "$GITHUB_STEP_SUMMARY"
+
+  # ── 5. Deploy to Cloudflare Pages ──────────────────────────
+  deploy:
+    name: Deploy to Cloudflare Pages
+    needs: package
+    if: success()
+    runs-on: self-hosted
+    permissions:
+      deployments: write
+    steps:
+      - name: Download deployment artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ needs.package.outputs.artifact_name }}
+          path: deployment/dist
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@f0a1cd58cd66095dee69bfa18fa5efd1dde93bca # v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: compose-bridge-artifacts-phantom
+          directory: deployment/dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
+          wranglerVersion: "3"
