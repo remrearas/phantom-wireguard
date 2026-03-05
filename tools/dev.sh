@@ -105,6 +105,17 @@ cmd_state_reset() {
     green "state/db cleared."
 }
 
+cmd_openapi() {
+    bold "Exporting OpenAPI schema..."
+    $COMPOSE exec "$DAEMON" python -c "
+import json
+from phantom_daemon.main import create_app
+app = create_app(lifespan_func=None)
+print(json.dumps(app.openapi(), indent=2))
+" > openapi.json
+    green "Written to openapi.json"
+}
+
 cmd_stubs() {
     local image="phantom-daemon-dev:latest"
     local dockerfile="dev.Dockerfile"
@@ -151,6 +162,7 @@ Usage: ./tools/dev.sh <command>
   db-reset    Wipe db/
   state-reset Wipe state/db/
   stubs       Generate .pyi vendor stubs
+  openapi     Export OpenAPI schema (openapi.json)
 HELP
 }
 
@@ -172,5 +184,6 @@ case "${1:-help}" in
     db-reset)    cmd_db_reset ;;
     state-reset) cmd_state_reset ;;
     stubs)       cmd_stubs ;;
+    openapi)     cmd_openapi ;;
     help|*)      cmd_help ;;
 esac

@@ -30,6 +30,9 @@ container-data/state/db/*
 # Type stubs (generated)
 typings/
 
+# OpenAPI (generated)
+openapi.json
+
 # Test
 .pytest_cache/
 .coverage
