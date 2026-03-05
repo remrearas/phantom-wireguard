@@ -66,5 +66,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: ./tools/dev.sh fetch-compose-bridge
 
-      - name: Run E2E tests for Multihop
-        run: ./tools/dev.sh test-multihop-e2e
+      - name: Run E2E tests for Multighost
+        run: ./tools/dev.sh test-multighost-e2e
