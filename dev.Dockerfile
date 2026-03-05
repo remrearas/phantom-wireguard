@@ -1,12 +1,12 @@
 # ──────────────────────────────────────────────────────────────────
 # phantom-daemon  ·  Development Image
 # ──────────────────────────────────────────────────────────────────
+# System deps, vendor bridges, and Python requirements only.
+# Application source is mounted via compose volumes.
+#
 # Build:
 #   docker build -f dev.Dockerfile -t phantom-daemon:dev .
 #   docker build -f dev.Dockerfile --build-arg TARGETARCH=arm64 -t phantom-daemon:dev-arm64 .
-#
-# Run (remote interpreter):
-#   docker run --rm -it phantom-daemon:dev python -c "import phantom_daemon; print(phantom_daemon.__version__)"
 # ──────────────────────────────────────────────────────────────────
 
 FROM python:3.12-slim AS base
@@ -23,7 +23,7 @@ ARG VENDOR_DIR=/opt/phantom/vendor
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
     curl unzip \
-    libnftables1 nftables iproute2 \
+    libnftables1 nftables iproute2 iptables iputils-ping procps \
  && rm -rf /var/lib/apt/lists/*
 
 # ── Download & unpack vendor pack ────────────────────────────────
@@ -55,11 +55,6 @@ WORKDIR /app
 
 COPY requirements.txt requirements-test.txt ./
 RUN pip install --no-cache-dir -r requirements-test.txt
-
-# ── Application source ───────────────────────────────────────────
-COPY phantom_daemon/ phantom_daemon/
-COPY tests/ tests/
-COPY pytest.ini ./
 
 # ── Runtime defaults ─────────────────────────────────────────────
 ENV PYTHONDONTWRITEBYTECODE=1

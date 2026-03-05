@@ -126,6 +126,7 @@ def shared_db():
 
 # ── Test ─────────────────────────────────────────────────────────
 
+@pytest.mark.slow
 class TestIntegrity:
 
     @pytest.mark.integration

@@ -32,10 +32,36 @@ jobs:
       - name: Run tests
         run: ./tools/dev.sh test
 
-      - name: Logs on failure
+      - name: Dev stack logs on failure
         if: failure()
         run: ./tools/dev.sh logs
 
       - name: Stop dev stack
         if: always()
         run: ./tools/dev.sh down
+
+  e2e:
+    name: Run E2E tests
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Generate dev secrets
+        run: ./tools/gen-keys-dev.sh
+
+      - name: Fetch compose-bridge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./tools/dev.sh fetch-compose-bridge
+
+      - name: Run E2E tests for Multihop
+        run: ./tools/dev.sh test-multihop-e2e

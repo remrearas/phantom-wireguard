@@ -42,6 +42,10 @@ test_results/
 # SQLite
 *.sqlite
 
+# Lib (downloaded artifacts)
+lib/*
+!lib/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db

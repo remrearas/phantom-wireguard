@@ -53,7 +53,16 @@ cmd_logs() {
 }
 
 cmd_test() {
-    bold "Running pytest (ASGI mode)..."
+    bold "Running pytest (ASGI mode, excluding slow)..."
+    if [ $# -eq 0 ]; then
+        $COMPOSE exec "$DAEMON" python -m pytest tests/ -v -s -m "not slow"
+    else
+        $COMPOSE exec "$DAEMON" python -m pytest -v -s -m "not slow" "$@"
+    fi
+}
+
+cmd_test_full() {
+    bold "Running pytest (ASGI mode, all tests)..."
     if [ $# -eq 0 ]; then
         $COMPOSE exec "$DAEMON" python -m pytest tests/ -v -s
     else
@@ -116,6 +125,80 @@ print(json.dumps(app.openapi(), indent=2))
     green "Written to openapi.json"
 }
 
+cmd_test_multihop_e2e() {
+    if [ ! -d "lib/compose_bridge" ] || [ -z "$(ls lib/compose_bridge/*.so lib/compose_bridge/*.dylib 2>/dev/null)" ]; then
+        red "compose-bridge not found. Run: ./tools/dev.sh fetch-compose-bridge"
+        exit 1
+    fi
+    bold "Running multihop E2E tests..."
+    local lib_file
+    lib_file="$(find lib/compose_bridge -maxdepth 1 \( -name '*.dylib' -o -name '*.so' \) -print -quit)"
+    COMPOSE_BRIDGE_LIB_PATH="$(pwd)/${lib_file}" \
+    PYTHONPATH="$(pwd)/lib:${PYTHONPATH:-}" \
+    python3 e2e_tests/multihop/runner.py "$@"
+}
+
+cmd_fetch_compose_bridge() {
+    local repo="ARAS-Workspace/phantom-wg"
+    local run_id="22726661393"
+    local version="1.0.0"
+    local dest="lib/compose_bridge"
+
+    # Detect platform
+    local os arch
+    os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    arch="$(uname -m)"
+    case "$arch" in
+        x86_64)  arch="amd64" ;;
+        aarch64) arch="arm64" ;;
+        arm64)   arch="arm64" ;;
+        *)       red "Unsupported architecture: $arch"; exit 1 ;;
+    esac
+
+    local artifact_name="compose-bridge-${version}-${os}-${arch}"
+
+    if ! command -v gh &>/dev/null; then
+        red "GitHub CLI (gh) required: brew install gh"
+        exit 1
+    fi
+
+    if ! gh auth status &>/dev/null; then
+        red "Not authenticated. Run: gh auth login"
+        exit 1
+    fi
+
+    bold "Fetching ${artifact_name}..."
+
+    # Clean destination
+    rm -rf "$dest"
+    mkdir -p "$dest"
+
+    # Download artifact zip
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+
+    gh run download "$run_id" \
+        --repo "$repo" \
+        --name "$artifact_name" \
+        --dir "$tmp_dir"
+
+    # The artifact contains a zip: compose-bridge-VERSION-PLATFORM.zip
+    local zip_file="$tmp_dir/${artifact_name}.zip"
+    if [ -f "$zip_file" ]; then
+        # Zip contains compose_bridge/ directory — extract contents to dest
+        unzip -o "$zip_file" -d "$tmp_dir/extracted"
+        cp "$tmp_dir/extracted/compose_bridge/"* "$dest/"
+    else
+        # gh download extracts the artifact directly
+        cp "$tmp_dir/"* "$dest/" 2>/dev/null || true
+    fi
+
+    rm -rf "$tmp_dir"
+
+    green "Installed to ${dest}/"
+    ls -lh "$dest/"
+}
+
 cmd_stubs() {
     local image="phantom-daemon-dev:latest"
     local dockerfile="dev.Dockerfile"
@@ -152,8 +235,10 @@ Usage: ./tools/dev.sh <command>
   restart     Restart daemon container
   rebuild     Full rebuild (no-cache)
   logs        Follow daemon logs
-  test        Run pytest (ASGI)
+  test        Run pytest (ASGI, excluding slow)
+  test-full   Run pytest (ASGI, all tests incl. slow)
   test-uds    Run pytest (UDS)
+  test-multihop-e2e Run multihop E2E tests (5-container)
   shell       Open shell in daemon
   curl <path> Query via gateway
   status      Show containers
@@ -163,6 +248,7 @@ Usage: ./tools/dev.sh <command>
   state-reset Wipe state/db/
   stubs       Generate .pyi vendor stubs
   openapi     Export OpenAPI schema (openapi.json)
+  fetch-compose-bridge  Download compose-bridge artifact for current platform
 HELP
 }
 
@@ -174,8 +260,10 @@ case "${1:-help}" in
     restart)  cmd_restart ;;
     rebuild)  cmd_rebuild ;;
     logs)     cmd_logs ;;
-    test)     shift; cmd_test "$@" ;;
-    test-uds) shift; cmd_test_uds "$@" ;;
+    test)          shift; cmd_test "$@" ;;
+    test-full)     shift; cmd_test_full "$@" ;;
+    test-uds)      shift; cmd_test_uds "$@" ;;
+    test-multihop-e2e) shift; cmd_test_multihop_e2e "$@" ;;
     shell)    cmd_shell ;;
     curl)     shift; cmd_curl "$@" ;;
     status)   cmd_status ;;
@@ -185,5 +273,6 @@ case "${1:-help}" in
     state-reset) cmd_state_reset ;;
     stubs)       cmd_stubs ;;
     openapi)     cmd_openapi ;;
+    fetch-compose-bridge) cmd_fetch_compose_bridge ;;
     help|*)      cmd_help ;;
 esac

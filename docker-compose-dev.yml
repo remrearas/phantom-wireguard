@@ -33,6 +33,8 @@ services:
       - phantom-sock:/var/run/phantom
       - ./phantom_daemon:/app/phantom_daemon:ro
       - ./tests:/app/tests:ro
+      - ./e2e_tests:/app/e2e_tests:ro
+      - ./pytest.ini:/app/pytest.ini:ro
       - ./container-data/db:/var/lib/phantom/db
       - ./container-data/state/db:/var/lib/phantom/state/db
     secrets:
