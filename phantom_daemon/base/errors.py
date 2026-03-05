@@ -42,3 +42,7 @@ class ExitStoreError(StartupError):
 
 class FirewallError(StartupError):
     """Failed to initialise or configure firewall bridge."""
+
+
+class WstunnelError(StartupError):
+    """Failed to initialise or operate wstunnel bridge."""
