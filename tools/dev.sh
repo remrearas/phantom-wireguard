@@ -23,6 +23,12 @@ red()   { printf "\033[31m%s\033[0m\n" "$*"; }
 green() { printf "\033[32m%s\033[0m\n" "$*"; }
 bold()  { printf "\033[1m%s\033[0m\n" "$*"; }
 
+cmd_build() {
+    bold "Building dev images..."
+    $COMPOSE build
+    green "Images built."
+}
+
 cmd_up() {
     bold "Starting dev stack..."
     $COMPOSE up -d --build
@@ -230,6 +236,7 @@ cmd_help() {
     cat <<'HELP'
 Usage: ./tools/dev.sh <command>
 
+  build       Build dev images (no start)
   up          Build & start dev stack
   down        Stop dev stack
   restart     Restart daemon container
@@ -255,6 +262,7 @@ HELP
 # ── Main ─────────────────────────────────────────────────────────
 
 case "${1:-help}" in
+    build)    cmd_build ;;
     up)       cmd_up ;;
     down)     cmd_down ;;
     restart)  cmd_restart ;;

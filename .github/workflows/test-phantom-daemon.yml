@@ -26,7 +26,10 @@ jobs:
       - name: Generate dev secrets
         run: ./tools/gen-keys-dev.sh
 
-      - name: Build & start dev stack
+      - name: Build dev images
+        run: ./tools/dev.sh build
+
+      - name: Start dev stack
         run: ./tools/dev.sh up
 
       - name: Run tests
