@@ -41,7 +41,6 @@ services:
       - PHANTOM_STATE_DIR=/var/lib/phantom/state/db
       - WIREGUARD_LISTEN_PORT=51820
       - WIREGUARD_MTU=1420
-      - WIREGUARD_KEEPALIVE=25
       - WIREGUARD_ENDPOINT_V4=
       - WIREGUARD_ENDPOINT_V6=
 
