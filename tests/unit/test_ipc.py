@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from wireguard_go_bridge.keys import derive_public_key, generate_private_key
 
-from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME
+from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME, WG_INTERFACE_NAME_EXIT
 from phantom_daemon.base.services.wireguard.ipc import (
+    build_exit_config,
     build_full_config,
     build_peer_config,
     build_peer_remove_config,
@@ -18,6 +19,9 @@ from phantom_daemon.base.services.wireguard.ipc import (
 class TestConstants:
     def test_interface_name(self):
         assert WG_INTERFACE_NAME == "wg_phantom_main"
+
+    def test_interface_name_exit(self):
+        assert WG_INTERFACE_NAME_EXIT == "wg_phantom_exit"
 
     def test_interface_name_type(self):
         assert isinstance(WG_INTERFACE_NAME, str)
@@ -270,3 +274,49 @@ class TestParseDeviceStatus:
         assert p.rx_bytes == 0
         assert p.tx_bytes == 0
         assert p.keepalive == 0
+
+
+class TestBuildExitConfig:
+    """Tests for build_exit_config — client-mode IPC builder."""
+
+    def test_basic_format(self):
+        cfg = build_exit_config(
+            private_key_hex="aabbccdd",
+            peer_public_key_hex="11223344",
+            peer_preshared_key_hex="55667788",
+            endpoint="1.2.3.4:51820",
+            allowed_ips="0.0.0.0/0",
+            keepalive=25,
+        )
+        assert "private_key=aabbccdd" in cfg
+        assert "replace_peers=true" in cfg
+        assert "public_key=11223344" in cfg
+        assert "preshared_key=55667788" in cfg
+        assert "endpoint=1.2.3.4:51820" in cfg
+        assert "allowed_ip=0.0.0.0/0" in cfg
+        assert "persistent_keepalive_interval=25" in cfg
+
+    def test_no_listen_port(self):
+        cfg = build_exit_config("a", "b", "c", "1.2.3.4:51820", "0.0.0.0/0", 5)
+        assert "listen_port" not in cfg
+
+    def test_multiple_allowed_ips(self):
+        cfg = build_exit_config(
+            "a", "b", "", "1.2.3.4:51820", "0.0.0.0/0, ::/0", 5,
+        )
+        assert "allowed_ip=0.0.0.0/0" in cfg
+        assert "allowed_ip=::/0" in cfg
+
+    def test_empty_preshared_key_omitted(self):
+        cfg = build_exit_config("a", "b", "", "1.2.3.4:51820", "0.0.0.0/0", 5)
+        assert "preshared_key=" not in cfg
+
+    def test_replace_peers_before_public_key(self):
+        cfg = build_exit_config("a", "peer_pub", "psk", "1.2.3.4:51820", "0.0.0.0/0", 5)
+        rp_pos = cfg.index("replace_peers=true")
+        pk_pos = cfg.index("public_key=peer_pub")
+        assert rp_pos < pk_pos
+
+    def test_ends_with_newline(self):
+        cfg = build_exit_config("a", "b", "", "1.2.3.4:51820", "0.0.0.0/0", 5)
+        assert cfg.endswith("\n")

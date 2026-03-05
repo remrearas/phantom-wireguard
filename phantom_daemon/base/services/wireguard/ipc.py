@@ -21,9 +21,9 @@ from dataclasses import dataclass, field
 # ── UAPI Status Types ────────────────────────────────────────────
 
 
-@dataclass(slots=True)
+@dataclass
 class PeerStatus:
-    public_key: str
+    public_key: str = ""
     endpoint: str = ""
     allowed_ips: list[str] = field(default_factory=list)
     latest_handshake: int = 0
@@ -32,7 +32,7 @@ class PeerStatus:
     keepalive: int = 0
 
 
-@dataclass(slots=True)
+@dataclass
 class DeviceStatus:
     public_key: str = ""
     listen_port: int = 0
@@ -83,6 +83,34 @@ def build_full_config(
                 keepalive=keepalive,
             )
         )
+    return "".join(parts)
+
+
+def build_exit_config(
+    private_key_hex: str,
+    peer_public_key_hex: str,
+    peer_preshared_key_hex: str,
+    endpoint: str,
+    allowed_ips: str,
+    keepalive: int,
+) -> str:
+    """Build IPC config for exit tunnel (client mode, no listen_port).
+
+    allowed_ips is comma-separated — each entry becomes an allowed_ip= line.
+    """
+    parts = [
+        f"private_key={private_key_hex}\n",
+        "replace_peers=true\n",
+        f"public_key={peer_public_key_hex}\n",
+    ]
+    if peer_preshared_key_hex:
+        parts.append(f"preshared_key={peer_preshared_key_hex}\n")
+    parts.append(f"endpoint={endpoint}\n")
+    for ip in allowed_ips.split(","):
+        ip = ip.strip()
+        if ip:
+            parts.append(f"allowed_ip={ip}\n")
+    parts.append(f"persistent_keepalive_interval={keepalive}\n")
     return "".join(parts)
 
 

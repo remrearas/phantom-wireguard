@@ -9,9 +9,12 @@ import pytest
 from phantom_daemon.base.errors import FirewallError
 from phantom_daemon.base.services.firewall.service import (
     CORE_PRESET_NAME,
+    MULTIHOP_PRESET_NAME,
     FirewallService,
     _read_core_preset,
+    _read_multihop_preset,
     _resolve_core_preset,
+    resolve_multihop_preset,
     open_firewall,
 )
 
@@ -39,6 +42,60 @@ class TestResolvePreset:
         spec = _resolve_core_preset(test_env.env, test_env.wallet)
         assert spec["rules"][2]["in_iface"] == WG_INTERFACE_NAME
         assert spec["rules"][3]["out_iface"] == WG_INTERFACE_NAME
+
+
+# ── TestResolveMultihopPreset ─────────────────────────────────────
+
+
+class TestResolveMultihopPreset:
+    def test_read_multihop_preset(self):
+        """multihop.yaml is loadable and has expected structure."""
+        spec = _read_multihop_preset()
+        assert spec["name"] == MULTIHOP_PRESET_NAME
+        assert spec["priority"] == 80
+        assert len(spec["rules"]) == 3
+        assert "table" in spec
+
+    def test_resolve_injects_interfaces(self):
+        spec = resolve_multihop_preset(
+            ipv4_subnet="10.8.0.0/24",
+            wg_interface="wg_main",
+            wg_interface_exit="wg_exit",
+        )
+        # Rules check
+        assert spec["rules"][0]["in_iface"] == "wg_main"
+        assert spec["rules"][0]["out_iface"] == "wg_exit"
+        assert spec["rules"][1]["in_iface"] == "wg_exit"
+        assert spec["rules"][1]["out_iface"] == "wg_main"
+        assert spec["rules"][2]["out_iface"] == "wg_exit"
+        assert spec["rules"][2]["source"] == "10.8.0.0/24"
+
+    def test_resolve_injects_table_templates(self):
+        spec = resolve_multihop_preset(
+            ipv4_subnet="10.8.0.0/24",
+            wg_interface="wg_main",
+            wg_interface_exit="wg_exit",
+        )
+        table = spec["table"]
+        # policy entry
+        policy = table[1]["policy"]
+        assert policy["from"] == "10.8.0.0/24"
+        # route entries
+        route_main = table[2]["route"]
+        assert route_main["destination"] == "10.8.0.0/24"
+        assert route_main["device"] == "wg_main"
+        route_exit = table[3]["route"]
+        assert route_exit["device"] == "wg_exit"
+
+    def test_uses_default_interface_names(self):
+        from phantom_daemon.base.services.wireguard import (
+            WG_INTERFACE_NAME,
+            WG_INTERFACE_NAME_EXIT,
+        )
+
+        spec = resolve_multihop_preset(ipv4_subnet="10.0.0.0/8")
+        assert spec["rules"][0]["in_iface"] == WG_INTERFACE_NAME
+        assert spec["rules"][0]["out_iface"] == WG_INTERFACE_NAME_EXIT
 
 
 # ── TestOpenFirewall ─────────────────────────────────────────────

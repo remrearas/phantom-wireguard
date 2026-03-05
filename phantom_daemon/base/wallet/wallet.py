@@ -292,17 +292,8 @@ class Wallet:
         )
         self._conn.commit()
 
-    def get_client(self, name: str) -> Optional[dict]:
-        """Get client by name, or None if not found."""
-        row = self._conn.execute(
-            "SELECT ipv4_address, ipv6_address, id, name, "
-            "private_key_hex, public_key_hex, preshared_key_hex, "
-            "created_at, updated_at "
-            "FROM users WHERE name = ?",
-            (name,),
-        ).fetchone()
-        if not row:
-            return None
+    @staticmethod
+    def _row_to_client(row) -> dict:
         return {
             "ipv4_address": row[0],
             "ipv6_address": row[1],
@@ -315,28 +306,28 @@ class Wallet:
             "updated_at": row[8],
         }
 
+    _CLIENT_COLUMNS = (
+        "ipv4_address, ipv6_address, id, name, "
+        "private_key_hex, public_key_hex, preshared_key_hex, "
+        "created_at, updated_at"
+    )
+
+    def get_client(self, name: str) -> Optional[dict]:
+        """Get client by name, or None if not found."""
+        row = self._conn.execute(
+            f"SELECT {self._CLIENT_COLUMNS} FROM users WHERE name = ?",
+            (name,),
+        ).fetchone()
+        if not row:
+            return None
+        return self._row_to_client(row)
+
     def list_clients(self) -> list[dict]:
         """List all assigned clients ordered by rowid."""
         rows = self._conn.execute(
-            "SELECT ipv4_address, ipv6_address, id, name, "
-            "private_key_hex, public_key_hex, preshared_key_hex, "
-            "created_at, updated_at "
-            "FROM users WHERE id IS NOT NULL ORDER BY rowid"
+            f"SELECT {self._CLIENT_COLUMNS} FROM users WHERE id IS NOT NULL ORDER BY rowid"
         ).fetchall()
-        return [
-            {
-                "ipv4_address": r[0],
-                "ipv6_address": r[1],
-                "id": r[2],
-                "name": r[3],
-                "private_key_hex": r[4],
-                "public_key_hex": r[5],
-                "preshared_key_hex": r[6],
-                "created_at": r[7],
-                "updated_at": r[8],
-            }
-            for r in rows
-        ]
+        return [self._row_to_client(r) for r in rows]
 
     # ── DNS ────────────────────────────────────────────────────
 

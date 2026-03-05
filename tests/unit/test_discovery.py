@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from starlette.routing import Route
 
+# noinspection PyProtectedMember
 from phantom_daemon.modules import _module_to_prefix, setup_routers
 
 

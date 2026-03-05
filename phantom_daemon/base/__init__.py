@@ -15,6 +15,7 @@ Base startup services: secrets, environment, wallet, wireguard, firewall.
 
 from phantom_daemon.base.env import DaemonEnv, load_env
 from phantom_daemon.base.errors import (
+    ExitStoreError,
     FirewallError,
     SecretsError,
     StartupError,
@@ -22,6 +23,7 @@ from phantom_daemon.base.errors import (
     WalletFullError,
     WireGuardError,
 )
+from phantom_daemon.base.exit_store import ExitStore, open_exit_store
 from phantom_daemon.base.secrets import ServerKeys, load_secrets
 from phantom_daemon.base.services.firewall import FirewallService, open_firewall
 from phantom_daemon.base.services.wireguard import WireGuardService, open_wireguard
@@ -29,6 +31,8 @@ from phantom_daemon.base.wallet import Wallet, open_wallet
 
 __all__ = [
     "DaemonEnv",
+    "ExitStore",
+    "ExitStoreError",
     "FirewallError",
     "FirewallService",
     "SecretsError",
@@ -41,6 +45,7 @@ __all__ = [
     "WireGuardService",
     "load_env",
     "load_secrets",
+    "open_exit_store",
     "open_firewall",
     "open_wallet",
     "open_wireguard",

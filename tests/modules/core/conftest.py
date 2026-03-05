@@ -29,6 +29,7 @@ from starlette.testclient import TestClient
 
 from phantom_daemon.base.env import DaemonEnv
 from phantom_daemon.base.secrets.secrets import ServerKeys
+from phantom_daemon.base.exit_store import ExitStore, open_exit_store
 from phantom_daemon.base.wallet import Wallet, open_wallet
 from phantom_daemon.base.services.wireguard.service import WireGuardService, open_wireguard
 from phantom_daemon.main import create_app
@@ -49,6 +50,7 @@ class TestEnvironment:
     env: DaemonEnv
     wg: WireGuardService
     server_keys: ServerKeys
+    exit_store: ExitStore
 
 
 @pytest.fixture(scope="session")
@@ -91,10 +93,22 @@ def test_env():
     pub = derive_public_key(priv)
     server_keys = ServerKeys(private_key_hex=priv, public_key_hex=pub)
 
-    yield TestEnvironment(wallet=wallet, env=env, wg=wg, server_keys=server_keys)
+    # Exit store (same thread-safety pattern as wallet)
+    exit_db_name = f"exit-api-{ts}.db"
+    es = open_exit_store(db_dir=_DB_DIR, db_name=exit_db_name)
+    es.close()
+    exit_db_path = os.path.join(_DB_DIR, exit_db_name)
+    exit_conn = sqlite3.connect(exit_db_path, check_same_thread=False)
+    exit_store = ExitStore(exit_conn, Path(exit_db_path))
+
+    yield TestEnvironment(
+        wallet=wallet, env=env, wg=wg, server_keys=server_keys,
+        exit_store=exit_store,
+    )
 
     wg.down()
     wg.close()
+    exit_store.close()
     print(f"\n  DB preserved: {db_path}")
     wallet.close()
 
@@ -107,5 +121,7 @@ def client(test_env):
     app.state.wg = test_env.wg
     app.state.env = test_env.env
     app.state.server_keys = test_env.server_keys
+    app.state.exit_store = test_env.exit_store
+    app.state.wg_exit = None
     with TestClient(app) as c:
         yield c

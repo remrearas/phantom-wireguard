@@ -21,7 +21,6 @@ import logging
 import sqlite3
 import subprocess
 from pathlib import Path
-from types import TracebackType
 from typing import TYPE_CHECKING, Optional, Type
 
 from phantom_daemon.base.errors import WireGuardError
@@ -183,6 +182,37 @@ class WireGuardService:
                 f"Interface setup failed: {exc.cmd} exit={exc.returncode}"
             ) from exc
 
+    def apply_exit_interface(self, address: str) -> None:
+        """Bring exit interface UP and assign address.
+
+        address should include prefix (e.g. '10.0.0.2/32').
+        Raises WireGuardError on failure.
+        """
+        try:
+            subprocess.run(["ip", "link", "set", self._ifname, "up"], check=True)
+            subprocess.run(
+                ["ip", "addr", "add", address, "dev", self._ifname], check=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            raise WireGuardError(
+                f"Exit interface setup failed: {exc.cmd} exit={exc.returncode}"
+            ) from exc
+
+    def update_exit_address(self, address: str) -> None:
+        """Flush and re-assign exit interface address.
+
+        Raises WireGuardError on failure.
+        """
+        try:
+            subprocess.run(["ip", "addr", "flush", "dev", self._ifname], check=True)
+            subprocess.run(
+                ["ip", "addr", "add", address, "dev", self._ifname], check=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            raise WireGuardError(
+                f"Exit address update failed: {exc.cmd} exit={exc.returncode}"
+            ) from exc
+
     def update_addresses(self, ipv4_subnet: str, ipv6_subnet: str) -> None:
         """Flush and re-assign addresses (for CIDR change).
 
@@ -226,7 +256,7 @@ class WireGuardService:
         self,
         exc_type: Optional[Type[BaseException]],
         exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_tb: Optional[object],
     ) -> None:
         self.close()
 

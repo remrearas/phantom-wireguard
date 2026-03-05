@@ -62,6 +62,7 @@ class TestWalletCreate:
 
     def test_ip_pool_first_last(self, tmp_path):
         with open_wallet(str(tmp_path)) as w:
+            # noinspection SqlNoDataSourceInspection
             rows = w._conn.execute(
                 "SELECT ipv4_address, ipv6_address FROM users "
                 "ORDER BY rowid "
@@ -77,6 +78,7 @@ class TestWalletCreate:
 
     def test_audit_log_entry(self, tmp_path):
         with open_wallet(str(tmp_path)) as w:
+            # noinspection SqlNoDataSourceInspection
             row = w._conn.execute(
                 "SELECT action, detail FROM audit_log LIMIT 1"
             ).fetchone()

@@ -36,5 +36,9 @@ class WireGuardError(StartupError):
     """Failed to initialise or sync WireGuard bridge."""
 
 
+class ExitStoreError(StartupError):
+    """Failed to open, create, or query exit store database."""
+
+
 class FirewallError(StartupError):
     """Failed to initialise or configure firewall bridge."""

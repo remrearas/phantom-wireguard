@@ -20,7 +20,6 @@ import importlib.resources
 import logging
 import re
 from pathlib import Path
-from types import TracebackType
 from typing import Optional, Type
 
 import yaml
@@ -29,12 +28,13 @@ from firewall_bridge.presets import apply_preset, disable_preset, enable_preset,
 
 from phantom_daemon.base.env import DaemonEnv
 from phantom_daemon.base.errors import FirewallError
-from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME
+from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME, WG_INTERFACE_NAME_EXIT
 from phantom_daemon.base.wallet.wallet import Wallet
 
 log = logging.getLogger("phantom-daemon")
 
 CORE_PRESET_NAME = "core"
+MULTIHOP_PRESET_NAME = "multihop-exit"
 
 
 # ── Pure Functions ────────────────────────────────────────────────
@@ -42,8 +42,9 @@ CORE_PRESET_NAME = "core"
 _TEMPLATE_EXACT = re.compile(r"^\{(\w+)}$")
 
 
+# noinspection DuplicatedCode
 def _resolve_templates(spec: dict, context: dict) -> dict:
-    """Walk preset rules and replace {key} templates with context values."""
+    """Walk preset rules and table entries, replace {key} templates with context values."""
     result = copy.deepcopy(spec)
     for rule in result.get("rules", []):
         for key, val in list(rule.items()):
@@ -54,6 +55,18 @@ def _resolve_templates(spec: dict, context: dict) -> dict:
                 rule[key] = context[m.group(1)]
             elif "{" in val:
                 rule[key] = val.format_map(context)
+    for entry in result.get("table", []):
+        for _action, inner in list(entry.items()):
+            if not isinstance(inner, dict):
+                continue
+            for key, val in list(inner.items()):
+                if not isinstance(val, str):
+                    continue
+                m = _TEMPLATE_EXACT.match(val)
+                if m and m.group(1) in context:
+                    inner[key] = context[m.group(1)]
+                elif "{" in val:
+                    inner[key] = val.format_map(context)
     return result
 
 
@@ -72,6 +85,29 @@ def _resolve_core_preset(env: DaemonEnv, wallet: Wallet) -> dict:
         "listen_port": env.listen_port,
         "wg_interface": WG_INTERFACE_NAME,
         "ipv4_subnet": wallet.get_config("ipv4_subnet") or "",
+    }
+    return _resolve_templates(spec, context)
+
+
+def _read_multihop_preset() -> dict:
+    """Read multihop.yaml from package resources."""
+    ref = importlib.resources.files(
+        "phantom_daemon.base.services.firewall.presets"
+    ).joinpath("multihop.yaml")
+    return yaml.safe_load(ref.read_text(encoding="utf-8"))
+
+
+def resolve_multihop_preset(
+    ipv4_subnet: str,
+    wg_interface: str = WG_INTERFACE_NAME,
+    wg_interface_exit: str = WG_INTERFACE_NAME_EXIT,
+) -> dict:
+    """Load multihop preset YAML and resolve {template} placeholders."""
+    spec = _read_multihop_preset()
+    context = {
+        "ipv4_subnet": ipv4_subnet,
+        "wg_interface": wg_interface,
+        "wg_interface_exit": wg_interface_exit,
     }
     return _resolve_templates(spec, context)
 
@@ -167,7 +203,7 @@ class FirewallService:
         self,
         exc_type: Optional[Type[BaseException]],
         exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_tb: Optional[object],
     ) -> None:
         self.close()
 

@@ -2,7 +2,7 @@
 ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
 ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
 ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
-██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║s
 ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
 ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
 
@@ -28,15 +28,20 @@ from fastapi.responses import JSONResponse
 
 from phantom_daemon import __version__
 from phantom_daemon.base import (
+    ExitStoreError,
     StartupError,
     WalletError,
     WalletFullError,
     load_env,
     load_secrets,
+    open_exit_store,
     open_firewall,
     open_wallet,
     open_wireguard,
 )
+from phantom_daemon.base.services.firewall.service import resolve_multihop_preset
+from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME_EXIT
+from phantom_daemon.base.services.wireguard.ipc import build_exit_config
 from phantom_daemon.modules import setup_routers
 
 log = logging.getLogger("phantom-daemon")
@@ -70,17 +75,50 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             fw.bootstrap(env=env, wallet=wallet)
         fw.start()
 
+        # Phase 3c: Exit store + optional multihop recovery
+        exit_store = open_exit_store(db_dir=env.db_dir)
+        wg_exit = None
+        if exit_store.is_enabled():
+            active = exit_store.get_active()
+            exit_data = exit_store.get_exit(active)
+            if exit_data:
+                wg_exit = open_wireguard(
+                    state_dir=env.state_dir, mtu=env.mtu,
+                    ifname=WG_INTERFACE_NAME_EXIT,
+                )
+                config = build_exit_config(
+                    private_key_hex=exit_data["private_key_hex"],
+                    peer_public_key_hex=exit_data["public_key_hex"],
+                    peer_preshared_key_hex=exit_data["preshared_key_hex"],
+                    endpoint=exit_data["endpoint"],
+                    allowed_ips=exit_data["allowed_ips"],
+                    keepalive=exit_data["keepalive"],
+                )
+                wg_exit._bridge.ipc_set(config)
+                wg_exit.up()
+                wg_exit.apply_exit_interface(exit_data["address"])
+                ipv4_subnet = wallet.get_config("ipv4_subnet") or ""
+                mh_spec = resolve_multihop_preset(ipv4_subnet=ipv4_subnet)
+                fw.apply_preset(mh_spec)
+                log.info("Multihop exit recovered: %s", active)
+
         app.state.server_keys = server_keys
         app.state.env = env
         app.state.wallet = wallet
         app.state.wg = wg
         app.state.fw = fw
+        app.state.exit_store = exit_store
+        app.state.wg_exit = wg_exit
     except StartupError as exc:
         log.critical("Startup failed: %s", exc)
         sys.exit(1)
 
     yield
 
+    if wg_exit is not None:
+        wg_exit.down()
+        wg_exit.close()
+    exit_store.close()
     fw.stop()
     fw.close()
     wg.down()
@@ -111,6 +149,13 @@ def _register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content={"ok": False, "error": exc.detail},
+        )
+
+    @app.exception_handler(ExitStoreError)
+    async def _exit_store_error(_request, exc):
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "error": str(exc)},
         )
 
     @app.exception_handler(WalletFullError)
