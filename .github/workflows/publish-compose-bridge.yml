@@ -259,6 +259,14 @@ jobs:
           path: dist/compose-bridge-${{ env.VERSION }}-darwin-arm64.zip
           retention-days: 90
 
+      - name: Delete intermediate build artifacts
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5.1.0
+        with:
+          name: |
+            compose_bridge-linux-amd64
+            compose_bridge-linux-arm64
+            compose_bridge-darwin-arm64
+
       - name: Summary
         run: |
           echo "## compose-bridge v${VERSION}" >> "$GITHUB_STEP_SUMMARY"
