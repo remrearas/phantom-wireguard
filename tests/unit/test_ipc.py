@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from wireguard_go_bridge.keys import derive_public_key, generate_private_key
+
 from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME
 from phantom_daemon.base.services.wireguard.ipc import (
     build_full_config,
     build_peer_config,
     build_peer_remove_config,
     build_server_config,
+    parse_device_status,
     parse_ipc_peers,
 )
 
@@ -147,3 +150,123 @@ class TestParseIpcPeers:
             "allowed_ip=10.8.0.4/32\n"
         )
         assert parse_ipc_peers(ipc) == {"peer1", "peer2", "peer3"}
+
+
+class TestParseDeviceStatus:
+    """Tests for parse_device_status — full UAPI dump parser."""
+
+    _SERVER_PRIV = generate_private_key()
+    _SERVER_PUB = derive_public_key(_SERVER_PRIV)
+
+    def test_empty_dump(self):
+        ds = parse_device_status("")
+        assert ds.public_key == ""
+        assert ds.listen_port == 0
+        assert ds.fwmark == 0
+        assert ds.peers == []
+
+    def test_server_only_no_peers(self):
+        ipc = (
+            f"private_key={self._SERVER_PRIV}\n"
+            "listen_port=51820\n"
+            "fwmark=0\n"
+        )
+        ds = parse_device_status(ipc)
+        assert ds.public_key == self._SERVER_PUB
+        assert ds.listen_port == 51820
+        assert ds.fwmark == 0
+        assert ds.peers == []
+
+    def test_single_peer_all_fields(self):
+        ipc = (
+            f"private_key={self._SERVER_PRIV}\n"
+            "listen_port=51820\n"
+            "fwmark=0\n"
+            "public_key=aabbccdd\n"
+            "endpoint=1.2.3.4:51820\n"
+            "allowed_ip=10.0.0.2/32\n"
+            "allowed_ip=fd00::2/128\n"
+            "last_handshake_time_sec=1700000000\n"
+            "last_handshake_time_nsec=123456789\n"
+            "rx_bytes=1024\n"
+            "tx_bytes=2048\n"
+            "persistent_keepalive_interval=25\n"
+        )
+        ds = parse_device_status(ipc)
+        assert len(ds.peers) == 1
+        p = ds.peers[0]
+        assert p.public_key == "aabbccdd"
+        assert p.endpoint == "1.2.3.4:51820"
+        assert p.allowed_ips == ["10.0.0.2/32", "fd00::2/128"]
+        assert p.latest_handshake == 1700000000
+        assert p.rx_bytes == 1024
+        assert p.tx_bytes == 2048
+        assert p.keepalive == 25
+
+    def test_multiple_peers(self):
+        ipc = (
+            f"private_key={self._SERVER_PRIV}\n"
+            "listen_port=51820\n"
+            "public_key=peer1\n"
+            "allowed_ip=10.0.0.2/32\n"
+            "allowed_ip=fd00::2/128\n"
+            "rx_bytes=100\n"
+            "tx_bytes=200\n"
+            "public_key=peer2\n"
+            "allowed_ip=10.0.0.3/32\n"
+            "rx_bytes=300\n"
+            "tx_bytes=400\n"
+            "public_key=peer3\n"
+            "endpoint=5.6.7.8:51820\n"
+            "allowed_ip=10.0.0.4/32\n"
+            "allowed_ip=fd00::4/128\n"
+            "allowed_ip=192.168.1.0/24\n"
+        )
+        ds = parse_device_status(ipc)
+        assert len(ds.peers) == 3
+        assert ds.peers[0].public_key == "peer1"
+        assert ds.peers[0].allowed_ips == ["10.0.0.2/32", "fd00::2/128"]
+        assert ds.peers[1].public_key == "peer2"
+        assert ds.peers[1].rx_bytes == 300
+        assert ds.peers[2].public_key == "peer3"
+        assert ds.peers[2].endpoint == "5.6.7.8:51820"
+        assert len(ds.peers[2].allowed_ips) == 3
+
+    def test_handshake_zero(self):
+        ipc = (
+            f"private_key={self._SERVER_PRIV}\n"
+            "listen_port=51820\n"
+            "public_key=peer_no_hs\n"
+            "last_handshake_time_sec=0\n"
+            "last_handshake_time_nsec=0\n"
+        )
+        ds = parse_device_status(ipc)
+        assert ds.peers[0].latest_handshake == 0
+
+    def test_unknown_keys_ignored(self):
+        ipc = (
+            f"private_key={self._SERVER_PRIV}\n"
+            "listen_port=51820\n"
+            "public_key=peer1\n"
+            "protocol_version=1\n"
+            "some_future_field=xyz\n"
+            "allowed_ip=10.0.0.2/32\n"
+        )
+        ds = parse_device_status(ipc)
+        assert len(ds.peers) == 1
+        assert ds.peers[0].allowed_ips == ["10.0.0.2/32"]
+
+    def test_peer_defaults(self):
+        ipc = (
+            f"private_key={self._SERVER_PRIV}\n"
+            "listen_port=51820\n"
+            "public_key=minimal\n"
+        )
+        ds = parse_device_status(ipc)
+        p = ds.peers[0]
+        assert p.endpoint == ""
+        assert p.allowed_ips == []
+        assert p.latest_handshake == 0
+        assert p.rx_bytes == 0
+        assert p.tx_bytes == 0
+        assert p.keepalive == 0

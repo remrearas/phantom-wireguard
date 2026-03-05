@@ -27,9 +27,11 @@ from typing import TYPE_CHECKING, Optional, Type
 from phantom_daemon.base.errors import WireGuardError
 from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME
 from phantom_daemon.base.services.wireguard.ipc import (
+    DeviceStatus,
     build_full_config,
     build_peer_config,
     build_peer_remove_config,
+    parse_device_status,
     parse_ipc_peers,
 )
 
@@ -129,6 +131,11 @@ class WireGuardService:
             ipc_count,
         )
         return wallet_count, ipc_count
+
+    def get_status(self) -> DeviceStatus:
+        """Full device status — wg show equivalent."""
+        dump = self._bridge.ipc_get()
+        return parse_device_status(dump)
 
     def add_peer(self, client: dict, keepalive: int) -> None:
         """Add a single peer to the IPC device.

@@ -15,6 +15,33 @@ IPC config builder and parser — pure functions, no FFI dependency.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
+
+# ── UAPI Status Types ────────────────────────────────────────────
+
+
+@dataclass(slots=True)
+class PeerStatus:
+    public_key: str
+    endpoint: str = ""
+    allowed_ips: list[str] = field(default_factory=list)
+    latest_handshake: int = 0
+    rx_bytes: int = 0
+    tx_bytes: int = 0
+    keepalive: int = 0
+
+
+@dataclass(slots=True)
+class DeviceStatus:
+    public_key: str = ""
+    listen_port: int = 0
+    fwmark: int = 0
+    peers: list[PeerStatus] = field(default_factory=list)
+
+
+# ── Config Builders ──────────────────────────────────────────────
+
 
 def build_server_config(private_key_hex: str, listen_port: int) -> str:
     """Build server-section IPC config string."""
@@ -71,3 +98,50 @@ def parse_ipc_peers(ipc_output: str) -> set[str]:
         if line.startswith("public_key="):
             peers.add(line.split("=", 1)[1])
     return peers
+
+
+def parse_device_status(ipc_dump: str) -> DeviceStatus:
+    """Parse full UAPI dump into structured DeviceStatus.
+
+    Interface fields: private_key → derive public key, listen_port, fwmark.
+    Peer sections: each public_key= starts a new peer.
+    Multiple allowed_ip= lines are collected into a list.
+    """
+    from wireguard_go_bridge.keys import derive_public_key
+
+    device = DeviceStatus()
+    current_peer: PeerStatus | None = None
+
+    for line in ipc_dump.splitlines():
+        if not line or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+
+        if key == "private_key":
+            device.public_key = derive_public_key(value)
+        elif key == "listen_port" and current_peer is None:
+            device.listen_port = int(value)
+        elif key == "fwmark" and current_peer is None:
+            device.fwmark = int(value)
+        elif key == "public_key":
+            # New peer section
+            current_peer = PeerStatus(public_key=value)
+            device.peers.append(current_peer)
+        elif current_peer is not None:
+            if key == "endpoint":
+                current_peer.endpoint = value
+            elif key == "allowed_ip":
+                current_peer.allowed_ips.append(value)
+            elif key == "last_handshake_time_sec":
+                current_peer.latest_handshake = int(value)
+            elif key == "last_handshake_time_nsec":
+                pass  # sec precision sufficient
+            elif key == "rx_bytes":
+                current_peer.rx_bytes = int(value)
+            elif key == "tx_bytes":
+                current_peer.tx_bytes = int(value)
+            elif key == "persistent_keepalive_interval":
+                current_peer.keepalive = int(value)
+            # Unknown keys silently ignored
+
+    return device
