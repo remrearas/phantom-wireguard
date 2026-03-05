@@ -26,12 +26,14 @@ bold()  { printf "\033[1m%s\033[0m\n" "$*"; }
 cmd_build() {
     bold "Building dev images..."
     $COMPOSE build
+    docker tag phantom-wg-dev-daemon:latest phantom-daemon-dev:latest 2>/dev/null || true
     green "Images built."
 }
 
 cmd_up() {
     bold "Starting dev stack..."
     $COMPOSE up -d --build
+    docker tag phantom-wg-dev-daemon:latest phantom-daemon-dev:latest 2>/dev/null || true
     green "Gateway: http://localhost:${GATEWAY_PORT}"
 }
 
