@@ -187,7 +187,7 @@ jobs:
           security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
           rm -f "$P12_PATH"
 
-  # ── 4. Package ─────────────────────────────────────────────
+  # ── 4. Package (per-arch zips) ───────────────────────────────
   package:
     name: Package dist
     runs-on: ubuntu-latest
@@ -214,34 +214,40 @@ jobs:
         with:
           path: artifacts
 
-      - name: Assemble package
+      - name: Assemble per-arch packages
         run: |
           set -euo pipefail
-          PKG="dist/${VERSION}/compose_bridge"
 
-          mkdir -p "$PKG"
-          cp compose_bridge/__init__.py "$PKG/"
-          cp compose_bridge/_ffi.py "$PKG/"
-          cp compose_bridge/bridge.py "$PKG/"
-          cp compose_bridge/types.py "$PKG/"
+          for PLATFORM in linux-amd64 linux-arm64 darwin-arm64; do
+            PKG="staging/compose_bridge"
+            rm -rf staging
+            mkdir -p "$PKG"
 
-          echo "$VERSION" > "$PKG/VERSION"
+            # Python sources
+            cp compose_bridge/__init__.py "$PKG/"
+            cp compose_bridge/_ffi.py "$PKG/"
+            cp compose_bridge/bridge.py "$PKG/"
+            cp compose_bridge/types.py "$PKG/"
+            echo "$VERSION" > "$PKG/VERSION"
 
-          cp artifacts/compose_bridge-linux-amd64/compose_bridge.so \
-            "$PKG/compose_bridge-linux-amd64.so"
-          cp artifacts/compose_bridge-linux-arm64/compose_bridge.so \
-            "$PKG/compose_bridge-linux-arm64.so"
-          cp artifacts/compose_bridge-darwin-arm64/compose_bridge.dylib \
-            "$PKG/compose_bridge-darwin-arm64.dylib"
+            # Platform binary
+            if [[ "$PLATFORM" == darwin-* ]]; then
+              EXT="dylib"
+            else
+              EXT="so"
+            fi
+            cp "artifacts/compose_bridge-${PLATFORM}/compose_bridge.${EXT}" \
+              "$PKG/compose_bridge-${PLATFORM}.${EXT}"
 
-          cd "dist/${VERSION}"
-          zip -r "../compose-bridge-${VERSION}.zip" compose_bridge/
-          cd ../..
+            # Create zip
+            mkdir -p "dist/${VERSION}"
+            cd staging
+            zip -r "../dist/${VERSION}/compose-bridge-${VERSION}-${PLATFORM}.zip" compose_bridge/
+            cd ..
+          done
 
-          echo "--- Package contents ---"
-          ls -lhR "dist/${VERSION}/compose_bridge/"
-          echo "--- Zip ---"
-          ls -lh "dist/compose-bridge-${VERSION}.zip"
+          echo "--- Dist contents ---"
+          ls -lh "dist/${VERSION}/"
 
       - name: Generate directory indexes
         env:
@@ -267,13 +273,11 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| File | Size |" >> "$GITHUB_STEP_SUMMARY"
           echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
-          for f in dist/${VERSION}/compose_bridge/compose_bridge-*; do
+          for f in dist/${VERSION}/*.zip; do
             NAME=$(basename "$f")
             SIZE=$(du -h "$f" | cut -f1)
             echo "| \`${NAME}\` | ${SIZE} |" >> "$GITHUB_STEP_SUMMARY"
           done
-          ZIP_SIZE=$(du -h "dist/compose-bridge-${VERSION}.zip" | cut -f1)
-          echo "| \`compose-bridge-${VERSION}.zip\` | ${ZIP_SIZE} |" >> "$GITHUB_STEP_SUMMARY"
 
   # ── 5. Deploy to Cloudflare Pages ──────────────────────────
   deploy:
