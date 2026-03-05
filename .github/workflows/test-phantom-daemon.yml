@@ -23,11 +23,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Generate dev secrets
-        run: ./tools/gen-keys-dev.sh
-
       - name: Build dev images
         run: ./tools/dev.sh build
+
+      - name: Generate dev secrets
+        run: ./tools/gen-keys-dev.sh
 
       - name: Start dev stack
         run: ./tools/dev.sh up
@@ -58,6 +58,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Build dev images
+        run: ./tools/dev.sh build
+
       - name: Generate dev secrets
         run: ./tools/gen-keys-dev.sh
 
@@ -68,3 +71,6 @@ jobs:
 
       - name: Run E2E tests for Multighost
         run: ./tools/dev.sh test-multighost-e2e
+
+      - name: Run E2E tests for Chaos
+        run: ./tools/dev.sh test-chaos-e2e
