@@ -44,10 +44,8 @@ fi
 # ── Ensure image exists ──────────────────────────────────────────
 
 if ! docker image inspect "$IMAGE" &>/dev/null; then
-    red "Image $IMAGE not found. Build it first:"
-    echo "  docker build -t $IMAGE -f $DOCKERFILE ."
-    echo "  ./tools/dev.sh build"
-    exit 1
+    bold "Image $IMAGE not found. Building..."
+    docker build -t "$IMAGE" -f "$DOCKERFILE" .
 fi
 
 # ── Generate keypair via bridge FFI ──────────────────────────────

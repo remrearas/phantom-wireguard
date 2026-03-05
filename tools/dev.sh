@@ -26,14 +26,12 @@ bold()  { printf "\033[1m%s\033[0m\n" "$*"; }
 cmd_build() {
     bold "Building dev images..."
     $COMPOSE build
-    docker tag phantom-wg-dev-daemon:latest phantom-daemon-dev:latest 2>/dev/null || true
     green "Images built."
 }
 
 cmd_up() {
     bold "Starting dev stack..."
     $COMPOSE up -d --build
-    docker tag phantom-wg-dev-daemon:latest phantom-daemon-dev:latest 2>/dev/null || true
     green "Gateway: http://localhost:${GATEWAY_PORT}"
 }
 
@@ -220,6 +218,110 @@ cmd_fetch_compose_bridge() {
     ls -lh "$dest/"
 }
 
+cmd_fetch_auth_service() {
+    local repo="ARAS-Workspace/phantom-wg"
+    local run_id="22743971708"
+    local version="1.0.0"
+    local artifact_name="phantom-auth-${version}"
+    local dest="services/auth-service"
+
+    if ! command -v gh &>/dev/null; then
+        red "GitHub CLI (gh) required: brew install gh"
+        exit 1
+    fi
+
+    if ! gh auth status &>/dev/null; then
+        red "Not authenticated. Run: gh auth login"
+        exit 1
+    fi
+
+    bold "Fetching ${artifact_name}..."
+
+    rm -rf "$dest"
+    mkdir -p "$dest"
+
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+
+    gh run download "$run_id" \
+        --repo "$repo" \
+        --name "$artifact_name" \
+        --dir "$tmp_dir"
+
+    # Artifact contains phantom-auth.tar.gz with phantom-auth/ prefix
+    local tar_file="$tmp_dir/phantom-auth.tar.gz"
+    if [ ! -f "$tar_file" ]; then
+        red "Expected phantom-auth.tar.gz not found in artifact"
+        rm -rf "$tmp_dir"
+        exit 1
+    fi
+    tar xzf "$tar_file" -C "$dest" --strip-components=1
+
+    rm -rf "$tmp_dir"
+
+    green "Installed to ${dest}/"
+    ls -lh "$dest/"
+}
+
+cmd_setup_auth() {
+    local auth_dir="services/auth-service"
+    local secrets_dir="container-data/secrets/development"
+    local db_dir="container-data/auth-db"
+    local image="phantom-auth:latest"
+    local admin_username="admin"
+    local force=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -f|--force) force=true; shift ;;
+            --username) admin_username="$2"; shift 2 ;;
+            *) red "Unknown option: $1"; exit 1 ;;
+        esac
+    done
+
+    if [ ! -d "$auth_dir" ]; then
+        red "auth-service not found. Run: ./tools/dev.sh fetch-auth-service"
+        exit 1
+    fi
+
+    if [[ -f "${secrets_dir}/auth_signing_key" && -f "${db_dir}/auth.db" ]]; then
+        if [[ "$force" != true ]]; then
+            red "Auth service already bootstrapped."
+            echo "  Keys: ${secrets_dir}/"
+            echo "  DB:   ${db_dir}/auth.db"
+            echo "  Use -f to force re-bootstrap."
+            exit 0
+        fi
+    fi
+
+    mkdir -p "$secrets_dir" "$db_dir"
+
+    bold "Building auth image..."
+    docker build -t "$image" -f "${auth_dir}/Dockerfile" "$auth_dir"
+
+    bold "Running bootstrap..."
+    local output
+    output=$(docker run --rm \
+        -v "$(pwd)/${secrets_dir}:/secrets" \
+        -v "$(pwd)/${db_dir}:/db" \
+        -v "$(pwd)/${auth_dir}/tools/bootstrap.py:/tmp/bootstrap.py:ro" \
+        "$image" \
+        python /tmp/bootstrap.py \
+            --secrets-dir /secrets \
+            --db-dir /db \
+            --admin-username "$admin_username")
+
+    echo "$output"
+
+    chmod 600 "${secrets_dir}/auth_signing_key" "${secrets_dir}/auth_verify_key" 2>/dev/null || true
+    chmod 600 "${secrets_dir}/.admin_password" 2>/dev/null || true
+
+    green "Auth service bootstrapped."
+    echo "  Keys:     ${secrets_dir}/"
+    echo "  DB:       ${db_dir}/auth.db"
+    echo "  Password: ${secrets_dir}/.admin_password"
+}
+
 cmd_stubs() {
     local image="phantom-daemon-dev:latest"
     local dockerfile="dev.Dockerfile"
@@ -272,6 +374,8 @@ Usage: ./tools/dev.sh <command>
   stubs       Generate .pyi vendor stubs
   openapi     Export OpenAPI schema (openapi.json)
   fetch-compose-bridge  Download compose-bridge artifact for current platform
+  fetch-auth-service    Download auth-service artifact
+  setup-auth            Bootstrap auth service (keys + DB + admin)
 HELP
 }
 
@@ -299,5 +403,7 @@ case "${1:-help}" in
     stubs)       cmd_stubs ;;
     openapi)     cmd_openapi ;;
     fetch-compose-bridge) cmd_fetch_compose_bridge ;;
+    fetch-auth-service) cmd_fetch_auth_service ;;
+    setup-auth) shift; cmd_setup_auth "$@" ;;
     help|*)      cmd_help ;;
 esac

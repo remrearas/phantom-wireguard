@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   test:
@@ -23,11 +24,19 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Fetch auth-service
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./tools/dev.sh fetch-auth-service
+
       - name: Build dev images
         run: ./tools/dev.sh build
 
       - name: Generate dev secrets
         run: ./tools/gen-keys-dev.sh
+
+      - name: Bootstrap auth service
+        run: ./tools/dev.sh setup-auth
 
       - name: Start dev stack
         run: ./tools/dev.sh up
@@ -58,16 +67,24 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Fetch compose-bridge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./tools/dev.sh fetch-compose-bridge
+
+      - name: Fetch auth-service
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./tools/dev.sh fetch-auth-service
+
       - name: Build dev images
         run: ./tools/dev.sh build
 
       - name: Generate dev secrets
         run: ./tools/gen-keys-dev.sh
 
-      - name: Fetch compose-bridge
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: ./tools/dev.sh fetch-compose-bridge
+      - name: Bootstrap auth service
+        run: ./tools/dev.sh setup-auth
 
       - name: Run E2E tests for Multighost
         run: ./tools/dev.sh test-multighost-e2e

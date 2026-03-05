@@ -4,11 +4,6 @@
 # Usage:
 #   docker compose up -d
 #   docker compose logs -f daemon
-#   docker compose exec daemon python -c "import phantom_daemon; print(phantom_daemon.__version__)"
-#
-# UDS test:
-#   docker compose exec daemon \
-#     curl --unix-socket /var/run/phantom/daemon.sock http://localhost/api/core/hello
 # ──────────────────────────────────────────────────────────────────
 
 services:
@@ -19,9 +14,7 @@ services:
     container_name: phantom-daemon
     restart: unless-stopped
     volumes:
-      # UDS socket
       - phantom-sock:/var/run/phantom
-      # Persistent data
       - phantom-data:/var/lib/phantom
     secrets:
       - wg_private_key
@@ -39,12 +32,36 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
 
+  auth:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - daemon
+    volumes:
+      - phantom-sock:/var/run/phantom
+      - phantom-auth-data:/var/lib/phantom/auth
+    secrets:
+      - auth_signing_key
+      - auth_verify_key
+    environment:
+      - PHANTOM_DAEMON_SOCKET=/var/run/phantom/daemon.sock
+      - AUTH_INACTIVITY_TIMEOUT=1800
+    ports:
+      - "8443:8443"
+
 secrets:
   wg_private_key:
     file: ./container-data/secrets/production/wg_private_key
   wg_public_key:
     file: ./container-data/secrets/production/wg_public_key
+  auth_signing_key:
+    file: ./container-data/secrets/production/auth_signing_key
+  auth_verify_key:
+    file: ./container-data/secrets/production/auth_verify_key
 
 volumes:
   phantom-sock:
   phantom-data:
+  phantom-auth-data:

@@ -8,6 +8,10 @@
 # Postman / curl:
 #   http://localhost:9080/api/core/hello
 #
+# Auth service proxy:
+#   http://localhost:8443/auth/login
+#   http://localhost:8443/api/core/hello (JWT required)
+#
 # gateway (socat) UDS → TCP wrapper:
 #   daemon.sock ← socat → :9080
 # ──────────────────────────────────────────────────────────────────
@@ -61,11 +65,36 @@ services:
     volumes:
       - phantom-sock:/var/run/phantom
 
+  auth:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: phantom-auth-dev
+    restart: unless-stopped
+    depends_on:
+      - daemon
+    volumes:
+      - phantom-sock:/var/run/phantom
+      - ./services/auth-service/auth_service:/app/auth_service:ro
+      - ./container-data/auth-db:/var/lib/phantom/auth
+    secrets:
+      - auth_signing_key
+      - auth_verify_key
+    environment:
+      - PHANTOM_DAEMON_SOCKET=/var/run/phantom/daemon.sock
+      - AUTH_INACTIVITY_TIMEOUT=1800
+    ports:
+      - "8443:8443"
+
 secrets:
   wg_private_key:
     file: ./container-data/secrets/development/wg_private_key
   wg_public_key:
     file: ./container-data/secrets/development/wg_public_key
+  auth_signing_key:
+    file: ./container-data/secrets/development/auth_signing_key
+  auth_verify_key:
+    file: ./container-data/secrets/development/auth_verify_key
 
 volumes:
   phantom-sock:

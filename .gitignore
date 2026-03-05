@@ -26,6 +26,8 @@ container-data/db/*
 !container-data/db/.gitkeep
 container-data/state/db/*
 !container-data/state/db/.gitkeep
+container-data/auth-db/*
+!container-data/auth-db/.gitkeep
 
 # Type stubs (generated)
 typings/
