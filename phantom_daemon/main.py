@@ -42,10 +42,7 @@ from phantom_daemon.base import (
     open_wireguard,
     open_wstunnel,
 )
-from phantom_daemon.base.services.firewall.service import (
-    resolve_ghost_preset,
-    resolve_multihop_preset,
-)
+
 from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME_EXIT
 from phantom_daemon.base.services.wireguard.ipc import build_exit_config
 from phantom_daemon.modules import setup_routers
@@ -75,13 +72,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             ipv6_subnet=wallet.get_config("ipv6_subnet"),
         )
 
-        # Phase 3b: Firewall bridge
-        fw = open_firewall(state_dir=env.state_dir)
-        if not fw.list_groups():
-            fw.bootstrap(env=env, wallet=wallet)
-        fw.start()
-
-        # Phase 3c: Exit store + optional multihop recovery
+        # Phase 3b: Exit store + optional multihop WG recovery
+        # WG exit interface must exist BEFORE firewall start, because
+        # fw.start() replays routing rules that reference wg_phantom_exit.
         exit_store = open_exit_store(db_dir=env.db_dir)
         wg_exit = None
         if exit_store.is_enabled():
@@ -103,12 +96,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 wg_exit._bridge.ipc_set(config)
                 wg_exit.up()
                 wg_exit.apply_exit_interface(exit_data["address"])
-                ipv4_subnet = wallet.get_config("ipv4_subnet") or ""
-                mh_spec = resolve_multihop_preset(ipv4_subnet=ipv4_subnet)
-                fw.apply_preset(mh_spec)
-                log.info("Multihop exit recovered: %s", active)
+                log.info("Multihop exit WG recovered: %s", active)
+
+        # Phase 3c: Firewall bridge
+        # Must come after WG exit recovery so interface exists for routing rules.
+        fw = open_firewall(state_dir=env.state_dir)
+        if not fw.list_groups():
+            fw.bootstrap(env=env, wallet=wallet)
+        fw.start()
 
         # Phase 3d: Ghost mode (wstunnel) recovery
+        # Firewall ghost preset is already replayed by fw.start() above.
         wstunnel = None
         wstunnel_db = Path(env.state_dir) / "wstunnel.db"
         if wstunnel_db.exists():
@@ -116,8 +114,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 ws = open_wstunnel(state_dir=env.state_dir)
                 if ws.was_running():
                     ws.start()
-                    ghost_spec = resolve_ghost_preset()
-                    fw.apply_preset(ghost_spec)
                     wstunnel = ws
                     log.info("Ghost mode recovered")
                 else:
