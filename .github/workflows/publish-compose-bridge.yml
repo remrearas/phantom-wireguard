@@ -18,10 +18,6 @@ on:
         required: true
       APPLE_ID_PASSWORD:
         required: true
-      CLOUDFLARE_API_TOKEN:
-        required: true
-      CLOUDFLARE_ACCOUNT_ID:
-        required: true
 
 concurrency:
   group: publish-compose-bridge-${{ github.ref }}
@@ -196,18 +192,11 @@ jobs:
       contents: read
     env:
       VERSION: ${{ needs.extract-version.outputs.version }}
-    outputs:
-      artifact_name: ${{ steps.prepare.outputs.artifact_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
-
-      - name: Setup Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.12"
 
       - name: Download all artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -240,67 +229,44 @@ jobs:
               "$PKG/compose_bridge-${PLATFORM}.${EXT}"
 
             # Create zip
-            mkdir -p "dist/${VERSION}"
+            mkdir -p dist
             cd staging
-            zip -r "../dist/${VERSION}/compose-bridge-${VERSION}-${PLATFORM}.zip" compose_bridge/
+            zip -r "../dist/compose-bridge-${VERSION}-${PLATFORM}.zip" compose_bridge/
             cd ..
           done
 
           echo "--- Dist contents ---"
-          ls -lh "dist/${VERSION}/"
+          ls -lh dist/
 
-      - name: Generate directory indexes
-        env:
-          TZ: Europe/Istanbul
-        run: python .github/scripts/generate_directory_indexes.py dist
-
-      - name: Prepare deployment artifact
-        id: prepare
-        run: |
-          ARTIFACT_NAME="compose-bridge-artifacts-$(echo "$GITHUB_SHA" | cut -c1-8)"
-          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
-
-      - name: Upload deployment artifact
+      - name: Upload linux-amd64
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: ${{ steps.prepare.outputs.artifact_name }}
-          path: dist/
-          retention-days: 7
+          name: compose-bridge-${{ env.VERSION }}-linux-amd64
+          path: dist/compose-bridge-${{ env.VERSION }}-linux-amd64.zip
+          retention-days: 90
+
+      - name: Upload linux-arm64
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: compose-bridge-${{ env.VERSION }}-linux-arm64
+          path: dist/compose-bridge-${{ env.VERSION }}-linux-arm64.zip
+          retention-days: 90
+
+      - name: Upload darwin-arm64
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: compose-bridge-${{ env.VERSION }}-darwin-arm64
+          path: dist/compose-bridge-${{ env.VERSION }}-darwin-arm64.zip
+          retention-days: 90
 
       - name: Summary
         run: |
           echo "## compose-bridge v${VERSION}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| File | Size |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
-          for f in dist/${VERSION}/*.zip; do
+          echo "| Artifact | Size |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|------|" >> "$GITHUB_STEP_SUMMARY"
+          for f in dist/*.zip; do
             NAME=$(basename "$f")
             SIZE=$(du -h "$f" | cut -f1)
             echo "| \`${NAME}\` | ${SIZE} |" >> "$GITHUB_STEP_SUMMARY"
           done
-
-  # ── 5. Deploy to Cloudflare Pages ──────────────────────────
-  deploy:
-    name: Deploy to Cloudflare Pages
-    needs: package
-    if: success()
-    runs-on: self-hosted
-    permissions:
-      deployments: write
-    steps:
-      - name: Download deployment artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: ${{ needs.package.outputs.artifact_name }}
-          path: deployment/dist
-
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@f0a1cd58cd66095dee69bfa18fa5efd1dde93bca # v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: compose-bridge-artifacts-phantom
-          directory: deployment/dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
-          wranglerVersion: "3"
