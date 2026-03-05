@@ -1,0 +1,34 @@
+# Build artifacts
+build/
+dist/
+
+# Go
+vendor/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+.claude/
+playground/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.venv/
+
+# Test results
+test_results/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
