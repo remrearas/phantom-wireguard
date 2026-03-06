@@ -24,11 +24,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Fetch auth-service
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: ./tools/dev.sh fetch-auth-service
-
       - name: Build dev images
         run: ./tools/dev.sh build
 
@@ -71,11 +66,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: ./tools/dev.sh fetch-compose-bridge
-
-      - name: Fetch auth-service
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: ./tools/dev.sh fetch-auth-service
 
       - name: Build dev images
         run: ./tools/dev.sh build

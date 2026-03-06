@@ -218,51 +218,6 @@ cmd_fetch_compose_bridge() {
     ls -lh "$dest/"
 }
 
-cmd_fetch_auth_service() {
-    local repo="ARAS-Workspace/phantom-wg"
-    local run_id="22743971708"
-    local version="1.0.0"
-    local artifact_name="phantom-auth-${version}"
-    local dest="services/auth-service"
-
-    if ! command -v gh &>/dev/null; then
-        red "GitHub CLI (gh) required: brew install gh"
-        exit 1
-    fi
-
-    if ! gh auth status &>/dev/null; then
-        red "Not authenticated. Run: gh auth login"
-        exit 1
-    fi
-
-    bold "Fetching ${artifact_name}..."
-
-    rm -rf "$dest"
-    mkdir -p "$dest"
-
-    local tmp_dir
-    tmp_dir="$(mktemp -d)"
-
-    gh run download "$run_id" \
-        --repo "$repo" \
-        --name "$artifact_name" \
-        --dir "$tmp_dir"
-
-    # Artifact contains phantom-auth.tar.gz with phantom-auth/ prefix
-    local tar_file="$tmp_dir/phantom-auth.tar.gz"
-    if [ ! -f "$tar_file" ]; then
-        red "Expected phantom-auth.tar.gz not found in artifact"
-        rm -rf "$tmp_dir"
-        exit 1
-    fi
-    tar xzf "$tar_file" -C "$dest" --strip-components=1
-
-    rm -rf "$tmp_dir"
-
-    green "Installed to ${dest}/"
-    ls -lh "$dest/"
-}
-
 cmd_setup_auth() {
     local auth_dir="services/auth-service"
     local secrets_dir="container-data/secrets/development"
@@ -374,7 +329,6 @@ Usage: ./tools/dev.sh <command>
   stubs       Generate .pyi vendor stubs
   openapi     Export OpenAPI schema (openapi.json)
   fetch-compose-bridge  Download compose-bridge artifact for current platform
-  fetch-auth-service    Download auth-service artifact
   setup-auth            Bootstrap auth service (keys + DB + admin)
 HELP
 }
@@ -403,7 +357,6 @@ case "${1:-help}" in
     stubs)       cmd_stubs ;;
     openapi)     cmd_openapi ;;
     fetch-compose-bridge) cmd_fetch_compose_bridge ;;
-    fetch-auth-service) cmd_fetch_auth_service ;;
     setup-auth) shift; cmd_setup_auth "$@" ;;
     help|*)      cmd_help ;;
 esac
