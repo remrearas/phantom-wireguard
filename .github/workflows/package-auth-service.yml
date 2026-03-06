@@ -42,17 +42,10 @@ jobs:
       - name: Build package
         run: python scripts/packager.py --clean --tar
 
-      - name: Upload distribution artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: phantom-auth-${{ steps.version.outputs.version }}
-          path: dist/phantom-auth/
-          retention-days: 90
-
       - name: Upload archive
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: phantom-auth-${{ steps.version.outputs.version }}-archive
+          name: phantom-auth-${{ steps.version.outputs.version }}
           path: dist/phantom-auth.tar.gz
           retention-days: 90
 
