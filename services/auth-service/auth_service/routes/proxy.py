@@ -15,12 +15,15 @@ Authenticated reverse proxy to daemon UDS.
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from auth_service.crypto.jwt import TokenPayload
 from auth_service.middleware.auth import require_auth
 
+log = logging.getLogger("phantom-auth")
 router = APIRouter(prefix="/api", tags=["proxy"])
 
 
@@ -34,12 +37,18 @@ async def proxy(
     _payload: TokenPayload = Depends(require_auth),
 ):
     """Forward authenticated request to daemon over UDS."""
+    config = request.app.state.config
     client = request.app.state.proxy_client
-    target_url = f"http://daemon/api/{path}"
+    target_url = f"{config.proxy_base_url}/api/{path}"
     if request.url.query:
         target_url = f"{target_url}?{request.url.query}"
 
     body = await request.body()
+    if len(body) > config.proxy_max_body:
+        return JSONResponse(
+            status_code=413,
+            content={"ok": False, "error": "Request body too large"},
+        )
 
     headers = {}
     for key, value in request.headers.items():
@@ -54,9 +63,10 @@ async def proxy(
             headers=headers,
         )
     except Exception as exc:
+        log.error("Daemon proxy error: %s", exc)
         return JSONResponse(
             status_code=502,
-            content={"ok": False, "error": f"Daemon unreachable: {exc}"},
+            content={"ok": False, "error": "Service temporarily unavailable"},
         )
 
     content_type = response.headers.get("content-type", "")

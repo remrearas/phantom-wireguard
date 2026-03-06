@@ -62,3 +62,11 @@ def require_auth(request: Request) -> TokenPayload:
     db.update_last_activity(payload.jti)
 
     return payload
+
+
+def require_superadmin(request: Request) -> TokenPayload:
+    """Require authenticated superadmin user."""
+    payload = require_auth(request)
+    if payload.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Superadmin access required")
+    return payload

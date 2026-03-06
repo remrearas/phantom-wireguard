@@ -54,8 +54,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         log.info("Auth database ready")
 
         # Phase 4: Build httpx client for daemon proxy
-        transport = httpx.AsyncHTTPTransport(uds=config.daemon_socket)
-        proxy_client = httpx.AsyncClient(transport=transport, timeout=30.0)
+        if config.proxy_is_uds:
+            transport = httpx.AsyncHTTPTransport(uds=config.proxy_socket_path)
+            proxy_client = httpx.AsyncClient(transport=transport, timeout=config.proxy_timeout)
+            log.info("Proxy target: UDS %s", config.proxy_socket_path)
+        else:
+            proxy_client = httpx.AsyncClient(timeout=config.proxy_timeout)
+            log.info("Proxy target: HTTP %s", config.proxy_url)
 
         # Phase 5: Rate limiter
         rate_limiter = RateLimiter(

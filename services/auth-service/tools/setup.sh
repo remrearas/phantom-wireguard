@@ -27,7 +27,6 @@ cd "$(dirname "$0")/.."
 
 IMAGE="phantom-auth:latest"
 DOCKERFILE="Dockerfile"
-DB_DIR="container-data/auth-db"
 FORCE=false
 ADMIN_USERNAME="admin"
 ENV="development"
@@ -41,11 +40,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ "$ENV" == "production" ]]; then
-    SECRETS_DIR="container-data/secrets"
-else
-    SECRETS_DIR="container-data/secrets/development"
-fi
+SECRETS_DIR="container-data/secrets/${ENV}"
+DB_DIR="container-data/auth-db/${ENV}"
 
 red()   { printf "\033[31m%s\033[0m\n" "$*"; }
 green() { printf "\033[32m%s\033[0m\n" "$*"; }

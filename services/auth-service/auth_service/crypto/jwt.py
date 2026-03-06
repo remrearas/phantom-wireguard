@@ -37,6 +37,7 @@ class TokenPayload:
     iat: int
     exp: int
     typ: str
+    role: str
 
 
 def _b64url_encode(data: bytes) -> str:
@@ -61,6 +62,7 @@ def encode_token(
     jti: str,
     lifetime: int,
     typ: str = "access",
+    extra: dict | None = None,
 ) -> str:
     """Create a signed JWT token."""
     now = int(time.time())
@@ -71,6 +73,8 @@ def encode_token(
         "exp": now + lifetime,
         "typ": typ,
     }
+    if extra:
+        payload.update(extra)
     header_b64 = _b64url_encode(json.dumps(_HEADER, separators=(",", ":")).encode())
     payload_b64 = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode())
     message = f"{header_b64}.{payload_b64}".encode("ascii")
@@ -80,8 +84,8 @@ def encode_token(
     return f"{header_b64}.{payload_b64}.{sig_b64}"
 
 
-def decode_token(verify_key: VerifyKey, token: str) -> TokenPayload:
-    """Verify and decode a JWT token."""
+def _verify_and_decode(verify_key: VerifyKey, token: str) -> dict:
+    """Verify JWT signature, check expiration, return raw payload dict."""
     parts = token.split(".")
     if len(parts) != 3:
         raise AuthTokenError("Invalid token format")
@@ -117,6 +121,12 @@ def decode_token(verify_key: VerifyKey, token: str) -> TokenPayload:
     if now >= exp:
         raise AuthTokenError("Token expired")
 
+    return payload
+
+
+def decode_token(verify_key: VerifyKey, token: str) -> TokenPayload:
+    """Verify and decode a JWT token. Returns standard claims only."""
+    payload = _verify_and_decode(verify_key, token)
     try:
         return TokenPayload(
             sub=payload["sub"],
@@ -124,6 +134,12 @@ def decode_token(verify_key: VerifyKey, token: str) -> TokenPayload:
             iat=payload["iat"],
             exp=payload["exp"],
             typ=payload.get("typ", "access"),
+            role=payload.get("role", "admin"),
         )
     except KeyError as exc:
         raise AuthTokenError(f"Missing claim: {exc}") from exc
+
+
+def decode_token_claims(verify_key: VerifyKey, token: str) -> dict:
+    """Verify and decode a JWT token. Returns full payload dict (extra claims included)."""
+    return _verify_and_decode(verify_key, token)
