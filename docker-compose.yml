@@ -1,0 +1,15 @@
+services:
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    secrets:
+      - auth_signing_key
+      - auth_verify_key
+
+secrets:
+  auth_signing_key:
+    file: ${AUTH_SECRETS_DIR:?AUTH_SECRETS_DIR must be set}/auth_signing_key
+  auth_verify_key:
+    file: ${AUTH_SECRETS_DIR:?AUTH_SECRETS_DIR must be set}/auth_verify_key

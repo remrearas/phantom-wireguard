@@ -1,0 +1,36 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Container data
+container-data/secrets/development/*
+!container-data/secrets/development/.gitkeep
+container-data/auth-db/*
+!container-data/auth-db/.gitkeep
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+test_results/
+
+# SQLite
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
