@@ -35,7 +35,7 @@ async def proxy(
 ):
     """Forward authenticated request to daemon over UDS."""
     client = request.app.state.proxy_client
-    target_url = f"http://daemon/{path}"
+    target_url = f"http://daemon/api/{path}"
     if request.url.query:
         target_url = f"{target_url}?{request.url.query}"
 
