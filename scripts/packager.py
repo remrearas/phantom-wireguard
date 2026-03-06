@@ -10,7 +10,6 @@ Creates dist/phantom-auth/ with only the files needed for deployment:
 
 Usage:
   python scripts/packager.py              Build dist/phantom-auth/
-  python scripts/packager.py --tar        Also create .tar.gz archive
   python scripts/packager.py --clean      Remove dist/ before building
 """
 
@@ -18,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import shutil
-import tarfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -107,29 +105,13 @@ def build(clean: bool = False) -> Path:
     return DIST
 
 
-def create_archive(dist_dir: Path) -> Path:
-    """Create a .tar.gz archive of the distribution."""
-    archive = dist_dir.with_suffix(".tar.gz")
-    with tarfile.open(archive, "w:gz") as tar:
-        tar.add(dist_dir, arcname=dist_dir.name)
-    size_kb = archive.stat().st_size / 1024
-    print(f"  Archive: {archive.relative_to(ROOT)} ({size_kb:.0f} KB)")
-    return archive
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Package auth service for distribution")
-    parser.add_argument("--tar", action="store_true", help="Create .tar.gz archive")
     parser.add_argument("--clean", action="store_true", help="Remove dist/ before building")
     args = parser.parse_args()
 
     print("Packaging phantom-auth...\n")
-    dist_dir = build(clean=args.clean)
-
-    if args.tar:
-        print()
-        create_archive(dist_dir)
-
+    build(clean=args.clean)
     print("\nDone.")
 
 
