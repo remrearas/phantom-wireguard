@@ -72,4 +72,5 @@ def test_build_verify_key():
 def test_keys_frozen():
     keys = AuthSigningKeys(signing_key_hex="a" * 64, verify_key_hex="b" * 64)
     with pytest.raises(AttributeError):
+        # noinspection PyDataclass
         keys.signing_key_hex = "c" * 64

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
     id            TEXT PRIMARY KEY,
     username      TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'admin',
     totp_secret   TEXT,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
@@ -112,9 +113,9 @@ def main() -> None:
     now = datetime.now(timezone.utc).isoformat()
     pw_hash = argon2id.str(password.encode("utf-8")).decode("ascii")
     conn.execute(
-        "INSERT INTO users (id, username, password_hash, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (user_id, args.admin_username, pw_hash, now, now),
+        "INSERT INTO users (id, username, password_hash, role, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (user_id, args.admin_username, pw_hash, "superadmin", now, now),
     )
     conn.commit()
     conn.close()

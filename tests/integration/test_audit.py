@@ -20,12 +20,12 @@ def test_audit_log_on_successful_login(auth_env):
 
 
 def test_audit_log_on_user_create(auth_env):
-    auth_env.create_user("audadmin", "adminpw12")
+    auth_env.create_user("audadmin", "adminpw12", role="superadmin")
     token = auth_env.login("audadmin", "adminpw12")
     client = auth_env.make_client()
     client.post(
         "/auth/users",
-        json={"username": "newaudit", "password": "newpw1234"},
+        json={"username": "newaudit", "password": "NewPw1234!"},
         headers=auth_env.bearer(token),
     )
     logs = auth_env.db.get_audit_logs()
@@ -44,9 +44,9 @@ def test_audit_log_on_logout(auth_env):
 def test_audit_log_on_totp_enable(auth_env):
     auth_env.create_user("totpaud", "totppw123")
     token = auth_env.login("totpaud", "totppw123")
-    client = auth_env.make_client()
-    client.post("/auth/totp/enable", headers=auth_env.bearer(token))
+    auth_env.enable_totp("totpaud", "totppw123", token)
     logs = auth_env.db.get_audit_logs()
+    assert any(l["action"] == "totp_setup_started" for l in logs)
     assert any(l["action"] == "totp_enabled" for l in logs)
 
 

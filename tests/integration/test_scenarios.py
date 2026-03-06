@@ -149,8 +149,8 @@ class TestAdminLogin:
 
 class TestUserLifecycle:
     USERNAME = "scenario_user"
-    PASSWORD = "scenarioPass1"
-    NEW_PASSWORD = "newScenario2"
+    PASSWORD = "ScenarioPass1!"
+    NEW_PASSWORD = "NewScenario2!"
 
     def test_01_create_user(self, http, admin_token):
         http.delete(f"/auth/users/{self.USERNAME}", headers=_bearer(admin_token))
@@ -247,9 +247,9 @@ class TestSelfProtection:
 
 class TestTOTPLifecycle:
     USERNAME = "totp_scenario"
-    PASSWORD = "totpPass123"
-    _secret = None
-    _backup_codes = None
+    PASSWORD = "TotpPass123!"
+    _secret: str | None = None
+    _backup_codes: list[str] | None = None
 
     def test_01_setup_user(self, http, admin_token):
         http.delete(f"/auth/users/{self.USERNAME}", headers=_bearer(admin_token))
@@ -264,12 +264,29 @@ class TestTOTPLifecycle:
         resp = http.post("/auth/login", json={"username": self.USERNAME, "password": self.PASSWORD})
         token = resp.json()["data"]["token"]
 
-        resp = http.post("/auth/totp/enable", headers=_bearer(token))
+        # Step 1: setup (verify password, get QR + backup codes)
+        resp = http.post(
+            "/auth/totp/setup",
+            json={"password": self.PASSWORD},
+            headers=_bearer(token),
+        )
         assert resp.status_code == 200
         data = resp.json()["data"]
+        assert "setup_token" in data
         assert "secret" in data
         assert "uri" in data
         assert len(data["backup_codes"]) == 8
+        assert data["expires_in"] > 0
+
+        # Step 2: confirm (verify TOTP code activates)
+        code = _generate_totp_code(data["secret"])
+        resp = http.post(
+            "/auth/totp/confirm",
+            json={"setup_token": data["setup_token"], "code": code},
+            headers=_bearer(token),
+        )
+        assert resp.status_code == 200
+
         TestTOTPLifecycle._secret = data["secret"]
         TestTOTPLifecycle._backup_codes = data["backup_codes"]
 
@@ -355,7 +372,7 @@ class TestTOTPLifecycle:
 
 class TestDeletedUserToken:
     USERNAME = "revoke_scenario"
-    PASSWORD = "revokePass1"
+    PASSWORD = "RevokePass1!"
 
     def test_01_create_and_login(self, http, admin_token):
         http.delete(f"/auth/users/{self.USERNAME}", headers=_bearer(admin_token))
@@ -389,7 +406,7 @@ class TestDeletedUserToken:
 
 class TestDuplicateUser:
     USERNAME = "dup_scenario"
-    PASSWORD = "dupPass123"
+    PASSWORD = "DupPass123!"
 
     def test_duplicate_returns_409(self, http, admin_token):
         http.delete(f"/auth/users/{self.USERNAME}", headers=_bearer(admin_token))
@@ -417,8 +434,9 @@ class TestDuplicateUser:
 
 class TestRateLimit:
     def test_rapid_failed_logins_trigger_429(self, http):
+        resp = None
         for _ in range(10):
             resp = http.post("/auth/login", json={"username": "x", "password": "y"})
             if resp.status_code == 429:
                 break
-        assert resp.status_code == 429
+        assert resp is not None and resp.status_code == 429

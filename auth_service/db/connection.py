@@ -30,4 +30,13 @@ def open_connection(db_path: str) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
     schema = _SCHEMA_PATH.read_text()
     conn.executescript(schema)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Apply forward-only migrations for existing databases."""
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+    if "role" not in columns:
+        conn.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'admin'")
+        conn.commit()

@@ -18,6 +18,8 @@ cd "$(dirname "$0")/.."
 
 COMPOSE="docker compose -f docker-compose-dev.yml"
 AUTH="auth"
+DEV_DB_DIR="container-data/auth-db/development"
+DEV_SECRETS_DIR="container-data/secrets/development"
 
 red()   { printf "\033[31m%s\033[0m\n" "$*"; }
 green() { printf "\033[32m%s\033[0m\n" "$*"; }
@@ -95,21 +97,49 @@ cmd_setup() {
     exec tools/setup.sh "$@"
 }
 
+cmd_db_reset() {
+    bold "Resetting development database..."
+    cmd_down 2>/dev/null || true
+    rm -f "${DEV_DB_DIR}/auth.db" "${DEV_DB_DIR}/auth.db-wal" "${DEV_DB_DIR}/auth.db-shm"
+    green "Database cleared: ${DEV_DB_DIR}/"
+    bold "Run 'tools/dev.sh setup' to re-bootstrap."
+}
+
+cmd_secrets_reset() {
+    bold "Resetting development secrets..."
+    cmd_down 2>/dev/null || true
+    rm -f "${DEV_SECRETS_DIR}/auth_signing_key" "${DEV_SECRETS_DIR}/auth_verify_key" "${DEV_SECRETS_DIR}/.admin_password"
+    green "Secrets cleared: ${DEV_SECRETS_DIR}/"
+    bold "Run 'tools/dev.sh setup' to re-bootstrap."
+}
+
+cmd_hard_reset() {
+    bold "Hard reset — clearing development database and secrets..."
+    cmd_down 2>/dev/null || true
+    rm -f "${DEV_DB_DIR}/auth.db" "${DEV_DB_DIR}/auth.db-wal" "${DEV_DB_DIR}/auth.db-shm"
+    rm -f "${DEV_SECRETS_DIR}/auth_signing_key" "${DEV_SECRETS_DIR}/auth_verify_key" "${DEV_SECRETS_DIR}/.admin_password"
+    green "Development environment cleared."
+    bold "Run 'tools/dev.sh setup' to re-bootstrap."
+}
+
 cmd_help() {
     cat <<'HELP'
 Usage: ./tools/dev.sh <command>
 
-  build       Build dev image
-  up          Build & start auth service
-  down        Stop auth service
-  restart     Restart auth container
-  logs        Follow auth logs
-  test        Run local tests (unit + integration)
+  build          Build dev image
+  up             Build & start auth service
+  down           Stop auth service
+  restart        Restart auth container
+  logs           Follow auth logs
+  test           Run local tests (unit + integration)
   test --docker  Run docker tests (live service scenarios)
-  test-full   Run all tests (local + docker)
-  shell       Open shell in auth container
-  status      Show container status
-  setup       Bootstrap auth service (keys + DB + admin)
+  test-full      Run all tests (local + docker)
+  shell          Open shell in auth container
+  status         Show container status
+  setup          Bootstrap auth service (keys + DB + admin)
+  db-reset       Clear development database
+  secrets-reset  Clear development secrets
+  hard-reset     Clear both database and secrets
 HELP
 }
 
@@ -128,6 +158,9 @@ case "$CMD" in
     test-full)  cmd_test_full "$@" ;;
     shell)      cmd_shell ;;
     status)     cmd_status ;;
-    setup)      cmd_setup "$@" ;;
-    help|*)     cmd_help ;;
+    setup)          cmd_setup "$@" ;;
+    db-reset)       cmd_db_reset ;;
+    secrets-reset)  cmd_secrets_reset ;;
+    hard-reset)     cmd_hard_reset ;;
+    help|*)         cmd_help ;;
 esac

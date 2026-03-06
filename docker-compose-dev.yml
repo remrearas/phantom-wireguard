@@ -5,18 +5,28 @@ services:
       dockerfile: dev.Dockerfile
     container_name: phantom-auth-dev
     volumes:
-#      - phantom-sock:/var/run/phantom
       - ./auth_service:/app/auth_service:ro
       - ./tests:/app/tests:ro
       - ./pytest.ini:/app/pytest.ini:ro
-      - ./container-data/auth-db:/var/lib/phantom/auth
+      - ./container-data/auth-db/development:/var/lib/phantom/auth
       - ./container-data/secrets/development:/run/secrets:ro
     environment:
-#      - PHANTOM_DAEMON_SOCKET=/var/run/phantom/daemon.sock
+      # ── Server ──
+      - AUTH_HOST=0.0.0.0
+      - AUTH_PORT=8443
+      - AUTH_LOG_LEVEL=info
+      # ── Proxy ──
+      # - AUTH_PROXY_URL=http://gateway:9080
+      - AUTH_PROXY_URL=unix:///var/run/phantom/daemon.sock
+      - AUTH_PROXY_TIMEOUT=30.0
+      - AUTH_PROXY_MAX_BODY=65536
+      # ── Auth ──
+      - AUTH_TOKEN_LIFETIME=86400
       - AUTH_INACTIVITY_TIMEOUT=1800
+      - AUTH_MFA_TOKEN_LIFETIME=120
+      - AUTH_TOTP_SETUP_LIFETIME=300
+      # ── Rate Limit (short window for idempotent tests) ──
+      - AUTH_RATE_LIMIT_WINDOW=5
+      - AUTH_RATE_LIMIT_MAX=5
     ports:
       - "8443:8443"
-
-volumes:
-  phantom-sock:
-    external: true

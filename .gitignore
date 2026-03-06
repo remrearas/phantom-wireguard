@@ -19,8 +19,12 @@ build/
 # Container data
 container-data/secrets/development/*
 !container-data/secrets/development/.gitkeep
-container-data/auth-db/*
-!container-data/auth-db/.gitkeep
+container-data/secrets/production/*
+!container-data/secrets/production/.gitkeep
+container-data/auth-db/development/*
+!container-data/auth-db/development/.gitkeep
+container-data/auth-db/production/*
+!container-data/auth-db/production/.gitkeep
 
 # Test
 .pytest_cache/

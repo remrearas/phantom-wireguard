@@ -64,12 +64,12 @@ def test_logout_revokes_token(auth_env):
 
 
 def test_create_user(auth_env):
-    auth_env.create_user("admin", "adminpass1")
+    auth_env.create_user("admin", "adminpass1", role="superadmin")
     token = auth_env.login("admin", "adminpass1")
     client = auth_env.make_client()
     resp = client.post(
         "/auth/users",
-        json={"username": "newuser", "password": "newpass123"},
+        json={"username": "newuser", "password": "NewPass123!"},
         headers=auth_env.bearer(token),
     )
     assert resp.status_code == 200
@@ -77,7 +77,7 @@ def test_create_user(auth_env):
 
 
 def test_list_users(auth_env):
-    auth_env.create_user("admin", "adminpass1")
+    auth_env.create_user("admin", "adminpass1", role="superadmin")
     token = auth_env.login("admin", "adminpass1")
     client = auth_env.make_client()
     resp = client.get("/auth/users", headers=auth_env.bearer(token))
@@ -86,7 +86,7 @@ def test_list_users(auth_env):
 
 
 def test_delete_user(auth_env):
-    auth_env.create_user("admin", "adminpass1")
+    auth_env.create_user("admin", "adminpass1", role="superadmin")
     auth_env.create_user("todelete", "del12345")
     token = auth_env.login("admin", "adminpass1")
     client = auth_env.make_client()
@@ -95,7 +95,7 @@ def test_delete_user(auth_env):
 
 
 def test_delete_self_forbidden(auth_env):
-    auth_env.create_user("admin", "adminpass1")
+    auth_env.create_user("admin", "adminpass1", role="superadmin")
     token = auth_env.login("admin", "adminpass1")
     client = auth_env.make_client()
     resp = client.delete("/auth/users/admin", headers=auth_env.bearer(token))
@@ -109,20 +109,20 @@ def test_change_password(auth_env):
     client = auth_env.make_client()
     resp = client.post(
         "/auth/users/chpw/password",
-        json={"password": "newpass123"},
+        json={"password": "NewPass123!"},
         headers=auth_env.bearer(token),
     )
     assert resp.status_code == 200
 
 
 def test_create_user_duplicate(auth_env):
-    auth_env.create_user("admin", "adminpass1")
+    auth_env.create_user("admin", "adminpass1", role="superadmin")
     auth_env.create_user("dup", "duppass12")
     token = auth_env.login("admin", "adminpass1")
     client = auth_env.make_client()
     resp = client.post(
         "/auth/users",
-        json={"username": "dup", "password": "duppass12"},
+        json={"username": "dup", "password": "DupPass12!"},
         headers=auth_env.bearer(token),
     )
     assert resp.status_code == 409
@@ -211,32 +211,88 @@ def test_mfa_backup_code_single_use(auth_env):
 # ── TOTP Enable / Disable ───────────────────────────────────────
 
 
-def test_totp_enable(auth_env):
+def test_totp_setup_returns_token_and_secret(auth_env):
     auth_env.create_user("totpuser", "totppass1")
     token = auth_env.login("totpuser", "totppass1")
     client = auth_env.make_client()
-    resp = client.post("/auth/totp/enable", headers=auth_env.bearer(token))
+    resp = client.post(
+        "/auth/totp/setup",
+        json={"password": "totppass1"},
+        headers=auth_env.bearer(token),
+    )
     assert resp.status_code == 200
     data = resp.json()["data"]
+    assert "setup_token" in data
     assert "secret" in data
     assert "uri" in data
     assert len(data["backup_codes"]) == 8
+    assert data["expires_in"] == 300
+    # TOTP should NOT be enabled yet
+    resp = client.get("/auth/me", headers=auth_env.bearer(token))
+    assert resp.json()["data"]["totp_enabled"] is False
 
 
-def test_totp_enable_already_enabled(auth_env):
+def test_totp_setup_wrong_password(auth_env):
+    auth_env.create_user("totpwpw", "totppass1")
+    token = auth_env.login("totpwpw", "totppass1")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/totp/setup",
+        json={"password": "wrongpass1"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 401
+
+
+def test_totp_confirm_activates(auth_env):
+    auth_env.create_user("totpconf", "totppass1")
+    token = auth_env.login("totpconf", "totppass1")
+    auth_env.enable_totp("totpconf", "totppass1", token)
+    # Verify TOTP is now enabled
+    client = auth_env.make_client()
+    resp = client.get("/auth/me", headers=auth_env.bearer(token))
+    assert resp.json()["data"]["totp_enabled"] is True
+
+
+def test_totp_confirm_wrong_code(auth_env):
+    auth_env.create_user("totpbad", "totppass1")
+    token = auth_env.login("totpbad", "totppass1")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/totp/setup",
+        json={"password": "totppass1"},
+        headers=auth_env.bearer(token),
+    )
+    setup_token = resp.json()["data"]["setup_token"]
+    resp = client.post(
+        "/auth/totp/confirm",
+        json={"setup_token": setup_token, "code": "000000"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 401
+    # TOTP should still be disabled
+    resp = client.get("/auth/me", headers=auth_env.bearer(token))
+    assert resp.json()["data"]["totp_enabled"] is False
+
+
+def test_totp_setup_already_enabled(auth_env):
     auth_env.create_user("totpdup", "totppass1")
     token = auth_env.login("totpdup", "totppass1")
+    auth_env.enable_totp("totpdup", "totppass1", token)
     client = auth_env.make_client()
-    client.post("/auth/totp/enable", headers=auth_env.bearer(token))
-    resp = client.post("/auth/totp/enable", headers=auth_env.bearer(token))
+    resp = client.post(
+        "/auth/totp/setup",
+        json={"password": "totppass1"},
+        headers=auth_env.bearer(token),
+    )
     assert resp.status_code == 409
 
 
 def test_totp_disable(auth_env):
     auth_env.create_user("totpdis", "totppass1")
     token = auth_env.login("totpdis", "totppass1")
+    auth_env.enable_totp("totpdis", "totppass1", token)
     client = auth_env.make_client()
-    client.post("/auth/totp/enable", headers=auth_env.bearer(token))
     resp = client.post(
         "/auth/totp/disable",
         json={"password": "totppass1"},
@@ -250,11 +306,137 @@ def test_totp_disable(auth_env):
 def test_totp_disable_wrong_password(auth_env):
     auth_env.create_user("totpwrg", "totppass1")
     token = auth_env.login("totpwrg", "totppass1")
+    auth_env.enable_totp("totpwrg", "totppass1", token)
     client = auth_env.make_client()
-    client.post("/auth/totp/enable", headers=auth_env.bearer(token))
     resp = client.post(
         "/auth/totp/disable",
         json={"password": "wrongpass1"},
         headers=auth_env.bearer(token),
     )
     assert resp.status_code == 401
+
+
+# ── RBAC: superadmin vs admin ─────────────────────────────────
+
+
+def test_admin_cannot_create_user(auth_env):
+    auth_env.create_user("regadmin", "adminpw12")
+    token = auth_env.login("regadmin", "adminpw12")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/users",
+        json={"username": "blocked", "password": "Blocked123!"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 403
+
+
+def test_admin_cannot_list_users(auth_env):
+    auth_env.create_user("regadmin2", "adminpw12")
+    token = auth_env.login("regadmin2", "adminpw12")
+    client = auth_env.make_client()
+    resp = client.get("/auth/users", headers=auth_env.bearer(token))
+    assert resp.status_code == 403
+
+
+def test_admin_cannot_delete_user(auth_env):
+    auth_env.create_user("regadmin3", "adminpw12")
+    auth_env.create_user("victim", "victimpw1")
+    token = auth_env.login("regadmin3", "adminpw12")
+    client = auth_env.make_client()
+    resp = client.delete("/auth/users/victim", headers=auth_env.bearer(token))
+    assert resp.status_code == 403
+
+
+def test_admin_cannot_change_other_password(auth_env):
+    auth_env.create_user("regadmin4", "adminpw12")
+    auth_env.create_user("other", "otherpw123")
+    token = auth_env.login("regadmin4", "adminpw12")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/users/other/password",
+        json={"password": "Hacked1234!"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 403
+
+
+def test_admin_can_change_own_password(auth_env):
+    auth_env.create_user("selfpw", "oldpass123")
+    token = auth_env.login("selfpw", "oldpass123")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/users/selfpw/password",
+        json={"password": "NewPass123!"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 200
+
+
+def test_superadmin_can_change_other_password(auth_env):
+    auth_env.create_user("super", "superpw12", role="superadmin")
+    auth_env.create_user("target", "targetpw1")
+    token = auth_env.login("super", "superpw12")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/users/target/password",
+        json={"password": "Changed123!"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 200
+
+
+def test_superadmin_cannot_delete_self(auth_env):
+    auth_env.create_user("superself", "superpw12", role="superadmin")
+    token = auth_env.login("superself", "superpw12")
+    client = auth_env.make_client()
+    resp = client.delete("/auth/users/superself", headers=auth_env.bearer(token))
+    assert resp.status_code == 400
+
+
+def test_admin_cannot_disable_other_totp(auth_env):
+    auth_env.create_user("admtotp", "adminpw12")
+    auth_env.create_user("totptarget", "targetpw1")
+    target_token = auth_env.login("totptarget", "targetpw1")
+    auth_env.enable_totp("totptarget", "targetpw1", target_token)
+    admin_token = auth_env.login("admtotp", "adminpw12")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/totp/disable",
+        json={"password": "adminpw12", "username": "totptarget"},
+        headers=auth_env.bearer(admin_token),
+    )
+    assert resp.status_code == 403
+
+
+def test_superadmin_can_disable_other_totp(auth_env):
+    auth_env.create_user("suptotp", "superpw12", role="superadmin")
+    auth_env.create_user("totpvic", "victimpw1")
+    vic_token = auth_env.login("totpvic", "victimpw1")
+    auth_env.enable_totp("totpvic", "victimpw1", vic_token)
+    sup_token = auth_env.login("suptotp", "superpw12")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/totp/disable",
+        json={"password": "superpw12", "username": "totpvic"},
+        headers=auth_env.bearer(sup_token),
+    )
+    assert resp.status_code == 200
+    resp = client.get("/auth/me", headers=auth_env.bearer(vic_token))
+    assert resp.json()["data"]["totp_enabled"] is False
+
+
+def test_login_returns_role_in_token(auth_env):
+    auth_env.create_user("rolecheck", "rolepw123", role="superadmin")
+    token = auth_env.login("rolecheck", "rolepw123")
+    client = auth_env.make_client()
+    resp = client.get("/auth/me", headers=auth_env.bearer(token))
+    assert resp.json()["data"]["role"] == "superadmin"
+
+
+def test_admin_role_in_me(auth_env):
+    auth_env.create_user("adminrole", "adminpw12")
+    token = auth_env.login("adminrole", "adminpw12")
+    client = auth_env.make_client()
+    resp = client.get("/auth/me", headers=auth_env.bearer(token))
+    assert resp.json()["data"]["role"] == "admin"

@@ -37,6 +37,7 @@ class UserRow:
     id: str
     username: str
     password_hash: str
+    role: str
     totp_secret: str | None
     created_at: str
     updated_at: str
@@ -69,15 +70,15 @@ class AuthDB:
 
     # ── Users ────────────────────────────────────────────────────
 
-    def create_user(self, username: str, password_hash: str) -> UserRow:
+    def create_user(self, username: str, password_hash: str, role: str = "admin") -> UserRow:
         """Create a new user. Raises AuthDatabaseError on duplicate."""
         user_id = uuid.uuid4().hex
         now = _now_iso()
         try:
             self._conn.execute(
-                "INSERT INTO users (id, username, password_hash, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (user_id, username, password_hash, now, now),
+                "INSERT INTO users (id, username, password_hash, role, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (user_id, username, password_hash, role, now, now),
             )
             self._conn.commit()
         except sqlite3.IntegrityError as exc:
@@ -86,6 +87,7 @@ class AuthDB:
             id=user_id,
             username=username,
             password_hash=password_hash,
+            role=role,
             totp_secret=None,
             created_at=now,
             updated_at=now,
@@ -94,7 +96,7 @@ class AuthDB:
     def get_user_by_username(self, username: str) -> UserRow | None:
         """Fetch user by username."""
         row = self._conn.execute(
-            "SELECT id, username, password_hash, totp_secret, created_at, updated_at "
+            "SELECT id, username, password_hash, role, totp_secret, created_at, updated_at "
             "FROM users WHERE username = ?",
             (username,),
         ).fetchone()
@@ -104,6 +106,7 @@ class AuthDB:
             id=row["id"],
             username=row["username"],
             password_hash=row["password_hash"],
+            role=row["role"],
             totp_secret=row["totp_secret"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
@@ -112,7 +115,7 @@ class AuthDB:
     def get_user_by_id(self, user_id: str) -> UserRow | None:
         """Fetch user by ID."""
         row = self._conn.execute(
-            "SELECT id, username, password_hash, totp_secret, created_at, updated_at "
+            "SELECT id, username, password_hash, role, totp_secret, created_at, updated_at "
             "FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
@@ -122,6 +125,7 @@ class AuthDB:
             id=row["id"],
             username=row["username"],
             password_hash=row["password_hash"],
+            role=row["role"],
             totp_secret=row["totp_secret"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
@@ -130,7 +134,7 @@ class AuthDB:
     def list_users(self) -> list[UserRow]:
         """List all users."""
         rows = self._conn.execute(
-            "SELECT id, username, password_hash, totp_secret, created_at, updated_at "
+            "SELECT id, username, password_hash, role, totp_secret, created_at, updated_at "
             "FROM users ORDER BY created_at"
         ).fetchall()
         return [
@@ -138,6 +142,7 @@ class AuthDB:
                 id=r["id"],
                 username=r["username"],
                 password_hash=r["password_hash"],
+                role=r["role"],
                 totp_secret=r["totp_secret"],
                 created_at=r["created_at"],
                 updated_at=r["updated_at"],

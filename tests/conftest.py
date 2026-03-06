@@ -36,9 +36,9 @@ class AuthTestEnvironment:
 
     # ── User helpers ─────────────────────────────────────────────
 
-    def create_user(self, username: str, password: str) -> UserRow:
+    def create_user(self, username: str, password: str, role: str = "admin") -> UserRow:
         """Create a user with plaintext password (hashed internally)."""
-        return self.db.create_user(username, hash_password(password))
+        return self.db.create_user(username, hash_password(password), role=role)
 
     # ── Session helpers ──────────────────────────────────────────
 
@@ -50,7 +50,7 @@ class AuthTestEnvironment:
 
         lt = lifetime or self.config.token_lifetime
         jti = uuid.uuid4().hex
-        token = encode_token(self.signing_key, sub=username, jti=jti, lifetime=lt)
+        token = encode_token(self.signing_key, sub=username, jti=jti, lifetime=lt, extra={"role": user.role})
 
         now = datetime.now(timezone.utc)
         self.db.create_session(
@@ -68,6 +68,40 @@ class AuthTestEnvironment:
         resp = client.post("/auth/login", json={"username": username, "password": password})
         assert resp.status_code == 200, resp.json()
         return resp.json()["data"]["token"]
+
+    # ── TOTP helpers ────────────────────────────────────────────
+
+    def enable_totp(self, _username: str, password: str, token: str) -> dict:
+        """Full TOTP enable via setup + confirm. Returns setup response data."""
+        client = self.make_client()
+        # Step 1: setup
+        resp = client.post(
+            "/auth/totp/setup",
+            json={"password": password},
+            headers=self.bearer(token),
+        )
+        assert resp.status_code == 200, resp.json()
+        setup_data = resp.json()["data"]
+        secret = setup_data["secret"]
+        setup_token = setup_data["setup_token"]
+
+        # Generate valid TOTP code from secret
+        import base64, hashlib, hmac as hmac_mod, struct, time as time_mod
+        key = base64.b32decode(secret)
+        counter = struct.pack(">Q", int(time_mod.time()) // 30)
+        mac = hmac_mod.new(key, counter, hashlib.sha1).digest()
+        offset = mac[-1] & 0x0F
+        truncated = struct.unpack(">I", mac[offset:offset + 4])[0] & 0x7FFFFFFF
+        code = str(truncated % (10 ** 6)).zfill(6)
+
+        # Step 2: confirm
+        resp2 = client.post(
+            "/auth/totp/confirm",
+            json={"setup_token": setup_token, "code": code},
+            headers=self.bearer(token),
+        )
+        assert resp2.status_code == 200, resp2.json()
+        return setup_data
 
     # ── Client factory ───────────────────────────────────────────
 
@@ -113,12 +147,18 @@ def auth_env(tmp_path):
         f.write(verify_hex)
 
     config = AuthConfig(
-        daemon_socket="/tmp/phantom-test.sock",
+        host="127.0.0.1",
+        port=8443,
+        log_level="warning",
+        proxy_url="unix:///tmp/phantom-test.sock",
         db_dir=db_dir,
         secrets_dir=secrets_dir,
         token_lifetime=3600,
         inactivity_timeout=1800,
         mfa_token_lifetime=300,
+        totp_setup_lifetime=300,
+        proxy_timeout=10.0,
+        proxy_max_body=65536,
         rate_limit_window=60,
         rate_limit_max=5,
     )

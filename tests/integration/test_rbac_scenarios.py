@@ -1,0 +1,373 @@
+"""
+Docker RBAC scenario tests — role-based access control verification.
+
+Usage: tools/dev.sh test --docker
+
+Prerequisites:
+  1. tools/setup.sh has been run (bootstrap superadmin exists)
+  2. docker compose up is running
+  3. Admin password in /run/secrets/.admin_password or AUTH_TEST_ADMIN_PASS env
+
+Scenarios (executed in order):
+
+  1. Superadmin creates admin user
+     Bootstrap superadmin logs in → creates admin user → admin appears in list.
+
+  2. Admin cannot manage users
+     Admin logs in → cannot create user (403) → cannot list users (403)
+     → cannot delete user (403).
+
+  3. Admin can only change own password
+     Admin changes own password → success.
+     Admin changes superadmin's password → 403.
+
+  4. Superadmin can change any password
+     Superadmin changes admin's password → success.
+     Admin logs in with new password → success.
+
+  5. Admin TOTP: self-management only
+     Admin enables own TOTP → login requires MFA → admin disables own TOTP.
+     Admin cannot disable superadmin's TOTP → 403.
+
+  6. Superadmin can disable other's TOTP
+     Superadmin enables TOTP on admin → superadmin disables admin's TOTP
+     with own password → success.
+
+  7. Superadmin cannot delete self
+     Superadmin tries to delete self → 400.
+
+  8. Superadmin deletes admin
+     Superadmin deletes admin → admin token revoked → admin cannot login.
+
+  9. Role in JWT and /me response
+     Login returns role in /me → superadmin sees "superadmin",
+     admin sees "admin".
+"""
+
+from __future__ import annotations
+
+import base64
+import hashlib
+import hmac
+import os
+import struct
+import time
+from pathlib import Path
+
+import httpx
+import pytest
+
+pytestmark = pytest.mark.docker
+
+BASE_URL = os.environ.get("AUTH_TEST_URL", "http://localhost:8443")
+ADMIN_USER = os.environ.get("AUTH_TEST_ADMIN_USER", "admin")
+
+
+def _resolve_admin_pass() -> str:
+    env_pass = os.environ.get("AUTH_TEST_ADMIN_PASS", "")
+    if env_pass:
+        return env_pass
+    for candidate in (
+        Path("/run/secrets/.admin_password"),
+        Path("container-data/secrets/development/.admin_password"),
+    ):
+        if candidate.is_file():
+            return candidate.read_text().strip()
+    return ""
+
+
+ADMIN_PASS = _resolve_admin_pass()
+
+
+def _bearer(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _generate_totp_code(secret: str) -> str:
+    key = base64.b32decode(secret)
+    counter = struct.pack(">Q", int(time.time()) // 30)
+    mac = hmac.new(key, counter, hashlib.sha1).digest()
+    offset = mac[-1] & 0x0F
+    truncated = struct.unpack(">I", mac[offset : offset + 4])[0] & 0x7FFFFFFF
+    return str(truncated % 1_000_000).zfill(6)
+
+
+def _enable_totp(http, token: str, password: str) -> str:
+    """Full TOTP enable flow (setup + confirm). Returns secret."""
+    resp = http.post("/auth/totp/setup", json={"password": password}, headers=_bearer(token))
+    assert resp.status_code == 200, resp.json()
+    data = resp.json()["data"]
+    code = _generate_totp_code(data["secret"])
+    resp2 = http.post(
+        "/auth/totp/confirm",
+        json={"setup_token": data["setup_token"], "code": code},
+        headers=_bearer(token),
+    )
+    assert resp2.status_code == 200, resp2.json()
+    return data["secret"]
+
+
+@pytest.fixture(scope="module")
+def http():
+    with httpx.Client(base_url=BASE_URL, timeout=10.0) as client:
+        yield client
+
+
+@pytest.fixture(scope="module")
+def superadmin_token(http):
+    if not ADMIN_PASS:
+        pytest.skip("Admin password not available")
+    resp = http.post("/auth/login", json={"username": ADMIN_USER, "password": ADMIN_PASS})
+    assert resp.status_code == 200, f"Superadmin login failed: {resp.json()}"
+    return resp.json()["data"]["token"]
+
+
+# ── Scenario 1: Superadmin creates admin ───────────────────────
+
+
+class TestSuperadminCreatesAdmin:
+    USERNAME = "rbac_admin"
+    PASSWORD = "RbacAdmin1!"
+
+    def test_01_create_admin(self, http, superadmin_token):
+        http.delete(f"/auth/users/{self.USERNAME}", headers=_bearer(superadmin_token))
+        resp = http.post(
+            "/auth/users",
+            json={"username": self.USERNAME, "password": self.PASSWORD},
+            headers=_bearer(superadmin_token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["username"] == self.USERNAME
+        assert data["role"] == "admin"
+
+    def test_02_admin_in_user_list(self, http, superadmin_token):
+        resp = http.get("/auth/users", headers=_bearer(superadmin_token))
+        assert resp.status_code == 200
+        usernames = [u["username"] for u in resp.json()["data"]]
+        assert self.USERNAME in usernames
+
+
+# ── Scenario 2: Admin cannot manage users ──────────────────────
+
+
+class TestAdminCannotManageUsers:
+    def test_01_admin_cannot_create(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "RbacAdmin1!",
+        })
+        assert resp.status_code == 200
+        token = resp.json()["data"]["token"]
+        resp = http.post(
+            "/auth/users",
+            json={"username": "blocked", "password": "Blocked123!"},
+            headers=_bearer(token),
+        )
+        assert resp.status_code == 403
+
+    def test_02_admin_cannot_list(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "RbacAdmin1!",
+        })
+        token = resp.json()["data"]["token"]
+        resp = http.get("/auth/users", headers=_bearer(token))
+        assert resp.status_code == 403
+
+    def test_03_admin_cannot_delete(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "RbacAdmin1!",
+        })
+        token = resp.json()["data"]["token"]
+        resp = http.delete(f"/auth/users/{ADMIN_USER}", headers=_bearer(token))
+        assert resp.status_code == 403
+
+
+# ── Scenario 3: Admin can only change own password ─────────────
+
+
+class TestAdminPasswordScope:
+    NEW_PASSWORD = "NewRbac12!"
+
+    def test_01_admin_changes_own_password(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "RbacAdmin1!",
+        })
+        token = resp.json()["data"]["token"]
+        resp = http.post(
+            "/auth/users/rbac_admin/password",
+            json={"password": self.NEW_PASSWORD},
+            headers=_bearer(token),
+        )
+        assert resp.status_code == 200
+
+    def test_02_admin_cannot_change_superadmin_password(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": self.NEW_PASSWORD,
+        })
+        token = resp.json()["data"]["token"]
+        resp = http.post(
+            f"/auth/users/{ADMIN_USER}/password",
+            json={"password": "Hacked1234!"},
+            headers=_bearer(token),
+        )
+        assert resp.status_code == 403
+
+
+# ── Scenario 4: Superadmin can change any password ─────────────
+
+
+class TestSuperadminPasswordScope:
+    RESET_PASSWORD = "ResetPw123!"
+
+    def test_01_superadmin_changes_admin_password(self, http, superadmin_token):
+        resp = http.post(
+            "/auth/users/rbac_admin/password",
+            json={"password": self.RESET_PASSWORD},
+            headers=_bearer(superadmin_token),
+        )
+        assert resp.status_code == 200
+
+    def test_02_admin_logs_in_with_new_password(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": self.RESET_PASSWORD,
+        })
+        assert resp.status_code == 200
+        assert "token" in resp.json()["data"]
+
+
+# ── Scenario 5: Admin TOTP self-management ─────────────────────
+
+
+class TestAdminTotpSelfManagement:
+    _secret: str | None = None
+
+    def test_01_admin_enables_own_totp(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "ResetPw123!",
+        })
+        token = resp.json()["data"]["token"]
+        secret = _enable_totp(http, token, "ResetPw123!")
+        TestAdminTotpSelfManagement._secret = secret
+
+    def test_02_admin_login_requires_mfa(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "ResetPw123!",
+        })
+        assert resp.json()["data"]["mfa_required"] is True
+
+    def test_03_admin_disables_own_totp(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "ResetPw123!",
+        })
+        mfa_token = resp.json()["data"]["mfa_token"]
+        code = _generate_totp_code(self._secret)
+        resp = http.post("/auth/mfa/verify", json={"mfa_token": mfa_token, "code": code})
+        token = resp.json()["data"]["token"]
+        resp = http.post(
+            "/auth/totp/disable",
+            json={"password": "ResetPw123!"},
+            headers=_bearer(token),
+        )
+        assert resp.status_code == 200
+
+    def test_04_admin_cannot_disable_superadmin_totp(self, http, superadmin_token):
+        # Enable TOTP on superadmin
+        secret = _enable_totp(http, superadmin_token, ADMIN_PASS)
+        TestAdminTotpSelfManagement._sa_secret = secret
+        # Admin tries to disable superadmin's TOTP
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "ResetPw123!",
+        })
+        admin_token = resp.json()["data"]["token"]
+        resp = http.post(
+            "/auth/totp/disable",
+            json={"password": "ResetPw123!", "username": ADMIN_USER},
+            headers=_bearer(admin_token),
+        )
+        assert resp.status_code == 403
+
+    def test_05_cleanup_superadmin_totp(self, http):
+        # Superadmin disables own TOTP so later scenarios work
+        resp = http.post("/auth/login", json={"username": ADMIN_USER, "password": ADMIN_PASS})
+        mfa_token = resp.json()["data"]["mfa_token"]
+        # noinspection PyUnresolvedReferences
+        code = _generate_totp_code(self._sa_secret)
+        resp = http.post("/auth/mfa/verify", json={"mfa_token": mfa_token, "code": code})
+        token = resp.json()["data"]["token"]
+        resp = http.post(
+            "/auth/totp/disable",
+            json={"password": ADMIN_PASS},
+            headers=_bearer(token),
+        )
+        assert resp.status_code == 200
+
+
+# ── Scenario 6: Superadmin disables other's TOTP ──────────────
+
+
+class TestSuperadminDisablesOtherTotp:
+    def test_01_enable_totp_on_admin(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "ResetPw123!",
+        })
+        token = resp.json()["data"]["token"]
+        _enable_totp(http, token, "ResetPw123!")
+        resp = http.get("/auth/me", headers=_bearer(token))
+        assert resp.json()["data"]["totp_enabled"] is True
+
+    def test_02_superadmin_disables_admin_totp(self, http, superadmin_token):
+        resp = http.post(
+            "/auth/totp/disable",
+            json={"password": ADMIN_PASS, "username": "rbac_admin"},
+            headers=_bearer(superadmin_token),
+        )
+        assert resp.status_code == 200
+
+
+# ── Scenario 7: Superadmin cannot delete self ──────────────────
+
+
+class TestSuperadminCannotDeleteSelf:
+    def test_self_delete_rejected(self, http, superadmin_token):
+        resp = http.delete(f"/auth/users/{ADMIN_USER}", headers=_bearer(superadmin_token))
+        assert resp.status_code == 400
+        assert "yourself" in resp.json()["error"]
+
+
+# ── Scenario 8: Superadmin deletes admin ───────────────────────
+
+
+class TestSuperadminDeletesAdmin:
+    def test_01_delete_admin(self, http, superadmin_token):
+        resp = http.delete("/auth/users/rbac_admin", headers=_bearer(superadmin_token))
+        assert resp.status_code == 200
+
+    def test_02_deleted_admin_cannot_login(self, http):
+        resp = http.post("/auth/login", json={
+            "username": "rbac_admin", "password": "ResetPw123!",
+        })
+        assert resp.status_code == 401
+
+
+# ── Scenario 9: Role in /me response ──────────────────────────
+
+
+class TestRoleInResponse:
+    def test_superadmin_role(self, http, superadmin_token):
+        resp = http.get("/auth/me", headers=_bearer(superadmin_token))
+        assert resp.json()["data"]["role"] == "superadmin"
+
+    def test_admin_role(self, http, superadmin_token):
+        # Create fresh admin for this test
+        http.delete("/auth/users/roletest", headers=_bearer(superadmin_token))
+        http.post(
+            "/auth/users",
+            json={"username": "roletest", "password": "RoleTest1!"},
+            headers=_bearer(superadmin_token),
+        )
+        resp = http.post("/auth/login", json={"username": "roletest", "password": "RoleTest1!"})
+        token = resp.json()["data"]["token"]
+        resp = http.get("/auth/me", headers=_bearer(token))
+        assert resp.json()["data"]["role"] == "admin"
+        # Cleanup
+        http.delete("/auth/users/roletest", headers=_bearer(superadmin_token))

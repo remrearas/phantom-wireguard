@@ -16,11 +16,13 @@ Entry point: python -m auth_service
 import uvicorn
 
 from auth_service.app import create_app
+from auth_service.config import load_auth_config
 
 
 def main() -> None:
+    config = load_auth_config()
     app = create_app()
-    uvicorn.run(app, host="0.0.0.0", port=8443, log_level="info")
+    uvicorn.run(app, host=config.host, port=config.port, log_level=config.log_level)
 
 
 if __name__ == "__main__":
