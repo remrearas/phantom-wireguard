@@ -103,8 +103,8 @@ fi
 
 # ── Set permissions ──────────────────────────────────────────────
 
-chmod 600 "${SECRETS_DIR}/auth_signing_key" "${SECRETS_DIR}/auth_verify_key"
-chmod 600 "${SECRETS_DIR}/.admin_password"
+chmod 600 "${SECRETS_DIR}/auth_signing_key" "${SECRETS_DIR}/auth_verify_key" 2>/dev/null || true
+chmod 600 "${SECRETS_DIR}/.admin_password" 2>/dev/null || true
 
 # ── Summary ───────────────────────────────────────────────────────
 
