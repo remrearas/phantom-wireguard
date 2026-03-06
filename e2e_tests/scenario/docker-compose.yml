@@ -1,0 +1,113 @@
+# ──────────────────────────────────────────────────────────────────
+# Scenario E2E test topology
+# ──────────────────────────────────────────────────────────────────
+# Services:
+#   daemon       — phantom-daemon (wg_main + wg_exit)
+#   auth         — auth-service (JWT proxy → daemon UDS)
+#   master       — pytest runner, docker.sock access
+#   exit-server  — WireGuard exit server
+#   client       — WireGuard client (wg-quick)
+#
+# All API calls go through auth:8443 (JWT required).
+# No gateway (socat) — auth-service is the only API entry point.
+# ──────────────────────────────────────────────────────────────────
+
+networks:
+  e2e:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+services:
+  daemon:
+    build:
+      context: ../..
+      dockerfile: dev.Dockerfile
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /var/lib/phantom/db /var/lib/phantom/state/db /etc/iproute2
+        exec python -m phantom_daemon.main /var/run/phantom/daemon.sock
+    cap_add: [NET_ADMIN, NET_RAW]
+    sysctls:
+      - net.ipv4.ip_forward=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - daemon-sock:/var/run/phantom
+      - ../../phantom_daemon:/app/phantom_daemon:ro
+      - ../../pytest.ini:/app/pytest.ini:ro
+    secrets: [wg_private_key, wg_public_key]
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PHANTOM_DB_DIR: /var/lib/phantom/db
+      PHANTOM_STATE_DIR: /var/lib/phantom/state/db
+      WIREGUARD_LISTEN_PORT: "51820"
+      WIREGUARD_MTU: "1420"
+      WIREGUARD_ENDPOINT_V4: "172.30.0.10"
+    networks:
+      e2e:
+        ipv4_address: 172.30.0.10
+
+  auth:
+    build:
+      context: ../../services/auth-service
+      dockerfile: Dockerfile
+    depends_on: [daemon]
+    volumes:
+      - daemon-sock:/var/run/phantom
+      - ../../container-data/auth-db:/var/lib/phantom/auth
+    secrets: [auth_signing_key, auth_verify_key]
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PHANTOM_DAEMON_SOCKET: /var/run/phantom/daemon.sock
+      AUTH_INACTIVITY_TIMEOUT: "1800"
+    networks:
+      e2e:
+        ipv4_address: 172.30.0.15
+
+  master:
+    build:
+      context: ../..
+      dockerfile: e2e_tests/scenario/master.Dockerfile
+    depends_on: [daemon, auth, exit-server, client]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../../e2e_tests:/app/e2e_tests:ro
+      - ../../container-data/secrets/development/.admin_password:/run/secrets/admin_password:ro
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PHANTOM_AUTH_URL: "http://auth:8443"
+    networks: [e2e]
+
+  exit-server:
+    build:
+      context: ../..
+      dockerfile: e2e_tests/multighost/exit-server.Dockerfile
+    privileged: true
+    cap_add: [NET_ADMIN]
+    networks: [e2e]
+
+  client:
+    build:
+      context: ../..
+      dockerfile: e2e_tests/multighost/client.Dockerfile
+    privileged: true
+    cap_add: [NET_ADMIN]
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks: [e2e]
+
+secrets:
+  wg_private_key:
+    file: ../../container-data/secrets/development/wg_private_key
+  wg_public_key:
+    file: ../../container-data/secrets/development/wg_public_key
+  auth_signing_key:
+    file: ../../container-data/secrets/development/auth_signing_key
+  auth_verify_key:
+    file: ../../container-data/secrets/development/auth_verify_key
+
+volumes:
+  daemon-sock:

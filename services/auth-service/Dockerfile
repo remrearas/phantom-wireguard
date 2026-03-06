@@ -9,6 +9,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY auth_service/ auth_service/
+
 RUN mkdir -p /var/lib/phantom/auth
 
 EXPOSE 8443

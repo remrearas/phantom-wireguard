@@ -1,0 +1,762 @@
+"""
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+WireGuard® is a registered trademark of Jason A. Donenfeld.
+
+Scenario E2E — user journey through auth-service proxy.
+
+Runs INSIDE the master container. All API calls go through auth:8443 (JWT).
+Tests a complete user journey:
+
+    1.  Login (admin, bootstrap password)
+    2.  Health-check (/api/core/hello via proxy)
+    3.  Change password
+    4.  Re-login (new password)
+    5.  Enable TOTP
+    6.  Logout
+    7.  Login with TOTP (MFA flow)
+    8.  Create client config
+    9.  Import exit-server + enable multihop
+    10. Client E2E (WG raw)
+    11. Enable ghost mode
+    12. Client E2E (wstunnel)
+    13. Cleanup
+
+Run with -s to see live output:
+    pytest e2e_tests/scenario/tests/test_user_journey.py -s
+"""
+
+from __future__ import annotations
+
+import base64
+import functools
+import json
+import time
+
+import pyotp
+import pytest
+import requests
+
+
+# Force line-by-line flush so output streams live under pytest -s
+# noinspection PyShadowingBuiltins
+print = functools.partial(print, flush=True)
+
+
+# -- Display helpers -------------------------------------------------
+
+_SEP = "=" * 64
+_THIN = "-" * 64
+
+
+def _api_log(method: str, path: str, resp: requests.Response, body: dict | None = None) -> None:
+    """Print API request/response summary."""
+    print(f"\n  {method} {path}")
+    if body:
+        print(f"    request     : {json.dumps(body, ensure_ascii=False)}")
+    print(f"    status      : {resp.status_code}")
+    try:
+        data = resp.json()
+        compact = json.dumps(data, indent=2, ensure_ascii=False)
+        for line in compact.splitlines()[:20]:
+            print(f"    response    : {line}")
+        if len(compact.splitlines()) > 20:
+            print(f"    response    : ... ({len(compact.splitlines())} lines total)")
+    except (ValueError, KeyError):
+        print(f"    response    : {resp.text[:200]}")
+
+
+def _exec_log(label: str, rc: int, out: str) -> None:
+    """Print container exec result."""
+    status = "OK" if rc == 0 else f"FAIL (rc={rc})"
+    print(f"  {label:16s}: {status}")
+    if out.strip():
+        for line in out.strip().splitlines():
+            print(f"    | {line}")
+
+
+# -- Fixtures --------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def api(auth_url):
+    """Thin wrapper for authenticated API calls with logging."""
+
+    class _Api:
+        def __init__(self, base: str):
+            self.base = base
+            self.token: str | None = None
+
+        @property
+        def _headers(self) -> dict[str, str]:
+            if self.token:
+                return {"Authorization": f"Bearer {self.token}"}
+            return {}
+
+        def get(self, path: str) -> requests.Response:
+            resp = requests.get(f"{self.base}{path}", headers=self._headers, timeout=10)
+            _api_log("GET", path, resp)
+            return resp
+
+        def post(self, path: str, body: dict | None = None, **kwargs) -> requests.Response:
+            if body is not None:
+                kwargs["json"] = body
+            resp = requests.post(
+                f"{self.base}{path}", headers=self._headers, timeout=10, **kwargs,
+            )
+            _api_log("POST", path, resp, body=body)
+            return resp
+
+        def delete(self, path: str) -> requests.Response:
+            resp = requests.delete(f"{self.base}{path}", headers=self._headers, timeout=10)
+            _api_log("DELETE", path, resp)
+            return resp
+
+    return _Api(auth_url)
+
+
+@pytest.fixture(scope="module")
+def exit_conf(container_exec, container_ip):
+    """Read exit-server WG config with resolved IP."""
+    for _ in range(30):
+        rc, out = container_exec("exit-server", "cat /config/client.conf", check=False)
+        if rc == 0 and "PublicKey" in out:
+            break
+        time.sleep(1)
+    else:
+        pytest.fail("exit-server config not ready after 30s")
+
+    exit_ip = container_ip("exit-server")
+    _, conf = container_exec("exit-server", "cat /config/client.conf")
+    return conf.replace("__EXIT_SERVER_IP__", exit_ip)
+
+
+@pytest.fixture(scope="module")
+def daemon_ip(container_ip):
+    """Daemon container IP on E2E network."""
+    return container_ip("daemon")
+
+
+# -- Test class ------------------------------------------------------
+
+class TestUserJourney:
+    """Full user journey through auth-service — 13 phases."""
+
+    _NEW_PASSWORD: str = "Sc3n@r10-E2E-N3wP@ss!"
+    _totp_secret: str = ""
+    _ghost_secret: str = ""
+
+    # ================================================================
+    #  PHASE 1 — LOGIN (BOOTSTRAP PASSWORD)
+    # ================================================================
+
+    def test_login(self, api, admin_password):
+        """Login with bootstrap admin credentials."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 1 — LOGIN (BOOTSTRAP PASSWORD)")
+        print(f"{_SEP}")
+
+        resp = api.post("/auth/login", body={
+            "username": "admin",
+            "password": admin_password,
+        })
+        assert resp.status_code == 200, f"login: {resp.status_code} {resp.text}"
+        assert resp.json()["ok"] is True
+
+        data = resp.json()["data"]
+        assert "token" in data
+        api.token = data["token"]
+
+        print(f"\n  Token         : {data['token'][:32]}...")
+        print(f"  Expires in    : {data['expires_in']}s")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 2 — HEALTH-CHECK (PROXY)
+    # ================================================================
+
+    def test_hello(self, api):
+        """Health-check via auth proxy → daemon /api/core/hello."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 2 — HEALTH-CHECK (PROXY)")
+        print(f"{_SEP}")
+
+        resp = api.get("/api/core/hello")
+        assert resp.status_code == 200, f"hello: {resp.status_code} {resp.text}"
+        assert resp.json()["ok"] is True
+
+        data = resp.json()["data"]
+        print(f"\n  Message       : {data['message']}")
+        print(f"  Version       : {data['version']}")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 3 — CHANGE PASSWORD
+    # ================================================================
+
+    def test_change_password(self, api):
+        """Change admin password via auth API."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 3 — CHANGE PASSWORD")
+        print(f"{_SEP}")
+
+        resp = api.post("/auth/users/admin/password", body={
+            "password": self._NEW_PASSWORD,
+        })
+        assert resp.status_code == 200, f"change pw: {resp.status_code} {resp.text}"
+        assert resp.json()["ok"] is True
+
+        print(f"\n  Password      : changed")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 4 — RE-LOGIN (NEW PASSWORD)
+    # ================================================================
+
+    def test_relogin(self, api):
+        """Re-login with the new password."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 4 — RE-LOGIN (NEW PASSWORD)")
+        print(f"{_SEP}")
+
+        resp = api.post("/auth/login", body={
+            "username": "admin",
+            "password": self._NEW_PASSWORD,
+        })
+        assert resp.status_code == 200, f"relogin: {resp.status_code} {resp.text}"
+
+        data = resp.json()["data"]
+        api.token = data["token"]
+
+        print(f"\n  Token         : {data['token'][:32]}...")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 5 — ENABLE TOTP
+    # ================================================================
+
+    def test_enable_totp(self, api):
+        """Enable TOTP MFA for admin user."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 5 — ENABLE TOTP")
+        print(f"{_SEP}")
+
+        resp = api.post("/auth/totp/enable")
+        assert resp.status_code == 200, f"totp enable: {resp.status_code} {resp.text}"
+        assert resp.json()["ok"] is True
+
+        data = resp.json()["data"]
+        assert "secret" in data
+        assert "backup_codes" in data
+
+        TestUserJourney._totp_secret = data["secret"]
+
+        print(f"\n  Secret        : {data['secret'][:8]}...")
+        print(f"  URI           : {data['uri'][:40]}...")
+        print(f"  Backup codes  : {len(data['backup_codes'])} codes")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 6 — LOGOUT
+    # ================================================================
+
+    def test_logout(self, api):
+        """Logout — revoke current session."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 6 — LOGOUT")
+        print(f"{_SEP}")
+
+        resp = api.post("/auth/logout")
+        assert resp.status_code == 200, f"logout: {resp.status_code} {resp.text}"
+
+        # Verify old token is rejected
+        resp_check = api.get("/auth/me")
+        assert resp_check.status_code == 401
+
+        api.token = None
+
+        print(f"\n  Session       : revoked")
+        print(f"  Old token     : rejected (401)")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 7 — LOGIN WITH TOTP (MFA FLOW)
+    # ================================================================
+
+    def test_login_totp(self, api):
+        """Login with TOTP — MFA challenge → verify."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 7 — LOGIN WITH TOTP (MFA FLOW)")
+        print(f"{_SEP}")
+
+        # Step 1: Login → MFA challenge
+        resp = api.post("/auth/login", body={
+            "username": "admin",
+            "password": self._NEW_PASSWORD,
+        })
+        assert resp.status_code == 200, f"mfa login: {resp.status_code} {resp.text}"
+
+        data = resp.json()["data"]
+        assert "mfa_token" in data, f"Expected MFA challenge, got: {data}"
+        mfa_token = data["mfa_token"]
+
+        print(f"\n  MFA token     : {mfa_token[:32]}...")
+
+        # Step 2: Generate TOTP code and verify
+        totp = pyotp.TOTP(self._totp_secret)
+        code = totp.now()
+
+        print(f"  TOTP code     : {code}")
+
+        resp = api.post("/auth/mfa/verify", body={
+            "mfa_token": mfa_token,
+            "code": code,
+        })
+        assert resp.status_code == 200, f"mfa verify: {resp.status_code} {resp.text}"
+
+        data = resp.json()["data"]
+        assert "token" in data
+        api.token = data["token"]
+
+        print(f"\n  Access token  : {data['token'][:32]}...")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 8 — CREATE CLIENT CONFIG
+    # ================================================================
+
+    def test_assign_client(self, api):
+        """Create a test client via daemon API (through proxy)."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 8 — CREATE CLIENT CONFIG")
+        print(f"{_SEP}")
+
+        resp = api.post("/api/core/clients/assign", body={"name": "e2e-scenario"})
+        assert resp.status_code == 201, f"assign: {resp.status_code} {resp.text}"
+
+        data = resp.json()["data"]
+        assert data["name"] == "e2e-scenario"
+        assert data["ipv4_address"]
+        assert data["private_key_hex"]
+
+        print(f"\n  Client name   : {data['name']}")
+        print(f"  IPv4 address  : {data['ipv4_address']}")
+        print(f"  Public key    : {data['public_key_hex'][:16]}...")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 9 — MULTIHOP IMPORT + ENABLE
+    # ================================================================
+
+    def test_import_exit(self, api, exit_conf):
+        """Import exit-server WG config via proxy."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 9a — IMPORT EXIT CONFIG")
+        print(f"{_SEP}")
+
+        print(f"\n  Exit config (from exit-server):")
+        for line in exit_conf.strip().splitlines():
+            print(f"    | {line}")
+
+        resp = api.post("/api/multihop/import", body={"name": "test-exit", "config": exit_conf})
+        assert resp.status_code == 201, f"import: {resp.status_code} {resp.text}"
+
+        resp = api.get("/api/multihop/list")
+        assert resp.status_code == 200
+        names = [e["name"] for e in resp.json()["data"]["exits"]]
+        assert "test-exit" in names
+        print(f"\n  Import verify : test-exit in {names}")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    def test_enable_multihop(self, api):
+        """Enable multihop via proxy."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 9b — ENABLE MULTIHOP")
+        print(f"{_SEP}")
+
+        resp = api.post("/api/multihop/enable", body={"name": "test-exit"})
+        assert resp.status_code == 200, f"enable: {resp.status_code} {resp.text}"
+        assert resp.json()["data"]["status"] == "enabled"
+
+        resp = api.get("/api/multihop/status")
+        status = resp.json()["data"]
+        assert status["enabled"] is True
+
+        print(f"\n  Multihop      : enabled={status['enabled']}  active={status['active']}")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 10 — CLIENT E2E (RAW WG)
+    # ================================================================
+
+    def test_client_e2e(self, api, container_exec, container_write_file):
+        """Client connects through full multihop chain (via proxy config)."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 10 — CLIENT E2E (FULL MULTIHOP CHAIN)")
+        print(f"{_SEP}")
+
+        # Export client config via proxy
+        resp = api.post(
+            "/api/core/clients/config",
+            body={"name": "e2e-scenario", "version": "v4"},
+        )
+        assert resp.status_code == 200, f"config export: {resp.status_code} {resp.text}"
+
+        client_conf_raw = base64.b64decode(resp.json()["data"]).decode()
+
+        print(f"\n{_THIN}")
+        print("  Client wg-quick config (from API, raw)")
+        print(f"{_THIN}")
+        for line in client_conf_raw.strip().splitlines():
+            print(f"    | {line}")
+
+        # Adapt config for E2E
+        adapted_lines = []
+        for line in client_conf_raw.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("DNS"):
+                continue
+            if stripped.startswith("Address") and "/32" in stripped:
+                line = line.replace("/32", "/24")
+            if stripped.startswith("AllowedIPs") and "0.0.0.0/0" in stripped:
+                line = line.replace("0.0.0.0/0", "10.0.0.0/8")
+            adapted_lines.append(line)
+        client_conf = "\n".join(adapted_lines)
+
+        print(f"\n{_THIN}")
+        print("  Client wg-quick config (adapted for E2E)")
+        print(f"{_THIN}")
+        for line in client_conf.strip().splitlines():
+            print(f"    | {line}")
+
+        # Write config and bring up client tunnel
+        container_write_file("client", "/etc/wireguard/wg0.conf", client_conf)
+        container_exec("client", "wg-quick up wg0")
+        time.sleep(5)
+
+        # Client WG show
+        print(f"\n{_THIN}")
+        print("  Client WireGuard state")
+        print(f"{_THIN}")
+        rc, out = container_exec("client", "wg show wg0", check=False)
+        _exec_log("wg show wg0", rc, out)
+
+        # Client -> daemon WG (direct)
+        print(f"\n{_THIN}")
+        print("  Connectivity: client -> daemon WG")
+        print(f"{_THIN}")
+        client_addr = ""
+        for line in client_conf.splitlines():
+            if line.strip().startswith("Address"):
+                client_addr = line.split("=", 1)[1].strip().split("/")[0].split(",")[0].strip()
+                break
+        subnet = client_addr.rsplit(".", 1)[0]
+        gateway_ip = f"{subnet}.1"
+
+        rc, out = container_exec("client", f"ping -c 3 -W 2 {gateway_ip}", check=False)
+        _exec_log(f"ping {gateway_ip}", rc, out)
+        assert rc == 0, f"client cannot reach daemon WG ({gateway_ip})\n{out}"
+
+        # Client -> exit-server (multihop)
+        print(f"\n{_THIN}")
+        print("  Connectivity: client -> exit-server (multihop)")
+        print(f"{_THIN}")
+        rc, out = container_exec("client", "ping -c 3 -W 2 10.0.2.1", check=False)
+        _exec_log("ping 10.0.2.1", rc, out)
+        assert rc == 0, f"client cannot reach exit-server via multihop (10.0.2.1)\n{out}"
+
+        print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 11 — GHOST MODE ENABLE
+    # ================================================================
+
+    def test_enable_ghost(self, api, container_exec, daemon_ip):
+        """Enable ghost mode via proxy — self-signed TLS."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 11 — ENABLE GHOST MODE")
+        print(f"{_SEP}")
+
+        # Tear down client WG from phase 10
+        container_exec("client", "wg-quick down wg0", check=False)
+
+        # Generate self-signed cert on daemon
+        cert_cmd = (
+            "openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 "
+            "-keyout /tmp/ghost.key -out /tmp/ghost.crt -days 1 -nodes "
+            '-subj "/CN=ghost-e2e" 2>&1'
+        )
+        rc, out = container_exec("daemon", cert_cmd)
+        _exec_log("openssl", rc, out)
+
+        _, cert_pem = container_exec("daemon", "cat /tmp/ghost.crt")
+        _, key_pem = container_exec("daemon", "cat /tmp/ghost.key")
+
+        cert_b64 = base64.b64encode(cert_pem.encode()).decode()
+        key_b64 = base64.b64encode(key_pem.encode()).decode()
+
+        print(f"\n  Cert CN       : ghost-e2e")
+        print(f"  Cert size     : {len(cert_pem)} bytes")
+
+        # Enable ghost via proxy
+        resp = api.post("/api/ghost/enable", body={
+            "domain": daemon_ip,
+            "tls_certificate": cert_b64,
+            "tls_private_key": key_b64,
+        })
+        assert resp.status_code == 201, f"ghost enable: {resp.status_code} {resp.text}"
+
+        data = resp.json()["data"]
+        assert data["status"] == "enabled"
+        assert data["protocol"] == "wss"
+        assert data["port"] == 443
+
+        TestUserJourney._ghost_secret = data["restrict_path_prefix"]
+
+        print(f"\n  Ghost status  : {data['status']}")
+        print(f"  Protocol      : {data['protocol']}")
+        print(f"  Port          : {data['port']}")
+        print(f"  Secret path   : {data['restrict_path_prefix'][:8]}...")
+
+        # Verify ghost + multihop-exit presets coexist
+        resp = api.get("/api/core/firewall/groups/list")
+        assert resp.status_code == 200
+        groups = resp.json()["data"]
+        group_names = [g["name"] for g in groups] if isinstance(groups, list) else list(groups.keys())
+        assert "ghost" in group_names, f"ghost preset missing: {group_names}"
+        assert "multihop-exit" in group_names, f"multihop-exit missing: {group_names}"
+        print(f"\n  FW groups     : {group_names}")
+
+        print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 12 — CLIENT E2E VIA WSTUNNEL
+    # ================================================================
+
+    def test_client_ghost_e2e(
+        self, api, container_exec, container_write_file, daemon_ip,
+    ):
+        """Client connects through wstunnel -> WG -> multihop chain (via proxy)."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 12 — CLIENT E2E VIA WSTUNNEL")
+        print(f"{_SEP}")
+
+        secret = self._ghost_secret
+
+        # Export client config via proxy
+        resp = api.post(
+            "/api/core/clients/config",
+            body={"name": "e2e-scenario", "version": "v4"},
+        )
+        assert resp.status_code == 200
+        client_conf_raw = base64.b64decode(resp.json()["data"]).decode()
+
+        # Adapt: strip DNS, /32->/24, 0.0.0.0/0->10.0.0.0/8, Endpoint -> wstunnel local
+        adapted_lines = []
+        for line in client_conf_raw.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("DNS"):
+                continue
+            if stripped.startswith("Address") and "/32" in stripped:
+                line = line.replace("/32", "/24")
+            if stripped.startswith("AllowedIPs") and "0.0.0.0/0" in stripped:
+                line = line.replace("0.0.0.0/0", "10.0.0.0/8")
+            if stripped.startswith("Endpoint"):
+                line = "Endpoint = 127.0.0.1:51820"
+            adapted_lines.append(line)
+        client_conf = "\n".join(adapted_lines)
+
+        print(f"\n{_THIN}")
+        print("  Client wg-quick config (adapted for wstunnel)")
+        print(f"{_THIN}")
+        for line in client_conf.strip().splitlines():
+            print(f"    | {line}")
+
+        container_write_file("client", "/etc/wireguard/wg0.conf", client_conf)
+
+        # Start wstunnel client
+        wstunnel_cmd = (
+            f"wstunnel client "
+            f"--http-upgrade-path-prefix {secret} "
+            f"-L udp://127.0.0.1:51820:127.0.0.1:51820 "
+            f"wss://{daemon_ip}:443"
+        )
+
+        print(f"\n{_THIN}")
+        print("  Starting wstunnel client")
+        print(f"{_THIN}")
+        print(f"  cmd: {wstunnel_cmd}")
+
+        container_exec("client", f"nohup {wstunnel_cmd} > /tmp/wstunnel.log 2>&1 &")
+        time.sleep(3)
+
+        # Verify wstunnel running
+        rc, out = container_exec("client", "pidof wstunnel", check=False)
+        _exec_log("wstunnel pid", rc, out)
+        assert rc == 0, f"wstunnel client not running\n{out}"
+
+        rc, out = container_exec("client", "cat /tmp/wstunnel.log", check=False)
+        if out.strip():
+            print(f"\n  wstunnel log:")
+            for line in out.strip().splitlines()[:10]:
+                print(f"    | {line}")
+
+        # Bring up WireGuard (over wstunnel)
+        container_exec("client", "wg-quick up wg0")
+        time.sleep(5)
+
+        # Client WG show (via wstunnel)
+        print(f"\n{_THIN}")
+        print("  Client WireGuard state (via wstunnel)")
+        print(f"{_THIN}")
+        rc, out = container_exec("client", "wg show wg0", check=False)
+        _exec_log("wg show wg0", rc, out)
+
+        # Client -> daemon WG
+        print(f"\n{_THIN}")
+        print("  Connectivity: client -> daemon WG (via wstunnel)")
+        print(f"{_THIN}")
+        client_addr = ""
+        for line in client_conf.splitlines():
+            if line.strip().startswith("Address"):
+                client_addr = line.split("=", 1)[1].strip().split("/")[0].split(",")[0].strip()
+                break
+        subnet = client_addr.rsplit(".", 1)[0]
+        gateway_ip = f"{subnet}.1"
+
+        rc, out = container_exec("client", f"ping -c 3 -W 2 {gateway_ip}", check=False)
+        _exec_log(f"ping {gateway_ip}", rc, out)
+        assert rc == 0, f"client cannot reach daemon WG via wstunnel ({gateway_ip})\n{out}"
+
+        # Client -> exit-server (multighost)
+        print(f"\n{_THIN}")
+        print("  Connectivity: client -> exit-server (multighost)")
+        print(f"{_THIN}")
+        rc, out = container_exec("client", "ping -c 3 -W 2 10.0.2.1", check=False)
+        _exec_log("ping 10.0.2.1", rc, out)
+        assert rc == 0, f"client cannot reach exit-server via multighost (10.0.2.1)\n{out}"
+
+        print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 13 — CLEANUP
+    # ================================================================
+
+    def test_disable_ghost(self, api, container_exec):
+        """Disable ghost mode — multihop must stay active."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 13a — DISABLE GHOST")
+        print(f"{_SEP}")
+
+        container_exec("client", "wg-quick down wg0", check=False)
+        container_exec("client", "kill $(pidof wstunnel) 2>/dev/null || true", check=False)
+
+        resp = api.post("/api/ghost/disable")
+        assert resp.status_code == 200
+
+        resp = api.get("/api/ghost/status")
+        assert resp.json()["data"]["enabled"] is False
+
+        resp = api.get("/api/multihop/status")
+        mh = resp.json()["data"]
+        assert mh["enabled"] is True, "multihop should survive ghost disable"
+
+        print(f"\n  Ghost         : disabled")
+        print(f"  Multihop      : still enabled={mh['enabled']}")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    def test_disable_multihop(self, api):
+        """Disable multihop."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 13b — DISABLE MULTIHOP")
+        print(f"{_SEP}")
+
+        resp = api.post("/api/multihop/disable")
+        assert resp.status_code == 200
+
+        resp = api.get("/api/multihop/status")
+        assert resp.json()["data"]["enabled"] is False
+
+        print(f"\n  Multihop      : disabled")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    def test_cleanup(self, api):
+        """Remove exit config, revoke client, disable TOTP."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 13c — CLEANUP")
+        print(f"{_SEP}")
+
+        api.post("/api/multihop/remove", body={"name": "test-exit"})
+        api.post("/api/core/clients/revoke", body={"name": "e2e-scenario"})
+
+        resp = api.get("/api/multihop/list")
+        names = [e["name"] for e in resp.json()["data"]["exits"]]
+        assert "test-exit" not in names
+
+        # Disable TOTP
+        resp = api.post("/auth/totp/disable", body={
+            "password": self._NEW_PASSWORD,
+        })
+        assert resp.status_code == 200
+
+        print(f"\n  Exits after   : {names}")
+        print(f"  Client        : e2e-scenario revoked")
+        print(f"  TOTP          : disabled")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+
+        print(f"\n{_SEP}")
+        print("  ALL PHASES PASSED")
+        print(f"{_SEP}\n")

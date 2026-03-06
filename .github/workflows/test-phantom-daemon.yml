@@ -81,3 +81,6 @@ jobs:
 
       - name: Run E2E tests for Chaos
         run: ./tools/dev.sh test-chaos-e2e
+
+      - name: Run E2E tests for Scenario
+        run: ./tools/dev.sh test-scenario-e2e

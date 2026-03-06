@@ -157,6 +157,19 @@ cmd_test_chaos_e2e() {
     python3 e2e_tests/chaos/runner.py "$@"
 }
 
+cmd_test_scenario_e2e() {
+    if [ ! -d "lib/compose_bridge" ] || [ -z "$(ls lib/compose_bridge/*.so lib/compose_bridge/*.dylib 2>/dev/null)" ]; then
+        red "compose-bridge not found. Run: ./tools/dev.sh fetch-compose-bridge"
+        exit 1
+    fi
+    bold "Running scenario E2E tests..."
+    local lib_file
+    lib_file="$(find lib/compose_bridge -maxdepth 1 \( -name '*.dylib' -o -name '*.so' \) -print -quit)"
+    COMPOSE_BRIDGE_LIB_PATH="$(pwd)/${lib_file}" \
+    PYTHONPATH="$(pwd)/lib:${PYTHONPATH:-}" \
+    python3 e2e_tests/scenario/runner.py "$@"
+}
+
 cmd_fetch_compose_bridge() {
     local repo="ARAS-Workspace/phantom-wg"
     local run_id="22726661393"
@@ -319,6 +332,7 @@ Usage: ./tools/dev.sh <command>
   test-uds    Run pytest (UDS)
   test-multighost-e2e Run multighost E2E tests (5-container)
   test-chaos-e2e Run chaos E2E tests (5-container, restart recovery)
+  test-scenario-e2e Run scenario E2E tests (5-container, auth-service user journey)
   shell       Open shell in daemon
   curl <path> Query via gateway
   status      Show containers
@@ -347,6 +361,7 @@ case "${1:-help}" in
     test-uds)      shift; cmd_test_uds "$@" ;;
     test-multighost-e2e) shift; cmd_test_multighost_e2e "$@" ;;
     test-chaos-e2e) shift; cmd_test_chaos_e2e "$@" ;;
+    test-scenario-e2e) shift; cmd_test_scenario_e2e "$@" ;;
     shell)    cmd_shell ;;
     curl)     shift; cmd_curl "$@" ;;
     status)   cmd_status ;;
