@@ -284,7 +284,17 @@ class TestPasswordChange:
         assert resp.status_code == 401
 
     # noinspection PyUnresolvedReferences
-    def test_04_change_password(self, http):
+    def test_04_same_password_rejected(self, http):
+        resp = http.post(
+            "/auth/password/change",
+            json={"change_token": self._change_token, "password": self.PASSWORD},
+            headers=_bearer(self._token),
+        )
+        assert resp.status_code == 400
+        assert "different" in resp.json()["error"]
+
+    # noinspection PyUnresolvedReferences
+    def test_05_change_password(self, http):
         resp = http.post(
             "/auth/password/change",
             json={"change_token": self._change_token, "password": self.NEW_PASSWORD},
@@ -292,16 +302,21 @@ class TestPasswordChange:
         )
         assert resp.status_code == 200
 
-    def test_05_login_with_new_password(self, http):
+    # noinspection PyUnresolvedReferences
+    def test_06_old_session_revoked(self, http):
+        resp = http.get("/auth/me", headers=_bearer(self._token))
+        assert resp.status_code == 401
+
+    def test_07_login_with_new_password(self, http):
         resp = http.post("/auth/login", json={"username": self.USERNAME, "password": self.NEW_PASSWORD})
         assert resp.status_code == 200
         assert "token" in resp.json()["data"]
 
-    def test_06_old_password_rejected(self, http):
+    def test_08_old_password_rejected(self, http):
         resp = http.post("/auth/login", json={"username": self.USERNAME, "password": self.PASSWORD})
         assert resp.status_code == 401
 
-    def test_07_cleanup(self, http, admin_token):
+    def test_09_cleanup(self, http, admin_token):
         http.delete(f"/auth/users/{self.USERNAME}", headers=_bearer(admin_token))
 
 

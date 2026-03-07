@@ -407,6 +407,50 @@ def test_password_change_weak_password(auth_env):
     assert resp.status_code == 422
 
 
+def test_password_change_same_password_rejected(auth_env):
+    auth_env.create_user("pwsame", "OldPw1234!")
+    token = auth_env.login("pwsame", "OldPw1234!")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/password/verify",
+        json={"password": "OldPw1234!"},
+        headers=auth_env.bearer(token),
+    )
+    change_token = resp.json()["data"]["change_token"]
+    resp = client.post(
+        "/auth/password/change",
+        json={"change_token": change_token, "password": "OldPw1234!"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 400
+    assert "different" in resp.json()["error"]
+
+
+def test_password_change_revokes_sessions(auth_env):
+    auth_env.create_user("pwrevoke", "oldpw1234")
+    token = auth_env.login("pwrevoke", "oldpw1234")
+    client = auth_env.make_client()
+    # Verify current session works
+    resp = client.get("/auth/me", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    # Change password
+    resp = client.post(
+        "/auth/password/verify",
+        json={"password": "oldpw1234"},
+        headers=auth_env.bearer(token),
+    )
+    change_token = resp.json()["data"]["change_token"]
+    resp = client.post(
+        "/auth/password/change",
+        json={"change_token": change_token, "password": "NewRevoke1!"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 200
+    # Old token should be revoked
+    resp = client.get("/auth/me", headers=auth_env.bearer(token))
+    assert resp.status_code == 401
+
+
 # ── RBAC: superadmin vs admin ─────────────────────────────────
 
 
