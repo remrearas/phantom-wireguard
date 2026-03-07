@@ -1,0 +1,244 @@
+@use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/theme' as theme;
+@use '@carbon/react/scss/breakpoint' as bp;
+
+// ── TotpStatus ──────────────────────────────────────────────────
+
+.totp-status__row {
+  display: flex;
+  align-items: center;
+  gap: spacing.$spacing-04;
+  margin-bottom: spacing.$spacing-05;
+}
+
+.totp-status__label {
+  font-size: 1rem;
+  color: theme.$text-primary;
+}
+
+
+// ── TotpEnable Wizard ───────────────────────────────────────────
+
+.totp-wizard {
+  padding: spacing.$spacing-07 0;
+
+  .cds--col {
+    display: flex;
+    flex-direction: column;
+    padding-left: spacing.$spacing-05;
+    padding-right: spacing.$spacing-05;
+
+    @include bp.breakpoint-down(sm) {
+      padding-left: spacing.$spacing-04;
+      padding-right: spacing.$spacing-04;
+    }
+  }
+}
+
+.totp-wizard__progress {
+  margin-bottom: spacing.$spacing-07;
+  text-align: center;
+  padding: spacing.$spacing-05;
+  background-color: theme.$layer-01;
+  border-radius: 4px;
+}
+
+.totp-wizard__progress-text {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: theme.$text-primary;
+
+  @include bp.breakpoint-down(md) { font-size: 1.25rem; }
+  @include bp.breakpoint-down(sm) { font-size: 1.125rem; }
+}
+
+.totp-wizard__error {
+  margin-bottom: spacing.$spacing-06;
+  max-width: 100%;
+}
+
+.totp-wizard__question {
+  margin-bottom: spacing.$spacing-05;
+  padding: spacing.$spacing-05;
+  background-color: theme.$layer-01;
+  border-left: 4px solid theme.$border-interactive;
+  border-radius: 4px;
+  animation: totpFadeIn 0.3s ease-in-out;
+}
+
+.totp-wizard__question-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: theme.$text-primary;
+  margin: 0 0 spacing.$spacing-04;
+  line-height: 1.4;
+
+  @include bp.breakpoint-down(sm) { font-size: 0.875rem; }
+  @include bp.breakpoint-up(lg) { font-size: 1.125rem; }
+}
+
+.totp-wizard__input {
+  max-width: 24rem;
+}
+
+.totp-wizard__qr-container {
+  display: flex;
+  justify-content: center;
+  margin: spacing.$spacing-05 0;
+}
+
+.totp-wizard__qr-wrapper {
+  padding: spacing.$spacing-05;
+  background-color: #ffffff;
+  border-radius: 8px;
+}
+
+.totp-wizard__secret {
+  display: flex;
+  align-items: center;
+  gap: spacing.$spacing-03;
+  flex-wrap: wrap;
+  margin-bottom: spacing.$spacing-05;
+  font-size: 0.875rem;
+  color: theme.$text-primary;
+}
+
+.totp-wizard__secret-label {
+  font-weight: 500;
+}
+
+.totp-wizard__secret-value {
+  font-family: 'IBM Plex Mono', monospace;
+  word-break: break-all;
+  user-select: all;
+}
+
+.totp-wizard__backup h4 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: theme.$text-primary;
+  margin-bottom: spacing.$spacing-03;
+}
+
+.totp-wizard__backup .cds--inline-notification {
+  max-width: 100%;
+}
+
+.totp-wizard__backup .cds--snippet {
+  margin-bottom: spacing.$spacing-05;
+  max-width: 100%;
+}
+
+.totp-wizard__navigation {
+  display: flex;
+  gap: spacing.$spacing-05;
+  justify-content: space-between;
+  padding: spacing.$spacing-05 0;
+
+  @include bp.breakpoint-down(sm) {
+    flex-direction: column;
+    gap: spacing.$spacing-04;
+  }
+}
+
+.totp-wizard__nav-btn {
+  min-width: 120px;
+
+  @include bp.breakpoint-down(sm) {
+    width: 100%;
+    min-width: unset;
+  }
+}
+
+// Done state
+.totp-wizard__done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+  animation: totpFadeIn 0.3s ease-in-out;
+}
+
+.totp-wizard__done-icon {
+  color: theme.$support-success;
+  margin-bottom: spacing.$spacing-05;
+}
+
+.totp-wizard__done-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: theme.$text-primary;
+  margin: 0 0 spacing.$spacing-07;
+
+  @include bp.breakpoint-down(sm) { font-size: 0.875rem; }
+  @include bp.breakpoint-up(lg) { font-size: 1.125rem; }
+}
+
+.totp-wizard__done-btn {
+  min-width: 200px;
+
+  @include bp.breakpoint-down(sm) {
+    width: 100%;
+    min-width: unset;
+  }
+}
+
+// Failed / result state
+.totp-wizard__result {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+
+  .cds--inline-notification {
+    margin-bottom: spacing.$spacing-06;
+    max-width: 100%;
+  }
+}
+
+.totp-wizard__restart {
+  display: flex;
+  gap: spacing.$spacing-03;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: spacing.$spacing-06;
+}
+
+.totp-wizard__restart-btn {
+  min-width: 200px;
+
+  @include bp.breakpoint-down(sm) {
+    width: 100%;
+    min-width: unset;
+  }
+}
+
+// Focus
+.totp-wizard .cds--btn:focus {
+  outline: 2px solid theme.$focus;
+  outline-offset: 2px;
+}
+
+// Animation
+@keyframes totpFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+// Breakpoint overrides
+@include bp.breakpoint(md) {
+  .totp-wizard__progress { padding: spacing.$spacing-06; }
+  .totp-wizard__question { padding: spacing.$spacing-06; }
+}
+
+@include bp.breakpoint(lg) {
+  .totp-wizard { padding: spacing.$spacing-09 0; }
+  .totp-wizard__progress {
+    padding: spacing.$spacing-07;
+    .totp-wizard__progress-text { font-size: 1.75rem; }
+  }
+  .totp-wizard__question {
+    padding: spacing.$spacing-07;
+  }
+}

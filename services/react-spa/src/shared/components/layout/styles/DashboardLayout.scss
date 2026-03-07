@@ -1,0 +1,24 @@
+@use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/breakpoint' as bp;
+
+.app-content {
+  min-height: calc(100vh - 3rem);
+  margin-top: 3rem;
+  padding-top: spacing.$spacing-07;
+  padding-bottom: spacing.$spacing-09;
+  background-color: var(--cds-background);
+}
+
+.app-content__box {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 spacing.$spacing-05;
+
+  @include bp.breakpoint-up(md) {
+    padding: 0 spacing.$spacing-07;
+  }
+
+  @include bp.breakpoint-up(lg) {
+    padding: 0 spacing.$spacing-09;
+  }
+}

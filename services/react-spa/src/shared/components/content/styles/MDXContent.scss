@@ -1,0 +1,40 @@
+@use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/type' as type;
+
+.mdx-page {
+  padding-top: spacing.$spacing-06;
+}
+
+.mdx-content {
+  h1 {
+    @include type.type-style('heading-04');
+    color: var(--cds-text-primary);
+    margin-bottom: spacing.$spacing-06;
+  }
+
+  h2 {
+    @include type.type-style('heading-03');
+    color: var(--cds-text-primary);
+    margin-top: spacing.$spacing-07;
+    margin-bottom: spacing.$spacing-05;
+  }
+
+  h3 {
+    @include type.type-style('heading-02');
+    color: var(--cds-text-primary);
+    margin-top: spacing.$spacing-06;
+    margin-bottom: spacing.$spacing-04;
+  }
+
+  p {
+    @include type.type-style('body-01');
+    color: var(--cds-text-secondary);
+    margin-bottom: spacing.$spacing-05;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--cds-border-subtle-00);
+    margin: spacing.$spacing-07 0;
+  }
+}

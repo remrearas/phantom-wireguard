@@ -1,0 +1,351 @@
+{
+  "_default": "tr",
+  "tr": {
+    "_meta": {
+      "code": "tr",
+      "nativeName": "Türkçe",
+      "flag": "/assets/flags/tr.svg"
+    },
+    "language": {
+      "switchTo": "Switch to English"
+    },
+    "loadingSpinner": {
+      "loading": "Yükleniyor...",
+      "pageLoading": "Sayfa yükleniyor..."
+    },
+    "login": {
+      "title": "Giriş Yap",
+      "username": "Kullanıcı Adı",
+      "usernamePlaceholder": "Kullanıcı Adınız",
+      "password": "Parola",
+      "passwordPlaceholder": "Parolanızı girin",
+      "submit": "Giriş",
+      "submitting": "Giriş yapılıyor...",
+      "totpTitle": "İki Faktörlü Doğrulama",
+      "totpCode": "TOTP Kodu",
+      "totpPlaceholder": "6 haneli kod",
+      "totpSubmit": "Doğrula",
+      "backupCodeTitle": "Yedek Kod ile Giriş",
+      "backupCode": "Yedek Kod",
+      "backupCodePlaceholder": "8 haneli yedek kod",
+      "useBackupCode": "Yedek kod kullan",
+      "useTotpCode": "TOTP kodu kullan",
+      "error": {
+        "invalidCredentials": "Geçersiz kullanıcı adı veya parola.",
+        "rateLimited": "Çok fazla deneme. Lütfen bekleyin.",
+        "networkError": "Sunucuya bağlanılamıyor.",
+        "invalidTotp": "Geçersiz TOTP kodu.",
+        "invalidBackupCode": "Geçersiz yedek kod.",
+        "tokenExpired": "Süre doldu. Lütfen tekrar giriş yapın."
+      },
+      "warning": {
+        "sessionExpired": "Oturumunuz sona erdi. Lütfen tekrar giriş yapın."
+      },
+      "countdown": "Kalan süre"
+    },
+    "header": {
+      "appName": "Phantom-WG",
+      "logout": "Çıkış"
+    },
+    "nav": {
+      "dashboard": "Gösterge Paneli",
+      "clients": "İstemciler",
+      "userOps": "Kullanıcı İşlemleri",
+      "totp": "İki Faktörlü Doğrulama",
+      "passwordChange": "Şifre Değiştir",
+      "users": "Kullanıcı Yönetimi"
+    },
+    "dinoGame": {
+      "startMessage": "Başlamak için tıklayın veya yukarı ok tuşuna basın",
+      "gameOver": "Oyun Bitti",
+      "restartMessage": "Tekrar denemek için tıklayın",
+      "score": "Skor"
+    },
+    "errorPages": {
+      "notFound": {
+        "code": "404",
+        "title": "Sayfa Bulunamadı",
+        "description": "Aradığınız sayfa mevcut değil veya taşınmış olabilir.",
+        "backHome": "Ana Sayfa",
+        "goBack": "Geri Dön"
+      },
+      "serverError": {
+        "code": "500",
+        "title": "Sunucu Hatası",
+        "description": "Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        "backHome": "Ana Sayfa",
+        "reload": "Sayfayı Yenile"
+      }
+    },
+    "dashboard": {
+      "welcome": "Phantom-WG Dashboard",
+      "subtitle": "Hoş geldiniz."
+    },
+    "passwordChange": {
+      "title": "Şifre Değiştir",
+      "description": "Hesabınızın parolasını değiştirmek için mevcut parolanızı ve yeni parolanızı girin.",
+      "currentPassword": "Mevcut Parola",
+      "currentPasswordPlaceholder": "Mevcut parolanızı girin",
+      "newPassword": "Yeni Parola",
+      "newPasswordPlaceholder": "En az 8 karakter, büyük/küçük harf, rakam, özel karakter",
+      "confirm": "Onayla",
+      "goBack": "Geri Dön",
+      "success": "Parolanız başarıyla değiştirildi.",
+      "generate": "Rastgele Oluştur",
+      "policy": {
+        "minLength": "En az 8 karakter",
+        "uppercase": "En az 1 büyük harf",
+        "lowercase": "En az 1 küçük harf",
+        "digit": "En az 1 rakam",
+        "special": "En az 1 özel karakter"
+      },
+      "error": {
+        "invalidPassword": "Mevcut parola hatalı.",
+        "weakPassword": "Yeni parola güvenlik gereksinimlerini karşılamıyor."
+      }
+    },
+    "settings": {
+      "title": "Ayarlar",
+      "account": {
+        "title": "Hesap Güvenliği",
+        "totp": {
+          "status": "İki Faktörlü Doğrulama (TOTP)",
+          "enabled": "Etkin",
+          "disabled": "Devre Dışı",
+          "enable": "TOTP Etkinleştir",
+          "disable": "TOTP Devre Dışı Bırak",
+          "enableTitle": "TOTP Etkinleştir",
+          "disableTitle": "TOTP Devre Dışı Bırak",
+          "enableSuccess": "TOTP başarıyla etkinleştirildi.",
+          "disableSuccess": "TOTP başarıyla devre dışı bırakıldı.",
+          "enterPassword": "Kimliğinizi doğrulamak için parolanızı girin.",
+          "scanQR": "QR kodu tarayıcı uygulamanızla okutun veya gizli anahtarı manuel girin.",
+          "verifyCode": "Uygulamanızdaki 6 haneli kodu girin.",
+          "setupExpired": "Kurulum süresi doldu. Lütfen tekrar deneyin.",
+          "secret": "Gizli Anahtar",
+          "backupCodes": "Yedek Kodlar",
+          "backupCodesWarning": "Bu kodları güvenli bir yere kaydedin. Her kod sadece bir kez kullanılabilir.",
+          "confirmPassword": "Parolanızı girin",
+          "passwordRequired": "TOTP'yi devre dışı bırakmak için parolanız gerekli.",
+          "alreadyEnabled": "TOTP zaten etkin.",
+          "notEnabled": "TOTP etkin değil.",
+          "invalidPassword": "Geçersiz parola.",
+          "confirm": "Onayla",
+          "cancel": "İptal",
+          "close": "Kapat",
+          "goBack": "Geri Dön",
+          "copied": "Kopyalandı"
+        }
+      },
+      "users": {
+        "title": "Kullanıcı Yönetimi",
+        "username": "Kullanıcı Adı",
+        "totpStatus": "2FA",
+        "createdAt": "Oluşturulma",
+        "actions": "İşlemler",
+        "addUser": "Kullanıcı Ekle",
+        "addUserTitle": "Yeni Kullanıcı Oluştur",
+        "deleteUser": "Sil",
+        "deleteUserTitle": "Kullanıcı Sil",
+        "changePassword": "Şifre Değiştir",
+        "changePasswordTitle": "Şifre Değiştir",
+        "confirmDelete": "kullanıcısını silmek istediğinizden emin misiniz?",
+        "newPassword": "Yeni Parola",
+        "role": "Rol",
+        "superadmin": "Süper Admin",
+        "admin": "Admin",
+        "newPasswordPlaceholder": "En az 8 karakter, büyük/küçük harf, rakam, özel karakter",
+        "usernamePlaceholder": "Kullanıcı adı (harf, rakam, - veya _)",
+        "generatePassword": "Rastgele Oluştur",
+        "createSuccess": "Kullanıcı başarıyla oluşturuldu.",
+        "deleteSuccess": "Kullanıcı başarıyla silindi.",
+        "passwordChangeSuccess": "Şifre başarıyla değiştirildi.",
+        "cannotDeleteSelf": "Kendinizi silemezsiniz.",
+        "userAlreadyExists": "Bu kullanıcı adı zaten mevcut.",
+        "userNotFound": "Kullanıcı bulunamadı.",
+        "confirm": "Onayla",
+        "cancel": "İptal",
+        "you": "(sen)"
+      },
+      "error": {
+        "generic": "Bir hata oluştu.",
+        "networkError": "Sunucuya bağlanılamıyor.",
+        "forbidden": "Bu işlem için yetkiniz yok."
+      }
+    }
+  },
+  "en": {
+    "_meta": {
+      "code": "en",
+      "nativeName": "English",
+      "flag": "/assets/flags/en.svg"
+    },
+    "language": {
+      "switchTo": "Türkçe'ye geç"
+    },
+    "loadingSpinner": {
+      "loading": "Loading...",
+      "pageLoading": "Loading page..."
+    },
+    "login": {
+      "title": "Sign In",
+      "username": "Username",
+      "usernamePlaceholder": "Your username",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "submit": "Sign In",
+      "submitting": "Signing in...",
+      "totpTitle": "Two-Factor Authentication",
+      "totpCode": "TOTP Code",
+      "totpPlaceholder": "6-digit code",
+      "totpSubmit": "Verify",
+      "backupCodeTitle": "Sign In with Backup Code",
+      "backupCode": "Backup Code",
+      "backupCodePlaceholder": "8-character backup code",
+      "useBackupCode": "Use backup code",
+      "useTotpCode": "Use TOTP code",
+      "error": {
+        "invalidCredentials": "Invalid username or password.",
+        "rateLimited": "Too many attempts. Please wait.",
+        "networkError": "Cannot connect to server.",
+        "invalidTotp": "Invalid TOTP code.",
+        "invalidBackupCode": "Invalid backup code.",
+        "tokenExpired": "Time expired. Please sign in again."
+      },
+      "warning": {
+        "sessionExpired": "Your session has expired. Please sign in again."
+      },
+      "countdown": "Time remaining"
+    },
+    "header": {
+      "appName": "Phantom-WG",
+      "logout": "Logout"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "clients": "Clients",
+      "userOps": "User Operations",
+      "totp": "Two-Factor Auth",
+      "passwordChange": "Change Password",
+      "users": "User Management"
+    },
+    "dinoGame": {
+      "startMessage": "Click or press Up arrow to start",
+      "gameOver": "Game Over",
+      "restartMessage": "Click to try again",
+      "score": "Score"
+    },
+    "errorPages": {
+      "notFound": {
+        "code": "404",
+        "title": "Page Not Found",
+        "description": "The page you are looking for does not exist or may have been moved.",
+        "backHome": "Home",
+        "goBack": "Go Back"
+      },
+      "serverError": {
+        "code": "500",
+        "title": "Server Error",
+        "description": "An unexpected error occurred. Please try again later.",
+        "backHome": "Home",
+        "reload": "Reload Page"
+      }
+    },
+    "dashboard": {
+      "welcome": "Phantom-WG Dashboard",
+      "subtitle": "Welcome."
+    },
+    "passwordChange": {
+      "title": "Change Password",
+      "description": "Enter your current password and new password to change your account password.",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter your current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Min 8 chars, uppercase, lowercase, digit, special",
+      "confirm": "Confirm",
+      "goBack": "Go Back",
+      "success": "Your password has been changed successfully.",
+      "generate": "Generate Random",
+      "policy": {
+        "minLength": "At least 8 characters",
+        "uppercase": "At least 1 uppercase letter",
+        "lowercase": "At least 1 lowercase letter",
+        "digit": "At least 1 digit",
+        "special": "At least 1 special character"
+      },
+      "error": {
+        "invalidPassword": "Current password is incorrect.",
+        "weakPassword": "New password does not meet security requirements."
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "account": {
+        "title": "Account Security",
+        "totp": {
+          "status": "Two-Factor Authentication (TOTP)",
+          "enabled": "Enabled",
+          "disabled": "Disabled",
+          "enable": "Enable TOTP",
+          "disable": "Disable TOTP",
+          "enableTitle": "Enable TOTP",
+          "disableTitle": "Disable TOTP",
+          "enableSuccess": "TOTP enabled successfully.",
+          "disableSuccess": "TOTP disabled successfully.",
+          "enterPassword": "Enter your password to verify your identity.",
+          "scanQR": "Scan the QR code with your authenticator app or enter the secret manually.",
+          "verifyCode": "Enter the 6-digit code from your authenticator app.",
+          "setupExpired": "Setup time expired. Please try again.",
+          "secret": "Secret Key",
+          "backupCodes": "Backup Codes",
+          "backupCodesWarning": "Save these codes in a safe place. Each code can only be used once.",
+          "confirmPassword": "Enter your password",
+          "passwordRequired": "Your password is required to disable TOTP.",
+          "alreadyEnabled": "TOTP is already enabled.",
+          "notEnabled": "TOTP is not enabled.",
+          "invalidPassword": "Invalid password.",
+          "confirm": "Confirm",
+          "cancel": "Cancel",
+          "close": "Close",
+          "goBack": "Go Back",
+          "copied": "Copied"
+        }
+      },
+      "users": {
+        "title": "User Management",
+        "username": "Username",
+        "totpStatus": "2FA",
+        "createdAt": "Created",
+        "actions": "Actions",
+        "addUser": "Add User",
+        "addUserTitle": "Create New User",
+        "deleteUser": "Delete",
+        "deleteUserTitle": "Delete User",
+        "changePassword": "Change Password",
+        "changePasswordTitle": "Change Password",
+        "confirmDelete": "Are you sure you want to delete this user?",
+        "newPassword": "New Password",
+        "role": "Role",
+        "superadmin": "Super Admin",
+        "admin": "Admin",
+        "newPasswordPlaceholder": "Min 8 chars, uppercase, lowercase, digit, special",
+        "usernamePlaceholder": "Username (letters, numbers, - or _)",
+        "generatePassword": "Generate Random",
+        "createSuccess": "User created successfully.",
+        "deleteSuccess": "User deleted successfully.",
+        "passwordChangeSuccess": "Password changed successfully.",
+        "cannotDeleteSelf": "You cannot delete yourself.",
+        "userAlreadyExists": "This username already exists.",
+        "userNotFound": "User not found.",
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "you": "(you)"
+      },
+      "error": {
+        "generic": "An error occurred.",
+        "networkError": "Cannot connect to server.",
+        "forbidden": "You do not have permission for this action."
+      }
+    }
+  }
+}

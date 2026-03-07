@@ -1,0 +1,74 @@
+@use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/theme' as theme;
+
+.um__notification {
+  margin-bottom: spacing.$spacing-05;
+  max-width: 100%;
+}
+
+.um__action-grid {
+  margin-bottom: spacing.$spacing-07;
+}
+
+.um__action-panel {
+  width: 100%;
+  padding: spacing.$spacing-05;
+  background-color: theme.$layer-01;
+  border-left: 4px solid theme.$border-interactive;
+  border-radius: 4px;
+
+  &--danger {
+    border-left-color: theme.$support-error;
+  }
+}
+
+.um__action-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: theme.$text-primary;
+  margin: 0 0 spacing.$spacing-04;
+}
+
+.um__password-row {
+  display: flex;
+  align-items: flex-end;
+  gap: spacing.$spacing-03;
+
+  .cds--form-item {
+    flex: 1;
+  }
+}
+
+.um__action-buttons {
+  display: flex;
+  gap: spacing.$spacing-03;
+  margin-top: spacing.$spacing-03;
+}
+
+.um__confirm-text {
+  font-size: 0.875rem;
+  color: theme.$text-primary;
+  margin-bottom: spacing.$spacing-04;
+}
+
+// Policy checklist — always vertical
+.um__checklist {
+  list-style: none;
+  padding: 0;
+  margin: spacing.$spacing-03 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-02;
+}
+
+.um__check {
+  display: flex;
+  align-items: center;
+  gap: spacing.$spacing-02;
+  font-size: 0.75rem;
+  color: theme.$text-disabled;
+
+  &--pass {
+    color: theme.$support-success;
+  }
+}

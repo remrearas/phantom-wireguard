@@ -1,0 +1,144 @@
+// ── Login page — centered layout (dark only) ─────────────────
+
+.login-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--cds-background);
+}
+
+// ── Header bar ────────────────────────────────────────────────
+
+.login-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3rem;
+  padding: 0 1rem;
+  background-color: var(--cds-layer-01);
+  border-bottom: 1px solid var(--cds-border-subtle-00);
+}
+
+.login-page__header-name {
+  font-size: 0.875rem;
+  color: var(--cds-text-primary);
+  letter-spacing: 0.16px;
+}
+
+.login-page__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--cds-icon-primary);
+  transition: background-color 70ms cubic-bezier(0.2, 0, 0.38, 0.9);
+
+  &:hover {
+    background-color: var(--cds-layer-hover-01);
+  }
+
+  &:focus {
+    outline: 2px solid var(--cds-focus);
+    outline-offset: -2px;
+  }
+}
+
+// ── Body — centered ──────────────────────────────────────────
+
+.login-page__body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 2rem 1rem;
+}
+
+// ── Card ─────────────────────────────────────────────────────
+
+.login-page__card {
+  width: 100%;
+  max-width: 24rem;
+}
+
+// ── Phantom icon ─────────────────────────────────────────────
+
+.login-page__icon {
+  display: block;
+  width: 120px;
+  height: auto;
+  margin: 0 auto 2rem;
+
+  // stellar-silver
+  .phantom-icon__shield {
+    fill: #E5E7EB;
+  }
+
+  .phantom-icon__ghost {
+    fill: #1F2937;
+  }
+
+  .phantom-icon__eyes {
+    fill: #E5E7EB;
+  }
+}
+
+// ── Heading ──────────────────────────────────────────────────
+
+.login-page__heading {
+  font-size: 1.75rem;
+  font-weight: 300;
+  line-height: 1.25;
+  color: var(--cds-text-primary);
+  margin: 0 0 1.5rem;
+  text-align: center;
+}
+
+// ── Grid ──────────────────────────────────────────────────────
+
+.login-page__grid {
+  padding-inline: 0;
+}
+
+// ── Form elements ────────────────────────────────────────────
+
+.login-page__notification {
+  margin-bottom: 1rem;
+  max-width: 100%;
+}
+
+.login-page__submit {
+  width: 100%;
+  max-width: 100%;
+}
+
+.login-page__countdown {
+  font-size: 0.875rem;
+  color: var(--cds-text-secondary);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.login-page__toggle-link {
+  background: none;
+  border: none;
+  color: var(--cds-link-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-align: center;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus {
+    outline: 2px solid var(--cds-focus);
+    outline-offset: 2px;
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "phantom-wg-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Phantom-WG Management Dashboard — Carbon Design System + React 19",
+  "author": "Rıza Emre ARAS <r.emrearas@proton.me>",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "translate": "node scripts/convert_translations.js"
+  },
+  "dependencies": {
+    "@carbon/icons-react": "^11.73.0",
+    "@carbon/react": "^1.99.0",
+    "@carbon/styles": "^1.98.0",
+    "@ibm/plex-mono": "^1.1.0",
+    "@ibm/plex-sans": "^1.1.0",
+    "@mdx-js/react": "^3.1.1",
+    "@mdx-js/rollup": "^3.1.1",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.1",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-mdx-frontmatter": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.2",
+    "js-yaml": "^4.1.0",
+    "sass-embedded": "^1.89.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

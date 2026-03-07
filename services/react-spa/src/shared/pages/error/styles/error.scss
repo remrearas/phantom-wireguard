@@ -1,0 +1,86 @@
+@use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/breakpoint' as breakpoint;
+
+.error-page-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: spacing.$spacing-05;
+}
+
+.error-page-content {
+  max-width: 42rem;
+  text-align: center;
+}
+
+.error-icon-wrapper {
+  display: inline-block;
+  margin-bottom: spacing.$spacing-06;
+
+  svg {
+    width: 6rem !important;
+    height: 6rem !important;
+  }
+}
+
+.error-icon {
+  color: var(--cds-icon-primary);
+  opacity: 0.9;
+}
+
+.error-code {
+  font-size: 5rem;
+  font-weight: 700;
+  margin-bottom: spacing.$spacing-03;
+  color: var(--cds-text-primary);
+}
+
+.error-title {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin-bottom: spacing.$spacing-05;
+  color: var(--cds-text-primary);
+}
+
+.error-description {
+  margin-bottom: spacing.$spacing-07;
+  color: var(--cds-text-secondary);
+}
+
+.error-game-area {
+  margin-block: spacing.$spacing-07;
+  padding: spacing.$spacing-05;
+}
+
+.error-actions {
+  display: flex;
+  gap: spacing.$spacing-05;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@include breakpoint.breakpoint-down(md) {
+  .error-code {
+    font-size: 3rem;
+  }
+
+  .error-title {
+    font-size: 1.25rem;
+  }
+
+  .error-icon-wrapper {
+    svg {
+      width: 4.5rem !important;
+      height: 4.5rem !important;
+    }
+  }
+
+  .error-actions {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+    }
+  }
+}
