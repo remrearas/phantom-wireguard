@@ -627,7 +627,32 @@ class TestAuditLog:
         )
         assert resp.status_code == 422  # limit > 100 rejected by FastAPI validation
 
-    def test_12_cleanup(self, http, admin_token):
+    def test_12_order_desc_default(self, http, admin_token):
+        resp = http.get("/auth/audit", headers={"Authorization": f"Bearer {admin_token}"})
+        assert resp.status_code == 200
+        page = resp.json()["data"]
+        assert page["order"] == "desc"
+        assert page["sort_by"] == "timestamp"
+        ids = [i["id"] for i in page["items"]]
+        assert ids == sorted(ids, reverse=True)
+
+    def test_13_order_asc(self, http, admin_token):
+        resp = http.get("/auth/audit?order=asc", headers={"Authorization": f"Bearer {admin_token}"})
+        assert resp.status_code == 200
+        page = resp.json()["data"]
+        assert page["order"] == "asc"
+        ids = [i["id"] for i in page["items"]]
+        assert ids == sorted(ids)
+
+    def test_14_order_invalid_rejected(self, http, admin_token):
+        resp = http.get("/auth/audit?order=random", headers={"Authorization": f"Bearer {admin_token}"})
+        assert resp.status_code == 422
+
+    def test_15_sort_by_invalid_rejected(self, http, admin_token):
+        resp = http.get("/auth/audit?sort_by=username", headers={"Authorization": f"Bearer {admin_token}"})
+        assert resp.status_code == 422
+
+    def test_16_cleanup(self, http, admin_token):
         http.delete(f"/auth/users/{self.TEMP_ADMIN}", headers={"Authorization": f"Bearer {admin_token}"})
 
 

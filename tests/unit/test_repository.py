@@ -297,3 +297,49 @@ def test_audit_paginated_detail_parsed(auth_env):
     db.add_audit_log("test_detail", {"foo": "bar", "count": 42}, ip_address="5.5.5.5")
     result = db.get_audit_logs_paginated()
     assert result["items"][0]["detail"] == {"foo": "bar", "count": 42}
+
+
+def test_audit_paginated_order_default_desc(auth_env):
+    """Default order is desc — most recent entry is first."""
+    db = auth_env.db
+    db.add_audit_log("login_success", {"seq": 1}, ip_address="1.0.0.1")
+    db.add_audit_log("login_success", {"seq": 2}, ip_address="1.0.0.1")
+    db.add_audit_log("login_success", {"seq": 3}, ip_address="1.0.0.1")
+    result = db.get_audit_logs_paginated(order="desc")
+    ids = [r["id"] for r in result["items"]]
+    assert ids == sorted(ids, reverse=True)
+    assert result["order"] == "desc"
+    assert result["sort_by"] == "timestamp"
+
+
+def test_audit_paginated_order_asc(auth_env):
+    """order=asc — oldest entry is first."""
+    db = auth_env.db
+    db.add_audit_log("logout", {"seq": 1}, ip_address="2.0.0.1")
+    db.add_audit_log("logout", {"seq": 2}, ip_address="2.0.0.1")
+    db.add_audit_log("logout", {"seq": 3}, ip_address="2.0.0.1")
+    result = db.get_audit_logs_paginated(order="asc")
+    ids = [r["id"] for r in result["items"]]
+    assert ids == sorted(ids)
+    assert result["order"] == "asc"
+
+
+def test_audit_paginated_order_echoed_in_response(auth_env):
+    """order and sort_by are always echoed back in the response."""
+    db = auth_env.db
+    db.add_audit_log("login_failed", {}, ip_address="3.0.0.1")
+    for order_val in ("asc", "desc"):
+        result = db.get_audit_logs_paginated(order=order_val)
+        assert result["order"] == order_val
+        assert result["sort_by"] == "timestamp"
+
+
+def test_audit_paginated_invalid_order_defaults_desc(auth_env):
+    """Any unrecognised order value safely defaults to DESC."""
+    db = auth_env.db
+    db.add_audit_log("mfa_success", {}, ip_address="4.0.0.1")
+    db.add_audit_log("mfa_success", {}, ip_address="4.0.0.1")
+    result = db.get_audit_logs_paginated(order="random_value")
+    ids = [r["id"] for r in result["items"]]
+    assert ids == sorted(ids, reverse=True)
+    assert result["order"] == "desc"

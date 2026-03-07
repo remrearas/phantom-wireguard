@@ -89,6 +89,8 @@ def test_audit_endpoint_superadmin_ok(auth_env):
     assert "page" in page
     assert "limit" in page
     assert "pages" in page
+    assert "order" in page
+    assert "sort_by" in page
 
 
 def test_audit_endpoint_pagination_defaults(auth_env):
@@ -181,3 +183,52 @@ def test_audit_endpoint_limit_max(auth_env):
     client = auth_env.make_client()
     resp = client.get("/auth/audit?limit=200", headers=auth_env.bearer(token))
     assert resp.status_code == 422  # limit > 100 rejected
+
+
+def test_audit_endpoint_order_desc_default(auth_env):
+    """Default order=desc — response echoes order and sort_by."""
+    auth_env.create_user("oadmin", "OrdAdmPw1!", role="superadmin")
+    for i in range(3):
+        auth_env.db.add_audit_log("login_success", {"i": i}, ip_address="10.1.0.1")
+    token = auth_env.login("oadmin", "OrdAdmPw1!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    page = resp.json()["data"]
+    assert page["order"] == "desc"
+    assert page["sort_by"] == "timestamp"
+    ids = [i["id"] for i in page["items"]]
+    assert ids == sorted(ids, reverse=True)
+
+
+def test_audit_endpoint_order_asc(auth_env):
+    """order=asc — oldest entry first, response echoes asc."""
+    auth_env.create_user("oadmin2", "OrdAdm2Pw!", role="superadmin")
+    for i in range(3):
+        auth_env.db.add_audit_log("logout", {"i": i}, ip_address="10.2.0.1")
+    token = auth_env.login("oadmin2", "OrdAdm2Pw!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit?order=asc", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    page = resp.json()["data"]
+    assert page["order"] == "asc"
+    ids = [i["id"] for i in page["items"]]
+    assert ids == sorted(ids)
+
+
+def test_audit_endpoint_order_invalid_rejected(auth_env):
+    """order values other than 'asc'/'desc' are rejected with 422."""
+    auth_env.create_user("oadmin3", "OrdAdm3Pw!", role="superadmin")
+    token = auth_env.login("oadmin3", "OrdAdm3Pw!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit?order=random", headers=auth_env.bearer(token))
+    assert resp.status_code == 422
+
+
+def test_audit_endpoint_sort_by_invalid_rejected(auth_env):
+    """sort_by values other than 'timestamp' are rejected with 422."""
+    auth_env.create_user("oadmin4", "OrdAdm4Pw!", role="superadmin")
+    token = auth_env.login("oadmin4", "OrdAdm4Pw!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit?sort_by=username", headers=auth_env.bearer(token))
+    assert resp.status_code == 422
