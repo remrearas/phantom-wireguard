@@ -167,3 +167,5 @@ class AuditLogPage(BaseModel):
     page: int
     limit: int
     pages: int
+    order: str
+    sort_by: str

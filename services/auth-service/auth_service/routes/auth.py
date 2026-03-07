@@ -468,11 +468,14 @@ def get_audit_log(
     action: str | None = Query(None, description="Filter by action type"),
     username: str | None = Query(None, description="Filter by username"),
     ip: str | None = Query(None, description="Filter by IP address"),
+    order: str = Query("desc", pattern="^(asc|desc)$", description="Sort direction: asc or desc"),
+    sort_by: str = Query("timestamp", pattern="^timestamp$", description="Sort column (timestamp only)"),
 ):
-    """Paginated audit log. Superadmin only."""
+    """Paginated audit log with filtering and ordering. Superadmin only."""
     db = request.app.state.db
     result = db.get_audit_logs_paginated(
-        page=page, limit=limit, action=action, username=username, ip=ip
+        page=page, limit=limit, action=action, username=username, ip=ip,
+        order=order, sort_by=sort_by,
     )
     return ApiOk(data=AuditLogPage(**result))
 

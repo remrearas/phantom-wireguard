@@ -348,12 +348,20 @@ class AuthDB:
         action: str | None = None,
         username: str | None = None,
         ip: str | None = None,
+        order: str = "desc",
+        sort_by: str = "timestamp",
     ) -> dict:
-        """Get audit log entries with server-side pagination and optional filters.
+        """Get audit log entries with server-side pagination, filtering and ordering.
 
         Joins with users table to resolve username from user_id.
-        Returns: { items, total, page, limit, pages }
+        sort_by is reserved for future multi-column support; currently only 'timestamp'.
+        Returns: { items, total, page, limit, pages, order, sort_by }
         """
+        # Normalise and guard order / sort_by to prevent SQL injection
+        safe_order = "DESC" if order.lower() != "asc" else "ASC"
+        # Only timestamp (al.id proxy) is supported for now
+        safe_sort_key = "al.id"
+
         # Build WHERE clause dynamically
         conditions: list[str] = []
         params: list[object] = []
@@ -384,7 +392,7 @@ class AuthDB:
         rows = self._conn.execute(
             f"SELECT al.id, al.user_id, u.username, al.action, al.detail, "
             f"al.ip_address, al.timestamp {base_query} "
-            "ORDER BY al.id DESC LIMIT ? OFFSET ?",
+            f"ORDER BY {safe_sort_key} {safe_order} LIMIT ? OFFSET ?",
             [*params, limit, offset],
         ).fetchall()
 
@@ -394,7 +402,6 @@ class AuthDB:
         items = []
         for r in rows:
             row_dict = dict(r)
-            # Parse detail JSON string back to dict
             try:
                 row_dict["detail"] = json.loads(row_dict["detail"] or "{}")
             except (json.JSONDecodeError, TypeError):
@@ -407,6 +414,8 @@ class AuthDB:
             "page": page,
             "limit": limit,
             "pages": pages,
+            "order": safe_order.lower(),
+            "sort_by": sort_by,
         }
 
 
