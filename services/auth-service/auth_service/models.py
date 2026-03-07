@@ -79,6 +79,25 @@ class ChangePasswordRequest(BaseModel):
         return _validate_password(v)
 
 
+class PasswordVerifyRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=256)
+
+
+class PasswordChangeRequest(BaseModel):
+    change_token: str
+    password: str = Field(min_length=8, max_length=256)
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return _validate_password(v)
+
+
+class PasswordVerifyResponse(BaseModel):
+    change_token: str
+    expires_in: int
+
+
 class MFAVerifyRequest(BaseModel):
     mfa_token: str
     code: str = Field(min_length=6, max_length=8)

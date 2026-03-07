@@ -41,6 +41,9 @@ from auth_service.models import (
     LoginResponse,
     MFARequiredResponse,
     MFAVerifyRequest,
+    PasswordChangeRequest,
+    PasswordVerifyRequest,
+    PasswordVerifyResponse,
     TOTPConfirmRequest,
     TOTPDisableRequest,
     TOTPSetupRequest,
@@ -300,6 +303,70 @@ def me(request: Request, payload: TokenPayload = Depends(require_auth)):
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return ApiOk(data=_user_info(user))
+
+
+# ── Password Change (2-step) ────────────────────────────────────
+
+
+@router.post("/password/verify")
+def password_verify(
+    body: PasswordVerifyRequest,
+    request: Request,
+    payload: TokenPayload = Depends(require_auth),
+):
+    """Step 1: Verify current password → issue short-lived change token."""
+    db = request.app.state.db
+    config = request.app.state.config
+    signing_key = request.app.state.signing_key
+    user = db.get_user_by_username(payload.sub)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid password")
+
+    change_token = encode_token(
+        signing_key=signing_key,
+        sub=user.username,
+        jti=uuid.uuid4().hex,
+        lifetime=config.mfa_token_lifetime,
+        typ="password_change",
+    )
+
+    audit_log(db, request, "password_change_started", {"username": user.username}, user_id=user.id)
+    return ApiOk(data=PasswordVerifyResponse(
+        change_token=change_token,
+        expires_in=config.mfa_token_lifetime,
+    ))
+
+
+@router.post("/password/change")
+def password_change(
+    body: PasswordChangeRequest,
+    request: Request,
+    payload: TokenPayload = Depends(require_auth),
+):
+    """Step 2: Change password using verified change token."""
+    verify_key = request.app.state.verify_key
+    db = request.app.state.db
+
+    try:
+        claims = decode_token_claims(verify_key, body.change_token)
+    except AuthTokenError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+    if claims.get("typ") != "password_change":
+        raise HTTPException(status_code=401, detail="Invalid change token")
+
+    if claims.get("sub") != payload.sub:
+        raise HTTPException(status_code=401, detail="Token subject mismatch")
+
+    pw_hash = hash_password(body.password)
+    if not db.update_password(payload.sub, pw_hash):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    audit_log(db, request, "password_changed", {"username": payload.sub, "by": payload.sub})
+    return ApiOk(data={"message": "Password changed"})
 
 
 # ── User Management ─────────────────────────────────────────────
