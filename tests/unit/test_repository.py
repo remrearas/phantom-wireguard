@@ -209,3 +209,91 @@ def test_audit_log(auth_env):
     assert len(logs) == 1
     assert logs[0]["action"] == "test_action"
     assert logs[0]["ip_address"] == "1.2.3.4"
+
+
+# ── Audit paginated ───────────────────────────────────────────────
+
+
+def test_audit_paginated_basic(auth_env):
+    db = auth_env.db
+    for i in range(10):
+        db.add_audit_log("login_success", {"i": i}, ip_address="10.0.0.1")
+    result = db.get_audit_logs_paginated(page=1, limit=5)
+    assert result["total"] == 10
+    assert len(result["items"]) == 5
+    assert result["page"] == 1
+    assert result["limit"] == 5
+    assert result["pages"] == 2
+
+
+def test_audit_paginated_second_page(auth_env):
+    db = auth_env.db
+    for i in range(7):
+        db.add_audit_log("logout", {}, ip_address="10.0.0.2")
+    result = db.get_audit_logs_paginated(page=2, limit=5)
+    assert result["total"] == 7
+    assert len(result["items"]) == 2
+    assert result["page"] == 2
+
+
+def test_audit_paginated_filter_action(auth_env):
+    db = auth_env.db
+    db.add_audit_log("login_success", {}, ip_address="1.1.1.1")
+    db.add_audit_log("login_failed", {}, ip_address="1.1.1.1")
+    db.add_audit_log("login_success", {}, ip_address="1.1.1.1")
+    result = db.get_audit_logs_paginated(action="login_success")
+    assert result["total"] == 2
+    assert all(r["action"] == "login_success" for r in result["items"])
+
+
+def test_audit_paginated_filter_username(auth_env):
+    db = auth_env.db
+    user = db.create_user("filterme", hash_password("pass1234!A"))
+    db.add_audit_log("login_success", {}, user_id=user.id, ip_address="2.2.2.2")
+    db.add_audit_log("logout", {}, ip_address="2.2.2.2")  # no user_id
+    result = db.get_audit_logs_paginated(username="filterme")
+    assert result["total"] == 1
+    assert result["items"][0]["username"] == "filterme"
+
+
+def test_audit_paginated_filter_ip(auth_env):
+    db = auth_env.db
+    db.add_audit_log("login_failed", {}, ip_address="9.9.9.9")
+    db.add_audit_log("login_failed", {}, ip_address="8.8.8.8")
+    result = db.get_audit_logs_paginated(ip="9.9.9.9")
+    assert result["total"] == 1
+    assert result["items"][0]["ip_address"] == "9.9.9.9"
+
+
+def test_audit_paginated_username_resolved(auth_env):
+    db = auth_env.db
+    user = db.create_user("resolved", hash_password("pass1234!A"))
+    db.add_audit_log("login_success", {}, user_id=user.id, ip_address="3.3.3.3")
+    result = db.get_audit_logs_paginated()
+    entry = result["items"][0]
+    assert entry["username"] == "resolved"
+    assert entry["user_id"] == user.id
+
+
+def test_audit_paginated_no_user_id(auth_env):
+    db = auth_env.db
+    db.add_audit_log("login_rate_limited", {}, ip_address="4.4.4.4")
+    result = db.get_audit_logs_paginated()
+    entry = result["items"][0]
+    assert entry["user_id"] is None
+    assert entry["username"] is None
+
+
+def test_audit_paginated_empty(auth_env):
+    db = auth_env.db
+    result = db.get_audit_logs_paginated()
+    assert result["total"] == 0
+    assert result["items"] == []
+    assert result["pages"] == 1
+
+
+def test_audit_paginated_detail_parsed(auth_env):
+    db = auth_env.db
+    db.add_audit_log("test_detail", {"foo": "bar", "count": 42}, ip_address="5.5.5.5")
+    result = db.get_audit_logs_paginated()
+    assert result["items"][0]["detail"] == {"foo": "bar", "count": 42}

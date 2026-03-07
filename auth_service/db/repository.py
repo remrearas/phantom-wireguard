@@ -341,6 +341,74 @@ class AuthDB:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def get_audit_logs_paginated(
+        self,
+        page: int = 1,
+        limit: int = 25,
+        action: str | None = None,
+        username: str | None = None,
+        ip: str | None = None,
+    ) -> dict:
+        """Get audit log entries with server-side pagination and optional filters.
+
+        Joins with users table to resolve username from user_id.
+        Returns: { items, total, page, limit, pages }
+        """
+        # Build WHERE clause dynamically
+        conditions: list[str] = []
+        params: list[object] = []
+
+        if action is not None:
+            conditions.append("al.action = ?")
+            params.append(action)
+        if username is not None:
+            conditions.append("u.username = ?")
+            params.append(username)
+        if ip is not None:
+            conditions.append("al.ip_address = ?")
+            params.append(ip)
+
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+        base_query = (
+            "FROM audit_log al "
+            "LEFT JOIN users u ON al.user_id = u.id "
+            f"{where}"
+        )
+
+        total: int = self._conn.execute(
+            f"SELECT COUNT(*) {base_query}", params
+        ).fetchone()[0]
+
+        offset = (page - 1) * limit
+        rows = self._conn.execute(
+            f"SELECT al.id, al.user_id, u.username, al.action, al.detail, "
+            f"al.ip_address, al.timestamp {base_query} "
+            "ORDER BY al.id DESC LIMIT ? OFFSET ?",
+            [*params, limit, offset],
+        ).fetchall()
+
+        import math
+        pages = math.ceil(total / limit) if total > 0 else 1
+
+        items = []
+        for r in rows:
+            row_dict = dict(r)
+            # Parse detail JSON string back to dict
+            try:
+                row_dict["detail"] = json.loads(row_dict["detail"] or "{}")
+            except (json.JSONDecodeError, TypeError):
+                row_dict["detail"] = {}
+            items.append(row_dict)
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": pages,
+        }
+
 
 def open_auth_db(db_dir: str) -> AuthDB:
     """Open existing auth.db. Raises if DB directory missing."""

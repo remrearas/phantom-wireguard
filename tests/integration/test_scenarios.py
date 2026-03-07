@@ -44,7 +44,12 @@ Scenarios (executed in order):
   7. Duplicate user creation
      Create user → same username again → 409 Conflict.
 
-  8. Rate limiting (last — poisons IP for the window duration)
+  8. Audit log API (superadmin only)
+     Unauthenticated → 401. Regular admin → 403.
+     Superadmin: paginated response with correct schema.
+     filter by action, username. Events from prior scenarios appear.
+
+  9. Rate limiting (last — poisons IP for the window duration)
      Rapid failed logins from same IP → sliding window fills → 429.
 """
 
@@ -507,7 +512,126 @@ class TestDuplicateUser:
         http.delete(f"/auth/users/{self.USERNAME}", headers=_bearer(admin_token))
 
 
-# ── Scenario 8: Rate limiting (last — poisons IP for the window) ─
+# ── Scenario 8: Audit log API ────────────────────────────────────
+
+
+class TestAuditLog:
+    """GET /auth/audit — superadmin only, paginated, filterable."""
+
+    _admin_token: str | None = None   # regular admin (role=admin) for 403 check
+    TEMP_ADMIN = "audit_temp_admin"
+    TEMP_PASS = "AuditTmp1!"
+
+    def test_01_unauthenticated_rejected(self, http):
+        resp = http.get("/auth/audit")
+        assert resp.status_code == 401
+
+    def test_02_regular_admin_forbidden(self, http, admin_token):
+        # Create a regular admin (role=admin, not superadmin)
+        http.delete(f"/auth/users/{self.TEMP_ADMIN}", headers={"Authorization": f"Bearer {admin_token}"})
+        resp = http.post(
+            "/auth/users",
+            json={"username": self.TEMP_ADMIN, "password": self.TEMP_PASS},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+
+        resp = http.post("/auth/login", json={"username": self.TEMP_ADMIN, "password": self.TEMP_PASS})
+        assert resp.status_code == 200
+        TestAuditLog._admin_token = resp.json()["data"]["token"]
+
+        resp = http.get("/auth/audit", headers={"Authorization": f"Bearer {self._admin_token}"})
+        assert resp.status_code == 403
+
+    def test_03_superadmin_ok(self, http, admin_token):
+        resp = http.get("/auth/audit", headers={"Authorization": f"Bearer {admin_token}"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+
+    def test_04_response_schema(self, http, admin_token):
+        resp = http.get("/auth/audit", headers={"Authorization": f"Bearer {admin_token}"})
+        assert resp.status_code == 200
+        page = resp.json()["data"]
+        assert "items" in page
+        assert "total" in page
+        assert "page" in page
+        assert "limit" in page
+        assert "pages" in page
+        assert page["page"] == 1
+        assert page["limit"] == 25
+        assert page["total"] >= 0
+
+    def test_05_item_schema(self, http, admin_token):
+        resp = http.get("/auth/audit", headers={"Authorization": f"Bearer {admin_token}"})
+        items = resp.json()["data"]["items"]
+        assert len(items) > 0, "Expected at least one audit entry from prior scenarios"
+        item = items[0]
+        assert "id" in item
+        assert "user_id" in item
+        assert "username" in item
+        assert "action" in item
+        assert "detail" in item and isinstance(item["detail"], dict)
+        assert "ip_address" in item
+        assert "timestamp" in item
+
+    def test_06_pagination_limit(self, http, admin_token):
+        resp = http.get("/auth/audit?page=1&limit=3", headers={"Authorization": f"Bearer {admin_token}"})
+        assert resp.status_code == 200
+        page = resp.json()["data"]
+        assert page["limit"] == 3
+        assert len(page["items"]) <= 3
+
+    def test_07_pagination_second_page(self, http, admin_token):
+        resp1 = http.get("/auth/audit?page=1&limit=5", headers={"Authorization": f"Bearer {admin_token}"})
+        resp2 = http.get("/auth/audit?page=2&limit=5", headers={"Authorization": f"Bearer {admin_token}"})
+        assert resp1.status_code == 200
+        assert resp2.status_code == 200
+        ids1 = {i["id"] for i in resp1.json()["data"]["items"]}
+        ids2 = {i["id"] for i in resp2.json()["data"]["items"]}
+        assert ids1.isdisjoint(ids2), "Pages must not overlap"
+
+    def test_08_filter_action(self, http, admin_token):
+        resp = http.get(
+            "/auth/audit?action=login_success",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+        items = resp.json()["data"]["items"]
+        assert len(items) > 0, "Expected login_success entries from prior scenarios"
+        assert all(i["action"] == "login_success" for i in items)
+
+    def test_09_filter_username(self, http, admin_token):
+        resp = http.get(
+            f"/auth/audit?username={ADMIN_USER}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+        items = resp.json()["data"]["items"]
+        assert len(items) > 0, f"Expected audit entries for {ADMIN_USER}"
+        assert all(i["username"] == ADMIN_USER for i in items)
+
+    def test_10_filter_nonexistent_action(self, http, admin_token):
+        resp = http.get(
+            "/auth/audit?action=nonexistent_action_xyz",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["data"]["total"] == 0
+        assert resp.json()["data"]["items"] == []
+
+    def test_11_limit_max_enforced(self, http, admin_token):
+        resp = http.get(
+            "/auth/audit?limit=200",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 422  # limit > 100 rejected by FastAPI validation
+
+    def test_12_cleanup(self, http, admin_token):
+        http.delete(f"/auth/users/{self.TEMP_ADMIN}", headers={"Authorization": f"Bearer {admin_token}"})
+
+
+# ── Scenario 9: Rate limiting (last — poisons IP for the window) ─
 
 
 class TestRateLimit:

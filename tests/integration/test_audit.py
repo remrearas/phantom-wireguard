@@ -56,3 +56,128 @@ def test_audit_log_on_rate_limit(auth_env):
     client.post("/auth/login", json={"username": "x", "password": "y"})
     logs = auth_env.db.get_audit_logs()
     assert any(l["action"] == "login_rate_limited" for l in logs)
+
+
+# ── GET /auth/audit ───────────────────────────────────────────────
+
+
+def test_audit_endpoint_requires_auth(auth_env):
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit")
+    assert resp.status_code == 401
+
+
+def test_audit_endpoint_admin_forbidden(auth_env):
+    auth_env.create_user("regular", "RegPw1234!")
+    token = auth_env.login("regular", "RegPw1234!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit", headers=auth_env.bearer(token))
+    assert resp.status_code == 403
+
+
+def test_audit_endpoint_superadmin_ok(auth_env):
+    auth_env.create_user("sadmin", "SAdminPw1!", role="superadmin")
+    token = auth_env.login("sadmin", "SAdminPw1!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    page = data["data"]
+    assert "items" in page
+    assert "total" in page
+    assert "page" in page
+    assert "limit" in page
+    assert "pages" in page
+
+
+def test_audit_endpoint_pagination_defaults(auth_env):
+    auth_env.create_user("padmin", "PAdminPw1!", role="superadmin")
+    token = auth_env.login("padmin", "PAdminPw1!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    page = resp.json()["data"]
+    assert page["page"] == 1
+    assert page["limit"] == 25
+
+
+def test_audit_endpoint_pagination_params(auth_env):
+    auth_env.create_user("pgadmin", "PgAdmPw1!", role="superadmin")
+    token = auth_env.login("pgadmin", "PgAdmPw1!")
+    # Seed 10 extra log entries
+    for _ in range(10):
+        auth_env.db.add_audit_log("test_event", {}, ip_address="0.0.0.0")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit?page=1&limit=5", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    page = resp.json()["data"]
+    assert page["limit"] == 5
+    assert len(page["items"]) <= 5
+
+
+def test_audit_endpoint_filter_action(auth_env):
+    auth_env.create_user("faction", "FActPw12!", role="superadmin")
+    token = auth_env.login("faction", "FActPw12!")
+    auth_env.db.add_audit_log("custom_event", {}, ip_address="1.0.0.1")
+    auth_env.db.add_audit_log("other_event", {}, ip_address="1.0.0.1")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit?action=custom_event", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    items = resp.json()["data"]["items"]
+    assert all(i["action"] == "custom_event" for i in items)
+
+
+def test_audit_endpoint_filter_username(auth_env):
+    auth_env.create_user("sadmin2", "SAdm2Pw1!", role="superadmin")
+    target = auth_env.create_user("target_user", "TargetPw1!")
+    auth_env.db.add_audit_log("login_success", {}, user_id=target.id, ip_address="2.0.0.1")
+    auth_env.db.add_audit_log("login_success", {}, ip_address="2.0.0.1")  # no user_id
+    token = auth_env.login("sadmin2", "SAdm2Pw1!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit?username=target_user", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    items = resp.json()["data"]["items"]
+    assert all(i["username"] == "target_user" for i in items)
+
+
+def test_audit_endpoint_filter_ip(auth_env):
+    auth_env.create_user("ipadmin", "IpAdmPw1!", role="superadmin")
+    auth_env.db.add_audit_log("login_failed", {}, ip_address="5.5.5.5")
+    auth_env.db.add_audit_log("login_failed", {}, ip_address="6.6.6.6")
+    token = auth_env.login("ipadmin", "IpAdmPw1!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit?ip=5.5.5.5", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    items = resp.json()["data"]["items"]
+    assert all(i["ip_address"] == "5.5.5.5" for i in items)
+
+
+def test_audit_endpoint_entry_schema(auth_env):
+    auth_env.create_user("schemaadmin", "SchmAdmPw1!", role="superadmin")
+    target = auth_env.create_user("schemauser", "SchUsrPw1!")
+    auth_env.db.add_audit_log(
+        "login_success", {"username": "schemauser"}, user_id=target.id, ip_address="7.7.7.7"
+    )
+    token = auth_env.login("schemaadmin", "SchmAdmPw1!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit?username=schemauser", headers=auth_env.bearer(token))
+    assert resp.status_code == 200
+    item = resp.json()["data"]["items"][0]
+    assert "id" in item
+    assert "user_id" in item
+    assert "username" in item
+    assert item["username"] == "schemauser"
+    assert "action" in item
+    assert "detail" in item
+    assert isinstance(item["detail"], dict)
+    assert "ip_address" in item
+    assert "timestamp" in item
+
+
+def test_audit_endpoint_limit_max(auth_env):
+    auth_env.create_user("limitadmin", "LimAdmPw1!", role="superadmin")
+    token = auth_env.login("limitadmin", "LimAdmPw1!")
+    client = auth_env.make_client()
+    resp = client.get("/auth/audit?limit=200", headers=auth_env.bearer(token))
+    assert resp.status_code == 422  # limit > 100 rejected
