@@ -109,15 +109,22 @@ cmd_db_ls_r() {
 }
 
 cmd_db_reset() {
-    bold "Wiping db/..."
+    bold "Wiping db/ + auth-db/..."
     rm -rf container-data/db/*
-    green "db/ cleared."
+    rm -f container-data/auth-db/auth.db container-data/auth-db/auth.db-wal container-data/auth-db/auth.db-shm
+    green "db/ + auth-db/ cleared."
 }
 
 cmd_state_reset() {
     bold "Wiping state/db/..."
     rm -rf container-data/state/db/*
     green "state/db cleared."
+}
+
+cmd_key_reset() {
+    bold "Wiping development secrets..."
+    find container-data/secrets/development -type f ! -name '.gitkeep' -delete
+    green "secrets/development/ cleared (gitkeep preserved)."
 }
 
 cmd_openapi() {
@@ -290,6 +297,50 @@ cmd_setup_auth() {
     echo "  Password: ${secrets_dir}/.admin_password"
 }
 
+cmd_setup_tls() {
+    local secrets_dir="container-data/secrets/development"
+    local cert_path="${secrets_dir}/tls_cert"
+    local key_path="${secrets_dir}/tls_key"
+    local force=false
+
+    for arg in "$@"; do
+        [[ "$arg" == "-f" || "$arg" == "--force" ]] && force=true
+    done
+
+    if [[ -f "$cert_path" && -f "$key_path" ]]; then
+        if [[ "$force" != true ]]; then
+            green "TLS cert already exists. Use -f to overwrite."
+            return 0
+        fi
+        bold "Overwriting TLS cert (--force)..."
+    fi
+
+    mkdir -p "$secrets_dir"
+
+    bold "Generating self-signed TLS certificate (development)..."
+    docker run --rm \
+        -v "$(pwd)/${secrets_dir}:/secrets" \
+        alpine/openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+            -days 365 -nodes \
+            -keyout /secrets/tls_key \
+            -out /secrets/tls_cert \
+            -subj "/C=TR/ST=Istanbul/L=Istanbul/O=Phantom-WG/OU=Development/CN=localhost" \
+            -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+            2>/dev/null
+
+    chmod 600 "$key_path" "$cert_path" 2>/dev/null || true
+
+    green "TLS certificate written to ${secrets_dir}/"
+    echo "  Cert: ${cert_path}"
+    echo "  Key:  ${key_path}"
+}
+
+cmd_build_spa() {
+    bold "Building React SPA..."
+    (cd services/react-spa && npm run translate && npm run build)
+    green "SPA built → services/react-spa/dist/"
+}
+
 cmd_stubs() {
     local image="phantom-daemon-dev:latest"
     local dockerfile="dev.Dockerfile"
@@ -338,12 +389,15 @@ Usage: ./tools/dev.sh <command>
   status      Show containers
   db-ls       List db/ (local)
   db-ls-r     List db/ (container)
-  db-reset    Wipe db/
+  db-reset    Wipe db/ + auth-db/
   state-reset Wipe state/db/
+  key-reset   Wipe development secrets (preserves .gitkeep)
   stubs       Generate .pyi vendor stubs
   openapi     Export OpenAPI schema (openapi.json)
   fetch-compose-bridge  Download compose-bridge artifact for current platform
   setup-auth            Bootstrap auth service (keys + DB + admin)
+  setup-tls             Generate self-signed TLS certificate (development)
+  build-spa             Build React SPA (translate + vite build)
 HELP
 }
 
@@ -369,9 +423,12 @@ case "${1:-help}" in
     db-ls-r)  cmd_db_ls_r ;;
     db-reset)    cmd_db_reset ;;
     state-reset) cmd_state_reset ;;
+    key-reset)   cmd_key_reset ;;
     stubs)       cmd_stubs ;;
     openapi)     cmd_openapi ;;
     fetch-compose-bridge) cmd_fetch_compose_bridge ;;
     setup-auth) shift; cmd_setup_auth "$@" ;;
+    setup-tls)  shift; cmd_setup_tls "$@" ;;
+    build-spa)  cmd_build_spa ;;
     help|*)      cmd_help ;;
 esac

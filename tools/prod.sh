@@ -32,10 +32,12 @@ cmd_setup() {
     bold "Full production setup..."
     cmd_gen_keys "$@"
     cmd_setup_auth "$@"
+    cmd_setup_tls "$@"
     green "Production setup complete."
     echo ""
     echo "  WG keys:      ${SECRETS_DIR}/"
     echo "  Auth keys:    ${SECRETS_DIR}/"
+    echo "  TLS cert:     ${SECRETS_DIR}/tls_cert"
     echo "  Auth DB:      ${AUTH_DB_DIR}/auth.db"
     echo "  Admin pass:   ${SECRETS_DIR}/.admin_password"
     echo ""
@@ -147,6 +149,48 @@ cmd_setup_auth() {
     echo "  Admin password: ${SECRETS_DIR}/.admin_password"
 }
 
+cmd_setup_tls() {
+    local force=false
+    for arg in "$@"; do
+        [[ "$arg" == "-f" || "$arg" == "--force" ]] && force=true
+    done
+
+    local cert_path="${SECRETS_DIR}/tls_cert"
+    local key_path="${SECRETS_DIR}/tls_key"
+
+    if [[ -f "$cert_path" && -f "$key_path" ]]; then
+        if [[ "$force" != true ]]; then
+            green "TLS cert already exists. Use -f to overwrite."
+            return 0
+        fi
+        bold "Overwriting TLS cert (--force)..."
+    fi
+
+    mkdir -p "$SECRETS_DIR"
+
+    bold "Generating self-signed TLS certificate..."
+    docker run --rm \
+        -v "$(pwd)/${SECRETS_DIR}:/secrets" \
+        alpine/openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+            -days 365 -nodes \
+            -keyout /secrets/tls_key \
+            -out /secrets/tls_cert \
+            -subj "/C=TR/ST=Istanbul/L=Istanbul/O=Phantom-WG/OU=Phantom Certification Authority/CN=phantom-wg/emailAddress=ca@phantom.tc" \
+            -addext "subjectAltName=DNS:phantom-wg,DNS:localhost,IP:127.0.0.1" \
+            -addext "certificatePolicies=2.5.29.32.0" \
+            -addext "nsComment=Phantom-WG Self-Signed Certificate" \
+            2>/dev/null
+
+    chmod 600 "$key_path" "$cert_path" 2>/dev/null || true
+
+    green "TLS certificate written to ${SECRETS_DIR}/"
+    echo "  Cert: ${cert_path}"
+    echo "  Key:  ${key_path}"
+    echo ""
+    bold "Certificate details:"
+    openssl x509 -in "$cert_path" -noout -subject -issuer -dates 2>/dev/null | sed 's/^/  /'
+}
+
 # ── Container Management ──────────────────────────────────────────
 
 cmd_build() {
@@ -208,11 +252,32 @@ cmd_exec() {
     $COMPOSE exec "$service" "$@"
 }
 
+cmd_hard_reset() {
+    bold "This will destroy ALL data: secrets, auth DB, and Docker volumes."
+    printf "Type 'yes' to confirm: "
+    read -r confirm
+    if [[ "$confirm" != "yes" ]]; then
+        red "Aborted."
+        exit 1
+    fi
+
+    bold "Stopping stack..."
+    $COMPOSE down -v 2>/dev/null || true
+
+    bold "Removing secrets..."
+    rm -rf "$SECRETS_DIR"
+
+    bold "Removing auth database..."
+    rm -rf "$AUTH_DB_DIR"
+
+    green "Hard reset complete. Run './tools/prod.sh setup' to start fresh."
+}
+
 # ── Helpers ───────────────────────────────────────────────────────
 
 _check_secrets() {
     local missing=false
-    for key in wg_private_key wg_public_key auth_signing_key auth_verify_key; do
+    for key in wg_private_key wg_public_key auth_signing_key auth_verify_key tls_cert tls_key; do
         if [[ ! -s "${SECRETS_DIR}/${key}" ]]; then
             red "Missing: ${SECRETS_DIR}/${key}"
             missing=true
@@ -229,9 +294,10 @@ cmd_help() {
 Usage: ./tools/prod.sh <command>
 
   Setup:
-    setup               Full setup (gen-keys + setup-auth)
+    setup               Full setup (gen-keys + setup-auth + setup-tls)
     gen-keys            Generate WireGuard keypair
     setup-auth          Bootstrap auth service (keys + DB + admin)
+    setup-tls           Generate self-signed TLS certificate
 
   Container:
     build               Build production images
@@ -242,6 +308,9 @@ Usage: ./tools/prod.sh <command>
     status              Show container status
     shell [service]     Open shell (default: daemon)
     exec <svc> <cmd>    Execute command in service
+
+  Danger:
+    hard-reset          Wipe ALL data (secrets + auth DB + volumes)
 
   Options:
     -f, --force         Overwrite existing keys/bootstrap
@@ -254,6 +323,8 @@ case "${1:-help}" in
     setup)      shift; cmd_setup "$@" ;;
     gen-keys)   shift; cmd_gen_keys "$@" ;;
     setup-auth) shift; cmd_setup_auth "$@" ;;
+    setup-tls)  shift; cmd_setup_tls "$@" ;;
+    hard-reset) cmd_hard_reset ;;
     build)      cmd_build ;;
     up)         cmd_up ;;
     down)       cmd_down ;;

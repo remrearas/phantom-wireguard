@@ -65,7 +65,7 @@ services:
     volumes:
       - phantom-sock:/var/run/phantom
 
-  auth:
+  auth-service:
     build:
       context: ./services/auth-service
       dockerfile: Dockerfile
@@ -81,10 +81,25 @@ services:
       - auth_signing_key
       - auth_verify_key
     environment:
-      - PHANTOM_DAEMON_SOCKET=/var/run/phantom/daemon.sock
+      - AUTH_PROXY_URL=unix:///var/run/phantom/daemon.sock
       - AUTH_INACTIVITY_TIMEOUT=1800
     ports:
       - "8443:8443"
+
+  nginx:
+    image: nginx:alpine
+    container_name: phantom-nginx-dev
+    restart: unless-stopped
+    depends_on:
+      - auth-service
+    volumes:
+      - ./services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./services/react-spa/dist:/usr/share/nginx/html:ro
+    secrets:
+      - tls_cert
+      - tls_key
+    ports:
+      - "443:443"
 
 secrets:
   wg_private_key:
@@ -95,6 +110,10 @@ secrets:
     file: ./container-data/secrets/development/auth_signing_key
   auth_verify_key:
     file: ./container-data/secrets/development/auth_verify_key
+  tls_cert:
+    file: ./container-data/secrets/development/tls_cert
+  tls_key:
+    file: ./container-data/secrets/development/tls_key
 
 volumes:
   phantom-sock:

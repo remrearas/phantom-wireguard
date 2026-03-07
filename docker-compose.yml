@@ -2,8 +2,16 @@
 # phantom-daemon  ·  Production Compose
 # ──────────────────────────────────────────────────────────────────
 # Usage:
-#   docker compose up -d
-#   docker compose logs -f daemon
+#   ./tools/prod.sh setup       # first-time: keys + auth + TLS cert
+#   ./tools/prod.sh up          # start production stack
+#
+# Topology:
+#   Internet → :8443 (nginx, TLS) → auth-service:8443 → daemon (UDS)
+#   Internet → :443/tcp (ghost/wstunnel, DPI bypass) → daemon
+#   Internet → :51820/udp (WireGuard) → daemon
+#
+# All environment variables have defaults. Set WIREGUARD_ENDPOINT_V4
+# and/or WIREGUARD_ENDPOINT_V6 to your server's public IP.
 # ──────────────────────────────────────────────────────────────────
 
 services:
@@ -15,41 +23,85 @@ services:
     restart: unless-stopped
     volumes:
       - phantom-sock:/var/run/phantom
-      - phantom-data:/var/lib/phantom
+      - ./container-data/db:/var/lib/phantom/db
+      - ./container-data/state/db:/var/lib/phantom/state/db
     secrets:
       - wg_private_key
       - wg_public_key
     environment:
+      # ── General ──────────────────────────────────────────────
       - PYTHONUNBUFFERED=1
-      - PHANTOM_DB_DIR=/var/lib/phantom
-      - WIREGUARD_LISTEN_PORT=51820
-      - WIREGUARD_MTU=1420
-      - WIREGUARD_ENDPOINT_V4=
-      - WIREGUARD_ENDPOINT_V6=
+      # ── Daemon Storage ───────────────────────────────────────
+      - PHANTOM_DB_DIR=/var/lib/phantom/db          # client/peer database
+      - PHANTOM_STATE_DIR=/var/lib/phantom/state/db  # runtime state database
+      # ── WireGuard ────────────────────────────────────────────
+      - WIREGUARD_LISTEN_PORT=51820     # UDP listen port
+      - WIREGUARD_MTU=1420              # interface MTU
+      - WIREGUARD_KEEPALIVE=25          # persistent keepalive (seconds)
+      - WIREGUARD_ENDPOINT_V4=          # public IPv4 (required for clients)
+      - WIREGUARD_ENDPOINT_V6=          # public IPv6 (optional)
     cap_add:
       - NET_ADMIN
       - NET_RAW
     sysctls:
       - net.ipv4.ip_forward=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "51820:51820/udp"
+      # ── Ghost Mode (wstunnel) ────────────────────────────────
+      # wstunnel listens on 443/tcp inside the container to
+      # disguise WireGuard traffic as HTTPS (DPI bypass).
+      # Remove this line if ghost mode is not needed.
+      # NOTE: If nginx also uses host port 443, change one of
+      #       them (e.g. nginx → 8443:443) to avoid conflict.
+      - "443:443/tcp"
 
-  auth:
+  auth-service:
     build:
       context: ./services/auth-service
       dockerfile: Dockerfile
+    container_name: phantom-auth
     restart: unless-stopped
     depends_on:
       - daemon
     volumes:
       - phantom-sock:/var/run/phantom
-      - phantom-auth-data:/var/lib/phantom/auth
+      - ./container-data/auth-db:/var/lib/phantom/auth
     secrets:
       - auth_signing_key
       - auth_verify_key
     environment:
+      # ── General ──────────────────────────────────────────────
+      - PYTHONUNBUFFERED=1
+      # ── Daemon Connection ────────────────────────────────────
       - PHANTOM_DAEMON_SOCKET=/var/run/phantom/daemon.sock
-      - AUTH_INACTIVITY_TIMEOUT=1800
+      # ── Auth Database ────────────────────────────────────────
+      - AUTH_DB_DIR=/var/lib/phantom/auth      # SQLite auth.db location
+      - AUTH_SECRETS_DIR=/run/secrets           # signing/verify key directory
+      # ── Token Lifetime ───────────────────────────────────────
+      - AUTH_TOKEN_LIFETIME=86400              # JWT expiry (seconds, default: 24h)
+      - AUTH_MFA_TOKEN_LIFETIME=300            # MFA pending token (seconds, default: 5m)
+      - AUTH_INACTIVITY_TIMEOUT=1800           # session timeout (seconds, default: 30m)
+      # ── Rate Limiting (login endpoint) ───────────────────────
+      - AUTH_RATE_LIMIT_WINDOW=60              # sliding window (seconds)
+      - AUTH_RATE_LIMIT_MAX=5                  # max attempts per window
+
+  nginx:
+    image: nginx:1-alpine
+    container_name: phantom-nginx
+    restart: unless-stopped
+    depends_on:
+      - auth-service
+    volumes:
+      - ./services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    secrets:
+      - tls_cert
+      - tls_key
     ports:
-      - "8443:8443"
+      # Default: 443. If ghost mode uses host port 443 (daemon),
+      # change this to another port (e.g. 8443:443).
+      - "8443:443"
 
 secrets:
   wg_private_key:
@@ -60,8 +112,10 @@ secrets:
     file: ./container-data/secrets/production/auth_signing_key
   auth_verify_key:
     file: ./container-data/secrets/production/auth_verify_key
+  tls_cert:
+    file: ./container-data/secrets/production/tls_cert
+  tls_key:
+    file: ./container-data/secrets/production/tls_key
 
 volumes:
   phantom-sock:
-  phantom-data:
-  phantom-auth-data:
