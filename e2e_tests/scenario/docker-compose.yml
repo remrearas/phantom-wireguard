@@ -57,11 +57,12 @@ services:
     depends_on: [daemon]
     volumes:
       - daemon-sock:/var/run/phantom
+      - ../../services/auth-service/auth_service:/app/auth_service:ro
       - ../../container-data/auth-db:/var/lib/phantom/auth
     secrets: [auth_signing_key, auth_verify_key]
     environment:
       PYTHONUNBUFFERED: "1"
-      PHANTOM_DAEMON_SOCKET: /var/run/phantom/daemon.sock
+      AUTH_PROXY_URL: "unix:///var/run/phantom/daemon.sock"
       AUTH_INACTIVITY_TIMEOUT: "1800"
     networks:
       e2e:

@@ -254,26 +254,46 @@ class TestUserJourney:
     # ================================================================
 
     def test_enable_totp(self, api):
-        """Enable TOTP MFA for admin user."""
+        """Enable TOTP MFA for admin user (setup + confirm)."""
         t0 = time.perf_counter()
 
         print(f"\n{_SEP}")
         print("  PHASE 5 — ENABLE TOTP")
         print(f"{_SEP}")
 
-        resp = api.post("/auth/totp/enable")
-        assert resp.status_code == 200, f"totp enable: {resp.status_code} {resp.text}"
+        # Step 1: Setup — verify password, get secret + backup codes
+        resp = api.post("/auth/totp/setup", body={
+            "password": self._NEW_PASSWORD,
+        })
+        assert resp.status_code == 200, f"totp setup: {resp.status_code} {resp.text}"
         assert resp.json()["ok"] is True
 
         data = resp.json()["data"]
+        assert "setup_token" in data
         assert "secret" in data
         assert "backup_codes" in data
 
         TestUserJourney._totp_secret = data["secret"]
+        setup_token = data["setup_token"]
 
         print(f"\n  Secret        : {data['secret'][:8]}...")
         print(f"  URI           : {data['uri'][:40]}...")
         print(f"  Backup codes  : {len(data['backup_codes'])} codes")
+
+        # Step 2: Confirm — verify TOTP code to activate
+        totp = pyotp.TOTP(data["secret"])
+        code = totp.now()
+
+        print(f"  TOTP code     : {code}")
+
+        resp = api.post("/auth/totp/confirm", body={
+            "setup_token": setup_token,
+            "code": code,
+        })
+        assert resp.status_code == 200, f"totp confirm: {resp.status_code} {resp.text}"
+        assert resp.json()["ok"] is True
+
+        print(f"  TOTP          : enabled")
         print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
         print(f"{_THIN}")
 
