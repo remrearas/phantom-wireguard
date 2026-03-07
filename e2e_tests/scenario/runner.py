@@ -13,7 +13,7 @@ WireGuard® is a registered trademark of Jason A. Donenfeld.
 
 Scenario E2E test runner — host-side orchestration via compose-bridge.
 
-Starts the full topology (daemon, auth, master, exit-server, client),
+Starts the full topology (daemon, auth-service, master, exit-server, client),
 runs pytest inside the master container, then tears down.
 
 All API calls go through the auth-service (JWT proxy).
@@ -73,7 +73,7 @@ def main() -> None:
 
         # Wait for services to be ready
         env.wait_for_log("daemon", "Application startup complete", timeout=60)
-        env.wait_for_log("auth", "Application startup complete", timeout=60)
+        env.wait_for_log("auth-service", "Application startup complete", timeout=60)
         env.wait_for_log("exit-server", "EXIT_READY", timeout=30)
         env.wait_for_ready("master", timeout=30)
 

@@ -40,7 +40,7 @@ def docker_client():
 @pytest.fixture(scope="session")
 def auth_url() -> str:
     """Auth-service base URL."""
-    return os.environ.get("PHANTOM_AUTH_URL", "http://auth:8443")
+    return os.environ.get("PHANTOM_AUTH_URL", "http://auth-service:8443")
 
 
 @pytest.fixture(scope="session")

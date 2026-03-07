@@ -12,7 +12,7 @@ WireGuard® is a registered trademark of Jason A. Donenfeld.
 
 Scenario E2E — user journey through auth-service proxy.
 
-Runs INSIDE the master container. All API calls go through auth:8443 (JWT).
+Runs INSIDE the master container. All API calls go through auth-service:8443 (JWT).
 Tests a complete user journey:
 
     1.  Login (admin, bootstrap password)

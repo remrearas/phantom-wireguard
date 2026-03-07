@@ -3,12 +3,12 @@
 # ──────────────────────────────────────────────────────────────────
 # Services:
 #   daemon       — phantom-daemon (wg_main + wg_exit)
-#   auth         — auth-service (JWT proxy → daemon UDS)
+#   auth-service — auth-service (JWT proxy → daemon UDS)
 #   master       — pytest runner, docker.sock access
 #   exit-server  — WireGuard exit server
 #   client       — WireGuard client (wg-quick)
 #
-# All API calls go through auth:8443 (JWT required).
+# All API calls go through auth-service:8443 (JWT required).
 # No gateway (socat) — auth-service is the only API entry point.
 # ──────────────────────────────────────────────────────────────────
 
@@ -50,7 +50,7 @@ services:
       e2e:
         ipv4_address: 172.30.0.10
 
-  auth:
+  auth-service:
     build:
       context: ../../services/auth-service
       dockerfile: Dockerfile
@@ -71,14 +71,14 @@ services:
     build:
       context: ../..
       dockerfile: e2e_tests/scenario/master.Dockerfile
-    depends_on: [daemon, auth, exit-server, client]
+    depends_on: [daemon, auth-service, exit-server, client]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ../../e2e_tests:/app/e2e_tests:ro
       - ../../container-data/secrets/development/.admin_password:/run/secrets/admin_password:ro
     environment:
       PYTHONUNBUFFERED: "1"
-      PHANTOM_AUTH_URL: "http://auth:8443"
+      PHANTOM_AUTH_URL: "http://auth-service:8443"
     networks: [e2e]
 
   exit-server:
