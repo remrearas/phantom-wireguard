@@ -316,6 +316,97 @@ def test_totp_disable_wrong_password(auth_env):
     assert resp.status_code == 401
 
 
+# ── Password Change (2-step) ──────────────────────────────────
+
+
+def test_password_verify_returns_change_token(auth_env):
+    auth_env.create_user("pwver", "pwverify1")
+    token = auth_env.login("pwver", "pwverify1")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/password/verify",
+        json={"password": "pwverify1"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert "change_token" in data
+    assert data["expires_in"] > 0
+
+
+def test_password_verify_wrong_password(auth_env):
+    auth_env.create_user("pwwrong", "pwverify1")
+    token = auth_env.login("pwwrong", "pwverify1")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/password/verify",
+        json={"password": "wrongpass1"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 401
+
+
+def test_password_change_with_token(auth_env):
+    auth_env.create_user("pwchange", "oldpw1234")
+    token = auth_env.login("pwchange", "oldpw1234")
+    client = auth_env.make_client()
+    # Step 1: verify
+    resp = client.post(
+        "/auth/password/verify",
+        json={"password": "oldpw1234"},
+        headers=auth_env.bearer(token),
+    )
+    change_token = resp.json()["data"]["change_token"]
+    # Step 2: change
+    resp = client.post(
+        "/auth/password/change",
+        json={"change_token": change_token, "password": "NewPw1234!"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 200
+    # Verify login with new password
+    client2 = auth_env.make_client()
+    resp = client2.post("/auth/login", json={"username": "pwchange", "password": "NewPw1234!"})
+    assert resp.status_code == 200
+
+
+def test_password_change_expired_token(auth_env):
+    import time
+    auth_env.create_user("pwexp", "oldpw1234")
+    token = auth_env.login("pwexp", "oldpw1234")
+    client = auth_env.make_client()
+    # Create a change token with 1s lifetime
+    from auth_service.crypto.jwt import encode_token
+    change_token = encode_token(
+        auth_env.signing_key, sub="pwexp", jti="test", lifetime=1, typ="password_change",
+    )
+    time.sleep(2)
+    resp = client.post(
+        "/auth/password/change",
+        json={"change_token": change_token, "password": "NewPw1234!"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 401
+
+
+def test_password_change_weak_password(auth_env):
+    auth_env.create_user("pwweak", "oldpw1234")
+    token = auth_env.login("pwweak", "oldpw1234")
+    client = auth_env.make_client()
+    resp = client.post(
+        "/auth/password/verify",
+        json={"password": "oldpw1234"},
+        headers=auth_env.bearer(token),
+    )
+    change_token = resp.json()["data"]["change_token"]
+    resp = client.post(
+        "/auth/password/change",
+        json={"change_token": change_token, "password": "weak"},
+        headers=auth_env.bearer(token),
+    )
+    assert resp.status_code == 422
+
+
 # ── RBAC: superadmin vs admin ─────────────────────────────────
 
 

@@ -242,7 +242,70 @@ class TestSelfProtection:
         assert "yourself" in resp.json()["error"]
 
 
-# ── Scenario 5: TOTP full lifecycle ─────────────────────────────
+# ── Scenario 5: Password change (2-step self-service) ──────────
+
+
+class TestPasswordChange:
+    USERNAME = "pwchange_scenario"
+    PASSWORD = "PwChange1!"
+    NEW_PASSWORD = "NewPwChange2!"
+
+    def test_01_setup_user(self, http, admin_token):
+        http.delete(f"/auth/users/{self.USERNAME}", headers=_bearer(admin_token))
+        resp = http.post(
+            "/auth/users",
+            json={"username": self.USERNAME, "password": self.PASSWORD},
+            headers=_bearer(admin_token),
+        )
+        assert resp.status_code == 200
+
+    def test_02_verify_current_password(self, http):
+        resp = http.post("/auth/login", json={"username": self.USERNAME, "password": self.PASSWORD})
+        token = resp.json()["data"]["token"]
+        resp = http.post(
+            "/auth/password/verify",
+            json={"password": self.PASSWORD},
+            headers=_bearer(token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert "change_token" in data
+        assert data["expires_in"] > 0
+        TestPasswordChange._token = token
+        TestPasswordChange._change_token = data["change_token"]
+
+    # noinspection PyUnresolvedReferences
+    def test_03_wrong_password_rejected(self, http):
+        resp = http.post(
+            "/auth/password/verify",
+            json={"password": "WrongPass1!"},
+            headers=_bearer(self._token),
+        )
+        assert resp.status_code == 401
+
+    # noinspection PyUnresolvedReferences
+    def test_04_change_password(self, http):
+        resp = http.post(
+            "/auth/password/change",
+            json={"change_token": self._change_token, "password": self.NEW_PASSWORD},
+            headers=_bearer(self._token),
+        )
+        assert resp.status_code == 200
+
+    def test_05_login_with_new_password(self, http):
+        resp = http.post("/auth/login", json={"username": self.USERNAME, "password": self.NEW_PASSWORD})
+        assert resp.status_code == 200
+        assert "token" in resp.json()["data"]
+
+    def test_06_old_password_rejected(self, http):
+        resp = http.post("/auth/login", json={"username": self.USERNAME, "password": self.PASSWORD})
+        assert resp.status_code == 401
+
+    def test_07_cleanup(self, http, admin_token):
+        http.delete(f"/auth/users/{self.USERNAME}", headers=_bearer(admin_token))
+
+
+# ── Scenario 6: TOTP full lifecycle ──────────────────────────────
 
 
 class TestTOTPLifecycle:
