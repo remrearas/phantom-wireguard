@@ -361,9 +361,16 @@ def password_change(
     if claims.get("sub") != payload.sub:
         raise HTTPException(status_code=401, detail="Token subject mismatch")
 
-    pw_hash = hash_password(body.password)
-    if not db.update_password(payload.sub, pw_hash):
+    user = db.get_user_by_username(payload.sub)
+    if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="New password must be different")
+
+    pw_hash = hash_password(body.password)
+    db.update_password(payload.sub, pw_hash)
+    db.revoke_user_sessions(user.id)
 
     audit_log(db, request, "password_changed", {"username": payload.sub, "by": payload.sub})
     return ApiOk(data={"message": "Password changed"})
