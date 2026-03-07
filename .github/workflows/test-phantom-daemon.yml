@@ -33,6 +33,12 @@ jobs:
       - name: Bootstrap auth service
         run: ./tools/dev.sh setup-auth
 
+      - name: Generate TLS certificate
+        run: ./tools/dev.sh setup-tls
+
+      - name: Prepare SPA dist (placeholder for nginx)
+        run: mkdir -p services/react-spa/dist && echo '<!DOCTYPE html><html><body>CI</body></html>' > services/react-spa/dist/index.html
+
       - name: Start dev stack
         run: ./tools/dev.sh up
 
@@ -75,6 +81,12 @@ jobs:
 
       - name: Bootstrap auth service
         run: ./tools/dev.sh setup-auth
+
+      - name: Generate TLS certificate
+        run: ./tools/dev.sh setup-tls
+
+      - name: Prepare SPA dist (placeholder for nginx)
+        run: mkdir -p services/react-spa/dist && echo '<!DOCTYPE html><html><body>CI</body></html>' > services/react-spa/dist/index.html
 
       - name: Run E2E tests for Multighost
         run: ./tools/dev.sh test-multighost-e2e
