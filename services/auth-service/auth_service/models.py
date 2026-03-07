@@ -146,3 +146,24 @@ class TOTPSetupResponse(BaseModel):
     uri: str
     backup_codes: list[str]
     expires_in: int
+
+
+# ── Audit Log ─────────────────────────────────────────────────────
+
+
+class AuditLogEntry(BaseModel):
+    id: int
+    user_id: str | None
+    username: str | None
+    action: str
+    detail: dict
+    ip_address: str
+    timestamp: str
+
+
+class AuditLogPage(BaseModel):
+    items: list[AuditLogEntry]
+    total: int
+    page: int
+    limit: int
+    pages: int

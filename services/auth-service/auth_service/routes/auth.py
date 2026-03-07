@@ -18,7 +18,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from nacl.signing import VerifyKey
 
 from auth_service.audit import audit_log
@@ -35,6 +35,7 @@ from auth_service.errors import AuthDatabaseError, AuthTokenError
 from auth_service.middleware.auth import require_auth, require_superadmin
 from auth_service.models import (
     ApiOk,
+    AuditLogPage,
     ChangePasswordRequest,
     CreateUserRequest,
     LoginRequest,
@@ -453,6 +454,27 @@ def change_password(
         {"username": username, "by": payload.sub},
     )
     return ApiOk(data={"message": "Password changed"})
+
+
+# ── Audit ────────────────────────────────────────────────────────
+
+
+@router.get("/audit", response_model=ApiOk[AuditLogPage])
+def get_audit_log(
+    request: Request,
+    _payload: TokenPayload = Depends(require_superadmin),
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    limit: int = Query(25, ge=1, le=100, description="Entries per page (max 100)"),
+    action: str | None = Query(None, description="Filter by action type"),
+    username: str | None = Query(None, description="Filter by username"),
+    ip: str | None = Query(None, description="Filter by IP address"),
+):
+    """Paginated audit log. Superadmin only."""
+    db = request.app.state.db
+    result = db.get_audit_logs_paginated(
+        page=page, limit=limit, action=action, username=username, ip=ip
+    )
+    return ApiOk(data=AuditLogPage(**result))
 
 
 # ── Helpers ──────────────────────────────────────────────────────
