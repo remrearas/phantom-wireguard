@@ -18,6 +18,7 @@ from __future__ import annotations
 import importlib.resources
 import ipaddress
 import json
+import math
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -328,6 +329,47 @@ class Wallet:
             f"SELECT {self._CLIENT_COLUMNS} FROM users WHERE id IS NOT NULL ORDER BY rowid"
         ).fetchall()
         return [self._row_to_client(r) for r in rows]
+
+    def list_clients_paginated(
+        self,
+        page: int = 1,
+        limit: int = 25,
+        search: str | None = None,
+        order: str = "desc",
+    ) -> dict:
+        """Paginated client list with optional name search and ordering.
+
+        Returns dict with: clients, total, page, limit, pages, order.
+        order is normalised to 'asc' or 'desc'.
+        """
+        safe_order = "ASC" if order.upper() == "ASC" else "DESC"
+        offset = (page - 1) * limit
+
+        where = "id IS NOT NULL"
+        params: list = []
+        if search:
+            where += " AND name LIKE ?"
+            params.append(f"%{search}%")
+
+        total: int = self._conn.execute(
+            f"SELECT COUNT(*) FROM users WHERE {where}", params
+        ).fetchone()[0]
+
+        rows = self._conn.execute(
+            f"SELECT {self._CLIENT_COLUMNS} FROM users "
+            f"WHERE {where} ORDER BY rowid {safe_order} LIMIT ? OFFSET ?",
+            [*params, limit, offset],
+        ).fetchall()
+
+        pages = math.ceil(total / limit) if total > 0 else 1
+        return {
+            "clients": [self._row_to_client(r) for r in rows],
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": pages,
+            "order": safe_order.lower(),
+        }
 
     # ── DNS ────────────────────────────────────────────────────
 

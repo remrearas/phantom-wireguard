@@ -116,3 +116,73 @@ class TestWalletContextManager:
         # After exit, connection should be closed
         with pytest.raises(Exception):
             w.count_users()
+
+
+# ── Paginated client list ─────────────────────────────────────────
+
+
+class TestListClientsPaginated:
+    """Tests for wallet.list_clients_paginated()."""
+
+    @pytest.fixture()
+    def wallet_with_clients(self, tmp_path):
+        """Wallet pre-loaded with 30 assigned clients: page-001 .. page-030."""
+        w = open_wallet(str(tmp_path))
+        for i in range(1, 31):
+            w.assign_client(f"page-{i:03d}")
+        yield w
+        w.close()
+
+    def test_empty_returns_zero(self, tmp_path):
+        with open_wallet(str(tmp_path)) as w:
+            result = w.list_clients_paginated()
+        assert result["total"] == 0
+        assert result["clients"] == []
+        assert result["page"] == 1
+        assert result["pages"] == 1
+
+    def test_basic_first_page(self, wallet_with_clients):
+        result = wallet_with_clients.list_clients_paginated(page=1, limit=10)
+        assert result["total"] == 30
+        assert result["pages"] == 3
+        assert len(result["clients"]) == 10
+
+    def test_last_page_partial(self, wallet_with_clients):
+        result = wallet_with_clients.list_clients_paginated(page=3, limit=10)
+        assert result["total"] == 30
+        assert len(result["clients"]) == 10
+
+    def test_beyond_last_page_empty(self, wallet_with_clients):
+        result = wallet_with_clients.list_clients_paginated(page=99, limit=10)
+        assert result["total"] == 30
+        assert result["clients"] == []
+
+    def test_order_asc(self, wallet_with_clients):
+        result = wallet_with_clients.list_clients_paginated(page=1, limit=5, order="asc")
+        names = [c["name"] for c in result["clients"]]
+        assert names == sorted(names)
+        assert result["order"] == "asc"
+
+    def test_order_desc(self, wallet_with_clients):
+        result = wallet_with_clients.list_clients_paginated(page=1, limit=5, order="desc")
+        names = [c["name"] for c in result["clients"]]
+        assert names == sorted(names, reverse=True)
+        assert result["order"] == "desc"
+
+    def test_search_match(self, wallet_with_clients):
+        result = wallet_with_clients.list_clients_paginated(search="page-01")
+        # "page-01" matches page-010..019 only — page-001 does NOT contain "page-01" as substring
+        assert result["total"] == 10
+        for c in result["clients"]:
+            assert "page-01" in c["name"]
+
+    def test_search_no_match(self, wallet_with_clients):
+        result = wallet_with_clients.list_clients_paginated(search="notexist")
+        assert result["total"] == 0
+        assert result["clients"] == []
+
+    def test_total_with_limit_1(self, wallet_with_clients):
+        result = wallet_with_clients.list_clients_paginated(page=1, limit=1)
+        assert result["total"] == 30
+        assert result["pages"] == 30
+        assert len(result["clients"]) == 1

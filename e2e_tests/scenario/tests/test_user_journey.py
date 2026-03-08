@@ -776,6 +776,83 @@ class TestUserJourney:
         print(f"  Client        : e2e-scenario revoked")
         print(f"  TOTP          : disabled")
         print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 14 — CLIENT PAGINATION
+    # ================================================================
+
+    def test_client_pagination(self, api):
+        """Create 100 clients, verify paginated list API, then revoke all."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 14 — CLIENT PAGINATION (100 clients)")
+        print(f"{_SEP}")
+
+        # noinspection PyPep8Naming
+        CLIENT_COUNT = 100
+        names = [f"e2e-pg-{i:03d}" for i in range(1, CLIENT_COUNT + 1)]
+
+        # ── Create 100 clients ───────────────────────────────────
+        print(f"\n  Creating {CLIENT_COUNT} clients...")
+        for name in names:
+            resp = api.post("/api/core/clients/assign", body={"name": name})
+            assert resp.status_code == 201, f"assign {name}: {resp.status_code} {resp.text}"
+        print(f"  Created   : {CLIENT_COUNT} clients")
+
+        # ── Page 1 (limit=25) — first 25 items ──────────────────
+        resp = api.get("/api/core/clients/list?page=1&limit=25&order=asc")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["total"] == CLIENT_COUNT,  f"total mismatch: {data['total']}"
+        assert data["pages"] == 4,             f"pages mismatch: {data['pages']}"
+        assert data["page"]  == 1
+        assert data["limit"] == 25
+        assert len(data["clients"]) == 25
+        first_name = data["clients"][0]["name"]
+        print(f"\n  Page 1/4  : {len(data['clients'])} items — first: {first_name}")
+
+        # ── Page 4 (limit=25) — last 25 items ───────────────────
+        resp = api.get("/api/core/clients/list?page=4&limit=25&order=asc")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["page"] == 4
+        assert len(data["clients"]) == 25
+        last_name = data["clients"][-1]["name"]
+        print(f"  Page 4/4  : {len(data['clients'])} items — last: {last_name}")
+
+        # ── Search filter ────────────────────────────────────────
+        resp = api.get("/api/core/clients/list?search=e2e-pg-01&limit=100")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        # "e2e-pg-01" matches e2e-pg-010..019 only — e2e-pg-001 does NOT contain "e2e-pg-01"
+        assert data["total"] == 10, f"search total mismatch: {data['total']}"
+        print(f"\n  Search    : 'e2e-pg-01' → {data['total']} matches")
+
+        # ── Order check ──────────────────────────────────────────
+        resp_asc  = api.get("/api/core/clients/list?page=1&limit=1&order=asc")
+        resp_desc = api.get("/api/core/clients/list?page=1&limit=1&order=desc")
+        assert resp_asc.status_code == 200 and resp_desc.status_code == 200
+        name_asc  = resp_asc.json()["data"]["clients"][0]["name"]
+        name_desc = resp_desc.json()["data"]["clients"][0]["name"]
+        assert name_asc != name_desc, "asc and desc first items should differ"
+        print(f"  Order asc : first={name_asc}")
+        print(f"  Order desc: first={name_desc}")
+
+        # ── Revoke all 100 clients ───────────────────────────────
+        print(f"\n  Revoking {CLIENT_COUNT} clients...")
+        for name in names:
+            resp = api.post("/api/core/clients/revoke", body={"name": name})
+            assert resp.status_code == 200, f"revoke {name}: {resp.status_code}"
+
+        # Verify clean slate
+        resp = api.get("/api/core/clients/list")
+        assert resp.status_code == 200
+        assert resp.json()["data"]["total"] == 0
+
+        print(f"  Revoked   : {CLIENT_COUNT} clients — total now 0")
+        print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
 
         print(f"\n{_SEP}")
         print("  ALL PHASES PASSED")

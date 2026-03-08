@@ -18,7 +18,7 @@ from __future__ import annotations
 import base64
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from phantom_daemon.base.errors import WalletError
@@ -63,6 +63,10 @@ class ClientSummary(BaseModel):
 class ClientListResponse(BaseModel):
     clients: list[ClientSummary]
     total: int
+    page: int
+    limit: int
+    pages: int
+    order: str
 
 
 class RevokeResponse(BaseModel):
@@ -95,22 +99,26 @@ async def assign_client(body: ClientNameRequest, request: Request):
 
 
 @router.get("/list", response_model=ApiOk[ClientListResponse])
-async def list_clients(request: Request):
+async def list_clients(
+    request: Request,
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=100),
+    search: str | None = Query(None),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
+):
     wallet = request.app.state.wallet
-    clients = wallet.list_clients()
-    summaries = [
-        ClientSummary(
-            id=c["id"],
-            name=c["name"],
-            ipv4_address=c["ipv4_address"],
-            ipv6_address=c["ipv6_address"],
-            public_key_hex=c["public_key_hex"],
-            created_at=c["created_at"],
-            updated_at=c["updated_at"],
-        )
-        for c in clients
-    ]
-    return ApiOk(data=ClientListResponse(clients=summaries, total=len(summaries)))
+    result = wallet.list_clients_paginated(
+        page=page, limit=limit, search=search, order=order
+    )
+    summaries = [ClientSummary(**c) for c in result["clients"]]
+    return ApiOk(data=ClientListResponse(
+        clients=summaries,
+        total=result["total"],
+        page=result["page"],
+        limit=result["limit"],
+        pages=result["pages"],
+        order=result["order"],
+    ))
 
 
 @router.post(
