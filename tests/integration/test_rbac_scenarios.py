@@ -331,7 +331,7 @@ class TestSuperadminCannotDeleteSelf:
     def test_self_delete_rejected(self, http, superadmin_token):
         resp = http.delete(f"/auth/users/{ADMIN_USER}", headers=_bearer(superadmin_token))
         assert resp.status_code == 400
-        assert "yourself" in resp.json()["error"]
+        assert resp.json()["error_code"] == "CANNOT_DELETE_SELF"
 
 
 # ── Scenario 8: Superadmin deletes admin ───────────────────────

@@ -100,7 +100,7 @@ def test_delete_self_forbidden(auth_env):
     client = auth_env.make_client()
     resp = client.delete("/auth/users/admin", headers=auth_env.bearer(token))
     assert resp.status_code == 400
-    assert "yourself" in resp.json()["error"]
+    assert resp.json()["error_code"] == "CANNOT_DELETE_SELF"
 
 
 def test_change_password(auth_env):
@@ -423,7 +423,7 @@ def test_password_change_same_password_rejected(auth_env):
         headers=auth_env.bearer(token),
     )
     assert resp.status_code == 400
-    assert "different" in resp.json()["error"]
+    assert resp.json()["error_code"] == "PASSWORD_MUST_DIFFER"
 
 
 def test_password_change_revokes_sessions(auth_env):

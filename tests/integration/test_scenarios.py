@@ -248,7 +248,7 @@ class TestSelfProtection:
     def test_cannot_delete_self(self, http, admin_token):
         resp = http.delete(f"/auth/users/{ADMIN_USER}", headers=_bearer(admin_token))
         assert resp.status_code == 400
-        assert "yourself" in resp.json()["error"]
+        assert resp.json()["error_code"] == "CANNOT_DELETE_SELF"
 
 
 # ── Scenario 5: Password change (2-step self-service) ──────────
@@ -300,7 +300,7 @@ class TestPasswordChange:
             headers=_bearer(self._token),
         )
         assert resp.status_code == 400
-        assert "different" in resp.json()["error"]
+        assert resp.json()["error_code"] == "PASSWORD_MUST_DIFFER"
 
     # noinspection PyUnresolvedReferences
     def test_05_change_password(self, http):
