@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 from nacl.signing import SigningKey, VerifyKey
 
-from auth_service.errors import AuthTokenError
+from auth_service.errors import AuthTokenExpiredError, AuthTokenInvalidError
 
 _HEADER = {"alg": "EdDSA", "typ": "JWT"}
 
@@ -88,38 +88,38 @@ def _verify_and_decode(verify_key: VerifyKey, token: str) -> dict:
     """Verify JWT signature, check expiration, return raw payload dict."""
     parts = token.split(".")
     if len(parts) != 3:
-        raise AuthTokenError("Invalid token format")
+        raise AuthTokenInvalidError("Invalid token format")
 
     header_b64, payload_b64, sig_b64 = parts
 
     try:
         header = json.loads(_b64url_decode(header_b64))
     except (json.JSONDecodeError, Exception) as exc:
-        raise AuthTokenError(f"Invalid token header: {exc}") from exc
+        raise AuthTokenInvalidError(f"Invalid token header: {exc}") from exc
 
     if header.get("alg") != "EdDSA":
-        raise AuthTokenError(f"Unsupported algorithm: {header.get('alg')}")
+        raise AuthTokenInvalidError(f"Unsupported algorithm: {header.get('alg')}")
 
     try:
         signature = _b64url_decode(sig_b64)
     except Exception as exc:
-        raise AuthTokenError(f"Invalid signature encoding: {exc}") from exc
+        raise AuthTokenInvalidError(f"Invalid signature encoding: {exc}") from exc
 
     message = f"{header_b64}.{payload_b64}".encode("ascii")
     try:
         verify_key.verify(message, signature)
     except Exception as exc:
-        raise AuthTokenError(f"Signature verification failed: {exc}") from exc
+        raise AuthTokenInvalidError(f"Signature verification failed: {exc}") from exc
 
     try:
         payload = json.loads(_b64url_decode(payload_b64))
     except (json.JSONDecodeError, Exception) as exc:
-        raise AuthTokenError(f"Invalid token payload: {exc}") from exc
+        raise AuthTokenInvalidError(f"Invalid token payload: {exc}") from exc
 
     now = int(time.time())
     exp = payload.get("exp", 0)
     if now >= exp:
-        raise AuthTokenError("Token expired")
+        raise AuthTokenExpiredError("Token expired")
 
     return payload
 
@@ -137,7 +137,7 @@ def decode_token(verify_key: VerifyKey, token: str) -> TokenPayload:
             role=payload.get("role", "admin"),
         )
     except KeyError as exc:
-        raise AuthTokenError(f"Missing claim: {exc}") from exc
+        raise AuthTokenInvalidError(f"Missing claim: {exc}") from exc
 
 
 def decode_token_claims(verify_key: VerifyKey, token: str) -> dict:

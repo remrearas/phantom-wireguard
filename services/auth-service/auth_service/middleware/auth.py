@@ -17,17 +17,17 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 
 from auth_service.crypto.jwt import TokenPayload, decode_token, token_hash
-from auth_service.errors import AuthTokenError
+from auth_service.errors import ApiException, AuthTokenExpiredError, AuthTokenInvalidError
 
 
 def require_auth(request: Request) -> TokenPayload:
     """Extract and verify Bearer token. Check session validity and inactivity."""
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        raise ApiException(401, "MISSING_AUTH_HEADER")
 
     raw_token = auth_header[7:]
     verify_key = request.app.state.verify_key
@@ -36,19 +36,21 @@ def require_auth(request: Request) -> TokenPayload:
 
     try:
         payload = decode_token(verify_key, raw_token)
-    except AuthTokenError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+    except AuthTokenExpiredError:
+        raise ApiException(401, "TOKEN_EXPIRED")
+    except AuthTokenInvalidError:
+        raise ApiException(401, "TOKEN_INVALID")
 
     if payload.typ != "access":
-        raise HTTPException(status_code=401, detail="Invalid token type")
+        raise ApiException(401, "INVALID_TOKEN_TYPE")
 
     session = db.get_session_by_jti(payload.jti)
     if session is None or session.revoked:
-        raise HTTPException(status_code=401, detail="Session revoked or not found")
+        raise ApiException(401, "SESSION_REVOKED")
 
     # Verify token hash matches stored hash
     if token_hash(raw_token) != session.token_hash:
-        raise HTTPException(status_code=401, detail="Token mismatch")
+        raise ApiException(401, "TOKEN_MISMATCH")
 
     # Inactivity timeout check
     last_activity = datetime.fromisoformat(session.last_activity_at)
@@ -56,7 +58,7 @@ def require_auth(request: Request) -> TokenPayload:
     elapsed = (now - last_activity).total_seconds()
     if elapsed > config.inactivity_timeout:
         db.revoke_session(payload.jti)
-        raise HTTPException(status_code=401, detail="Session expired due to inactivity")
+        raise ApiException(401, "SESSION_INACTIVE")
 
     # Update last activity
     db.update_last_activity(payload.jti)
@@ -68,5 +70,5 @@ def require_superadmin(request: Request) -> TokenPayload:
     """Require authenticated superadmin user."""
     payload = require_auth(request)
     if payload.role != "superadmin":
-        raise HTTPException(status_code=403, detail="Superadmin access required")
+        raise ApiException(403, "SUPERADMIN_REQUIRED")
     return payload

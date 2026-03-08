@@ -49,7 +49,12 @@ class ApiOk(BaseModel, Generic[T]):
 
 class ApiErr(BaseModel):
     ok: Literal[False] = False
-    error: str
+    error_code: str
+
+
+class ActionResult(BaseModel):
+    """Success response for action endpoints that return no domain data."""
+    success_code: str
 
 
 # ── Auth Requests ────────────────────────────────────────────────
