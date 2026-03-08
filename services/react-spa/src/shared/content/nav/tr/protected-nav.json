@@ -1,0 +1,48 @@
+{
+  "headerNav": [
+    {
+      "label": "Panel",
+      "href": "/",
+      "roles": ["admin", "superadmin"]
+    }
+  ],
+  "sideNav": [
+    {
+      "label": "Panel",
+      "href": "/",
+      "roles": ["admin", "superadmin"]
+    },
+    {
+      "label": "Kullanıcı İşlemleri",
+      "roles": ["admin", "superadmin"],
+      "children": [
+        {
+          "label": "Şifre Değiştir",
+          "href": "/password-change",
+          "roles": ["admin", "superadmin"]
+        },
+        {
+          "label": "TOTP",
+          "href": "/totp",
+          "roles": ["admin", "superadmin"]
+        }
+      ]
+    },
+    {
+      "label": "Yönetici İşlemleri",
+      "roles": ["superadmin"],
+      "children": [
+        {
+          "label": "Kullanıcı Yönetimi",
+          "href": "/users",
+          "roles": ["superadmin"]
+        },
+        {
+          "label": "Denetim Günlüğü",
+          "href": "/audit",
+          "roles": ["superadmin"]
+        }
+      ]
+    }
+  ]
+}

@@ -1,17 +1,18 @@
-import React, { lazy, Suspense } from 'react';
+import React from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { useAuth } from '@shared/contexts/AuthContext';
 import LoadingSpinner from '@shared/components/ui/LoadingSpinner';
-import DashboardLayout from '@shared/components/layout/DashboardLayout';
+import ProtectedLayout from '@shared/components/layout/ProtectedLayout';
+import PublicLayout from '@shared/components/layout/PublicLayout';
 import ErrorPage from '@shared/pages/error/ErrorPage';
-
-const LoginPage = lazy(() => import('@pages/login/LoginPage'));
-const DashboardPage = lazy(() => import('@pages/dashboard/pages/index/DashboardPage'));
-const TotpPage = lazy(() => import('@pages/totp/pages/index/TotpPage'));
-const TotpEnablePage = lazy(() => import('@pages/totp/pages/enable/TotpEnablePage'));
-const TotpDisablePage = lazy(() => import('@pages/totp/pages/disable/TotpDisablePage'));
-const PasswordChangePage = lazy(() => import('@pages/password-change/pages/index/PasswordChangePage'));
-const UsersPage = lazy(() => import('@pages/users/pages/index/UsersPage'));
+import LoginPage from '@pages/login/LoginPage';
+import DashboardPage from '@pages/dashboard/pages/index/DashboardPage';
+import TotpPage from '@pages/totp/pages/index/TotpPage';
+import TotpEnablePage from '@pages/totp/pages/enable/TotpEnablePage';
+import TotpDisablePage from '@pages/totp/pages/disable/TotpDisablePage';
+import PasswordChangePage from '@pages/password-change/pages/index/PasswordChangePage';
+import UsersPage from '@pages/users/pages/index/UsersPage';
+import AuditPage from '@pages/audit/pages/index/AuditPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, initializing } = useAuth();
@@ -43,17 +44,19 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const router = createBrowserRouter([
   {
-    path: '/login',
     element: (
       <PublicRoute>
-        <LoginPage />
+        <PublicLayout />
       </PublicRoute>
     ),
+    children: [
+      { path: '/login', element: <LoginPage /> },
+    ],
   },
   {
     element: (
       <ProtectedRoute>
-        <DashboardLayout />
+        <ProtectedLayout />
       </ProtectedRoute>
     ),
     children: [
@@ -63,6 +66,7 @@ const router = createBrowserRouter([
       { path: '/totp/disable', element: <TotpDisablePage /> },
       { path: '/password-change', element: <PasswordChangePage /> },
       { path: '/users', element: <UsersPage /> },
+      { path: '/audit', element: <AuditPage /> },
     ],
   },
   {
@@ -72,11 +76,7 @@ const router = createBrowserRouter([
 ]);
 
 const AppRouter: React.FC = () => {
-  return (
-    <Suspense fallback={<LoadingSpinner fullscreen />}>
-      <RouterProvider router={router} />
-    </Suspense>
-  );
+  return <RouterProvider router={router} />;
 };
 
 export default AppRouter;

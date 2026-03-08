@@ -1,0 +1,49 @@
+{
+  "headerNav": [
+    {
+      "label": "Dashboard",
+      "href": "/",
+      "roles": ["admin", "superadmin"]
+    }
+  ],
+  "sideNav": [
+    {
+      "label": "Dashboard",
+      "href": "/",
+      "roles": ["admin", "superadmin"]
+    },
+    {
+      "label": "User Operations",
+      "roles": ["admin", "superadmin"],
+      "defaultExpanded": true,
+      "children": [
+        {
+          "label": "Change Password",
+          "href": "/password-change",
+          "roles": ["admin", "superadmin"]
+        },
+        {
+          "label": "TOTP",
+          "href": "/totp",
+          "roles": ["admin", "superadmin"]
+        }
+      ]
+    },
+    {
+      "label": "Admin Operations",
+      "roles": ["superadmin"],
+      "children": [
+        {
+          "label": "User Management",
+          "href": "/users",
+          "roles": ["superadmin"]
+        },
+        {
+          "label": "Audit Log",
+          "href": "/audit",
+          "roles": ["superadmin"]
+        }
+      ]
+    }
+  ]
+}
