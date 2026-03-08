@@ -172,6 +172,31 @@
         "networkError": "Sunucuya bağlanılamıyor.",
         "forbidden": "Bu işlem için yetkiniz yok."
       }
+    },
+    "audit": {
+      "title": "Denetim Günlüğü",
+      "username": "Kullanıcı",
+      "action": "Eylem",
+      "detail": "Detay",
+      "ipAddress": "IP Adresi",
+      "timestamp": "Zaman",
+      "allActions": "Tüm Eylemler",
+      "filterUsername": "Kullanıcıya göre filtrele",
+      "filterIp": "IP'ye göre filtrele",
+      "applyFilters": "Filtrele",
+      "clearFilters": "Temizle",
+      "noResults": "Kayıt bulunamadı.",
+      "loading": "Yükleniyor...",
+      "itemsPerPage": "Sayfa başına kayıt",
+      "filterByAction": "Bu eyleme göre filtrele"
+    },
+    "pagination": {
+      "backwardText": "Önceki sayfa",
+      "forwardText": "Sonraki sayfa",
+      "itemsPerPageText": "Sayfa başına:",
+      "ofText": "/",
+      "itemsText": "kayıt",
+      "pagesText": "sayfa"
     }
   },
   "en": {
@@ -346,6 +371,31 @@
         "networkError": "Cannot connect to server.",
         "forbidden": "You do not have permission for this action."
       }
+    },
+    "audit": {
+      "title": "Audit Log",
+      "username": "User",
+      "action": "Action",
+      "detail": "Detail",
+      "ipAddress": "IP Address",
+      "timestamp": "Time",
+      "allActions": "All Actions",
+      "filterUsername": "Filter by username",
+      "filterIp": "Filter by IP address",
+      "applyFilters": "Apply",
+      "clearFilters": "Clear",
+      "noResults": "No records found.",
+      "loading": "Loading...",
+      "itemsPerPage": "Items per page",
+      "filterByAction": "Filter by this action"
+    },
+    "pagination": {
+      "backwardText": "Previous page",
+      "forwardText": "Next page",
+      "itemsPerPageText": "Items per page:",
+      "ofText": "of",
+      "itemsText": "items",
+      "pagesText": "pages"
     }
   }
 }

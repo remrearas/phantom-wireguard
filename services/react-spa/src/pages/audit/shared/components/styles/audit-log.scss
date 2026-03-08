@@ -1,0 +1,77 @@
+@use '@carbon/react/scss/spacing' as spacing;
+
+.audit-log {
+  width: 100%;
+}
+
+// ── Action column header — filter button + popover ────────────────
+
+.audit-log__action-header {
+  // Override Carbon's default header padding to fit button
+  .cds--table-header-label {
+    display: flex;
+    align-items: center;
+    gap: spacing.$spacing-03;
+  }
+}
+
+.audit-log__action-popover-anchor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.audit-log__filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  color: var(--cds-icon-secondary);
+  transition: background-color 70ms ease, color 70ms ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: var(--cds-layer-hover);
+    color: var(--cds-icon-primary);
+  }
+
+  &--active {
+    color: var(--cds-interactive);
+    border-color: var(--cds-interactive);
+  }
+}
+
+.audit-log__action-popover-content {
+  min-width: 14rem;
+  padding: spacing.$spacing-03;
+}
+
+// ── Detail cell — truncate long JSON ─────────────────────────────
+
+.audit-log__detail {
+  font-family: var(--cds-code-02-font-family, 'IBM Plex Mono', monospace), monospace;
+  font-size: 0.75rem;
+  color: var(--cds-text-secondary);
+  display: inline-block;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+// ── Empty state ───────────────────────────────────────────────────
+
+.audit-log__empty {
+  padding: spacing.$spacing-07 0;
+  text-align: center;
+  color: var(--cds-text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+}
