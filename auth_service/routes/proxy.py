@@ -69,7 +69,7 @@ async def proxy(
                   user_id=user_id)
         return JSONResponse(
             status_code=413,
-            content={"ok": False, "error": "Request body too large"},
+            content={"ok": False, "error_code": "BODY_TOO_LARGE"},
         )
 
     headers = {}
@@ -91,7 +91,7 @@ async def proxy(
                   user_id=user_id)
         return JSONResponse(
             status_code=502,
-            content={"ok": False, "error": "Service temporarily unavailable"},
+            content={"ok": False, "error_code": "SERVICE_UNAVAILABLE"},
         )
 
     content_type = response.headers.get("content-type", "")

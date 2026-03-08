@@ -62,9 +62,7 @@ def load_auth_config() -> AuthConfig:
         host=os.environ.get("AUTH_HOST", "0.0.0.0"),
         port=int(os.environ.get("AUTH_PORT", "8443")),
         log_level=os.environ.get("AUTH_LOG_LEVEL", "info"),
-        proxy_url=os.environ.get(
-            "AUTH_PROXY_URL", "unix:///var/run/phantom/daemon.sock"
-        ),
+        proxy_url=os.environ.get("AUTH_PROXY_URL", "unix:///var/run/phantom/daemon.sock"),
         db_dir=os.environ.get("AUTH_DB_DIR", "/var/lib/phantom/auth"),
         secrets_dir=os.environ.get("AUTH_SECRETS_DIR", "/run/secrets"),
         token_lifetime=int(os.environ.get("AUTH_TOKEN_LIFETIME", "86400")),

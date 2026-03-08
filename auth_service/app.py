@@ -103,19 +103,38 @@ def create_app(
     return app
 
 
+_STATUS_CODES: dict[int, str] = {
+    400: "BAD_REQUEST",
+    401: "UNAUTHORIZED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+    405: "METHOD_NOT_ALLOWED",
+    409: "CONFLICT",
+    413: "PAYLOAD_TOO_LARGE",
+    422: "VALIDATION_ERROR",
+    429: "TOO_MANY_REQUESTS",
+    500: "INTERNAL_ERROR",
+    502: "SERVICE_UNAVAILABLE",
+    503: "SERVICE_UNAVAILABLE",
+}
+
+
 def _register_error_handlers(app: FastAPI) -> None:
-    """Register global exception handlers — all errors return ApiErr envelope."""
+    """Register global exception handlers — all errors return ApiErr envelope with error_code."""
 
     @app.exception_handler(HTTPException)
     async def _http_error(_request, exc):
+        error_code = getattr(exc, "error_code", None) or _STATUS_CODES.get(
+            exc.status_code, "UNKNOWN_ERROR"
+        )
         return JSONResponse(
             status_code=exc.status_code,
-            content={"ok": False, "error": exc.detail},
+            content={"ok": False, "error_code": error_code},
         )
 
     @app.exception_handler(RequestValidationError)
-    async def _validation(_request, exc):
+    async def _validation(_request, _exc):
         return JSONResponse(
             status_code=422,
-            content={"ok": False, "error": str(exc)},
+            content={"ok": False, "error_code": "VALIDATION_ERROR"},
         )
