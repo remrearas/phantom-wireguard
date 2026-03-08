@@ -13,6 +13,7 @@ export type ApiResponse<T> = ApiOk<T> | ApiErr;
 type SessionExpiredHandler = () => void;
 
 const AUTH_PATHS = ['/auth/login', '/auth/mfa/verify', '/auth/totp/backup', '/auth/totp/setup', '/auth/totp/confirm', '/auth/totp/disable', '/auth/password/verify', '/auth/password/change'];
+const SERVER_ERROR_PATH = '/server-error';
 
 class ApiClient {
   private onSessionExpired: SessionExpiredHandler | null = null;
@@ -23,6 +24,12 @@ class ApiClient {
 
   private getToken(): string | null {
     return localStorage.getItem('token');
+  }
+
+  private redirectToServerError(): void {
+    if (window.location.pathname !== SERVER_ERROR_PATH) {
+      window.location.href = SERVER_ERROR_PATH;
+    }
   }
 
   async request<T>(method: string, path: string, body?: unknown): Promise<ApiResponse<T>> {
@@ -43,7 +50,13 @@ class ApiClient {
         body: body ? JSON.stringify(body) : undefined,
       });
     } catch {
+      this.redirectToServerError();
       return { ok: false, error: 'NETWORK_ERROR' };
+    }
+
+    if (response.status >= 500) {
+      this.redirectToServerError();
+      return { ok: false, error: 'SERVER_ERROR' };
     }
 
     if (response.status === 401 && !AUTH_PATHS.includes(path)) {
