@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
-import { apiClient, type ApiResponse } from '@shared/api/client';
+import React, { createContext, useContext, useCallback, useMemo, ReactNode } from 'react';
+import useSWR, { mutate as globalMutate } from 'swr';
+import { swrFetcher, USER_KEY } from '@shared/api/swrFetcher';
 
 export interface UserInfo {
   id: string;
@@ -12,33 +13,38 @@ export interface UserInfo {
 
 interface UserContextValue {
   user: UserInfo | null;
+  isLoading: boolean;
   isSuperadmin: boolean;
-  fetchUser: () => Promise<void>;
+  mutateUser: () => Promise<void>;
   clearUser: () => void;
-  setUser: (user: UserInfo) => void;
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const { data: user = null, isLoading, mutate } = useSWR<UserInfo | null>(
+    USER_KEY,
+    swrFetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 1000,
+    },
+  );
 
-  const fetchUser = useCallback(async () => {
-    const res = (await apiClient.get('/auth/me')) as ApiResponse<UserInfo>;
-    if (res.ok) {
-      setUser(res.data);
-    }
-  }, []);
+  const mutateUser = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
 
   const clearUser = useCallback(() => {
-    setUser(null);
+    void globalMutate(USER_KEY, null, false);
   }, []);
 
   const isSuperadmin = user?.role === 'superadmin';
 
   const value = useMemo(
-    () => ({ user, isSuperadmin, fetchUser, clearUser, setUser }),
-    [user, isSuperadmin, fetchUser, clearUser]
+    () => ({ user, isLoading, isSuperadmin, mutateUser, clearUser }),
+    [user, isLoading, isSuperadmin, mutateUser, clearUser],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

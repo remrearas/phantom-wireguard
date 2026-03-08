@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, ReactNode } from 'react';
 import { apiClient, type ApiResponse } from '@shared/api/client';
-import { useUser, type UserInfo } from '@shared/contexts/UserContext';
+import { useUser } from '@shared/contexts/UserContext';
 
 interface LoginResponse {
   token: string;
@@ -32,8 +32,12 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
-  const [initializing, setInitializing] = useState(() => !!localStorage.getItem('token'));
-  const { setUser, clearUser } = useUser();
+  // Snapshot: was there a token on mount? SWR will be loading the initial fetch.
+  const [hadTokenOnMount] = useState(() => !!localStorage.getItem('token'));
+  const { isLoading: userLoading, mutateUser, clearUser } = useUser();
+
+  // initializing = token existed on mount AND SWR hasn't resolved yet
+  const initializing = hadTokenOnMount && userLoading;
 
   const clearSession = useCallback(() => {
     localStorage.removeItem('token');
@@ -46,51 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     apiClient.setSessionExpiredHandler(clearSession);
   }, [clearSession]);
 
-  const checkSession = useCallback(async () => {
-    if (!localStorage.getItem('token')) return;
-    const res = (await apiClient.get('/auth/me')) as ApiResponse<UserInfo>;
-    if (res.ok) {
-      setUser(res.data);
-    }
-  }, [setUser]);
-
-  // Initial token validation
-  useEffect(() => {
-    if (!token) {
-      setInitializing(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const validate = async () => {
-      const res = (await apiClient.get('/auth/me')) as ApiResponse<UserInfo>;
-      if (cancelled) return;
-
-      if (res.ok) {
-        setUser(res.data);
-      } else {
-        clearSession();
-      }
-      setInitializing(false);
-    };
-
-    void validate();
-    return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Visibility change — check session when tab becomes visible
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        checkSession();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [checkSession]);
-
-  // Sync token state with localStorage on route changes and same-tab removals
+  // Sync token state with localStorage on cross-tab storage events and same-tab removals
   useEffect(() => {
     const syncToken = () => {
       const stored = localStorage.getItem('token');
@@ -99,11 +59,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         clearUser();
       }
     };
-    // Listen for cross-tab storage events
     window.addEventListener('storage', syncToken);
-    // Listen for same-tab pushState/popState (route changes)
     window.addEventListener('popstate', syncToken);
-    // Patch pushState to detect SPA navigation
     const originalPushState = history.pushState.bind(history);
     history.pushState = (...args) => {
       originalPushState(...args);
@@ -116,10 +73,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [token, clearUser]);
 
-  const storeToken = useCallback((newToken: string) => {
+  const storeToken = useCallback(async (newToken: string) => {
     localStorage.setItem('token', newToken);
     setToken(newToken);
-  }, []);
+    await mutateUser();
+  }, [mutateUser]);
 
   const login = useCallback(
     async (username: string, password: string): Promise<LoginResult> => {
@@ -136,7 +94,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { status: 'mfa_required', mfa_token: res.data.mfa_token, expires_in: res.data.expires_in };
       }
 
-      storeToken(res.data.token);
+      await storeToken(res.data.token);
       return { status: 'ok' };
     },
     [storeToken]
@@ -153,7 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { status: 'error', error: res.error };
       }
 
-      storeToken(res.data.token);
+      await storeToken(res.data.token);
       return { status: 'ok' };
     },
     [storeToken]
@@ -170,7 +128,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { status: 'error', error: res.error };
       }
 
-      storeToken(res.data.token);
+      await storeToken(res.data.token);
       return { status: 'ok' };
     },
     [storeToken]
