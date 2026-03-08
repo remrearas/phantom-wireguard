@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiClient, type ApiResponse } from '@shared/api/client';
+import { apiClient } from '@shared/api/client';
 
 interface UseApiResult<T> {
   data: T | null;
@@ -20,7 +20,7 @@ export function useApi<T>(path: string | null): UseApiResult<T> {
     if (!current) return;
     setLoading(true);
     setError(null);
-    const res = (await apiClient.get(current)) as ApiResponse<T>;
+    const res = await apiClient.get<T>(current);
     if (pathRef.current !== current) return;
     if (res.ok) {
       setData(res.data);

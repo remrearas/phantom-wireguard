@@ -199,7 +199,7 @@ const ProtectedHeader: React.FC = () => {
                       key={item.label}
                       title={item.label}
                       isActive={hasActiveChild(item)}
-                      defaultExpanded={item.defaultExpanded ?? false}
+                      defaultExpanded={hasActiveChild(item) || (item.defaultExpanded ?? false)}
                     >
                       {item.children.map((child) => (
                         <SideNavMenuItem

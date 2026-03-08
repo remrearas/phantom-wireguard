@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, ReactNode } from 'react';
-import { apiClient, type ApiResponse } from '@shared/api/client';
+import { apiClient } from '@shared/api/client';
 import { useUser } from '@shared/contexts/UserContext';
 
 interface LoginResponse {
@@ -81,10 +81,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = useCallback(
     async (username: string, password: string): Promise<LoginResult> => {
-      const res = (await apiClient.post('/auth/login', {
+      const res = await apiClient.post<LoginResponse | MFARequiredResponse>('/auth/login', {
         username,
         password,
-      })) as ApiResponse<LoginResponse | MFARequiredResponse>;
+      });
 
       if (!res.ok) {
         return { status: 'error', error: res.error };
@@ -102,10 +102,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const verifyTotp = useCallback(
     async (mfaToken: string, code: string): Promise<LoginResult> => {
-      const res = (await apiClient.post('/auth/mfa/verify', {
+      const res = await apiClient.post<LoginResponse>('/auth/mfa/verify', {
         mfa_token: mfaToken,
         code,
-      })) as ApiResponse<LoginResponse>;
+      });
 
       if (!res.ok) {
         return { status: 'error', error: res.error };
@@ -119,10 +119,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const verifyBackupCode = useCallback(
     async (mfaToken: string, code: string): Promise<LoginResult> => {
-      const res = (await apiClient.post('/auth/totp/backup', {
+      const res = await apiClient.post<LoginResponse>('/auth/totp/backup', {
         mfa_token: mfaToken,
         code,
-      })) as ApiResponse<LoginResponse>;
+      });
 
       if (!res.ok) {
         return { status: 'error', error: res.error };
