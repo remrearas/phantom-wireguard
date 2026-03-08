@@ -23,7 +23,7 @@ interface SetupData {
 type WizardStep = 'password' | 'setup' | 'verify' | 'done' | 'failed';
 
 const TotpEnable: React.FC = () => {
-  const { user, fetchUser } = useUser();
+  const { user, mutateUser } = useUser();
   const { locale } = useLocale();
   const t = translate(locale);
   const navigate = useNavigate();
@@ -68,6 +68,7 @@ const TotpEnable: React.FC = () => {
     });
     setLoading(false);
     if (res.ok) {
+      await mutateUser();
       setStep('done');
     } else {
       if (res.error === 'Token expired') {
@@ -105,7 +106,7 @@ const TotpEnable: React.FC = () => {
               <p className="totp-wizard__done-text">
                 {t.settings.account.totp.enableSuccess}
               </p>
-              <Button kind="primary" renderIcon={ArrowLeft} onClick={async () => { await fetchUser(); navigate('/totp'); }}
+              <Button kind="primary" renderIcon={ArrowLeft} onClick={() => navigate('/totp')}
                 className="totp-wizard__done-btn">
                 {t.settings.account.totp.goBack}
               </Button>

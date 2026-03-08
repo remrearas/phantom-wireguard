@@ -25,10 +25,7 @@ const NotFoundPage: React.FC = () => {
           <DinoGame.Lazy theme="error" />
         </div>
         <div className="error-actions">
-          <Button renderIcon={ArrowLeft} onClick={() => navigate('/')} size="lg">
-            {t.errorPages.notFound.backHome}
-          </Button>
-          <Button kind="ghost" onClick={() => navigate(-1 as never)} size="lg">
+          <Button renderIcon={ArrowLeft} onClick={() => navigate(-1 as never)} size="lg">
             {t.errorPages.notFound.goBack}
           </Button>
         </div>

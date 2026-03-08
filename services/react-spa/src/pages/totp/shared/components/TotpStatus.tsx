@@ -13,23 +13,25 @@ const TotpStatus: React.FC = () => {
   const t = translate(locale);
   const navigate = useNavigate();
 
+  if (!user) return null;
+
   return (
     <div className="totp-status">
       <div className="totp-status__row">
         <span className="totp-status__label">{t.settings.account.totp.status}</span>
-        <Tag type={user?.totp_enabled ? 'green' : 'cool-gray'} size="sm">
-          {user?.totp_enabled ? t.settings.account.totp.enabled : t.settings.account.totp.disabled}
+        <Tag type={user.totp_enabled ? 'green' : 'cool-gray'} size="sm">
+          {user.totp_enabled ? t.settings.account.totp.enabled : t.settings.account.totp.disabled}
         </Tag>
       </div>
 
-      {!user?.totp_enabled && (
+      {!user.totp_enabled && (
         <Button kind="primary" size="md" renderIcon={ArrowRight}
           onClick={() => navigate('/totp/enable')}>
           {t.settings.account.totp.enable}
         </Button>
       )}
 
-      {user?.totp_enabled && (
+      {user.totp_enabled && (
         <Button kind="danger--tertiary" size="md" renderIcon={ArrowRight}
           onClick={() => navigate('/totp/disable')}>
           {t.settings.account.totp.disable}

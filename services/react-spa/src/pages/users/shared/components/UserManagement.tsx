@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Grid,
   Column,
@@ -20,10 +20,11 @@ import {
   TextInput,
   InlineNotification,
   Stack,
+  Modal,
 } from '@carbon/react';
 import { Add, Renew, Checkmark, Close } from '@carbon/icons-react';
 import { useUser } from '@shared/contexts/UserContext';
-import { useLocale } from '@shared/hooks';
+import { useApi, useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import { apiClient } from '@shared/api/client';
 import { Navigate } from 'react-router-dom';
@@ -70,14 +71,15 @@ const formatDate = (iso: string): string => {
 };
 
 const UserManagement: React.FC = () => {
-  const { user } = useUser();
+  const { user, mutateUser } = useUser();
   const { locale } = useLocale();
   const t = translate(locale);
 
   if (user?.role !== 'superadmin') return <Navigate to="/" replace />;
 
-  const [users, setUsers] = useState<UserInfo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: usersData, loading, refetch: refetchUsers } = useApi<UserInfo[]>('/auth/users');
+  const users = usersData ?? [];
+
   const [notification, setNotification] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [action, setAction] = useState<ActiveAction>(null);
   const [formPassword, setFormPassword] = useState('');
@@ -85,15 +87,6 @@ const UserManagement: React.FC = () => {
   const [disablePassword, setDisablePassword] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    const res = await apiClient.get<UserInfo[]>('/auth/users');
-    if (res.ok) setUsers(res.data);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const resetAction = () => {
     setAction(null);
@@ -117,7 +110,7 @@ const UserManagement: React.FC = () => {
     if (res.ok) {
       resetAction();
       setNotification({ kind: 'success', text: t.settings.users.createSuccess });
-      loadUsers();
+      refetchUsers();
     } else {
       setActionError(res.error.startsWith('User already exists') ? t.settings.users.userAlreadyExists : res.error);
     }
@@ -145,7 +138,7 @@ const UserManagement: React.FC = () => {
     if (res.ok) {
       resetAction();
       setNotification({ kind: 'success', text: t.settings.users.deleteSuccess });
-      loadUsers();
+      refetchUsers();
     } else {
       setActionError(res.error === 'Cannot delete yourself' ? t.settings.users.cannotDeleteSelf : res.error);
     }
@@ -163,7 +156,8 @@ const UserManagement: React.FC = () => {
     if (res.ok) {
       resetAction();
       setNotification({ kind: 'success', text: t.settings.account.totp.disableSuccess });
-      loadUsers();
+      if (user?.username === username) await mutateUser();
+      refetchUsers();
     } else {
       const msg = res.error === 'Invalid password' ? t.settings.account.totp.invalidPassword : res.error;
       setActionError(msg);
@@ -209,117 +203,170 @@ const UserManagement: React.FC = () => {
 
   return (
     <div className="um">
-      {notification && (
-        <InlineNotification kind={notification.kind} title={notification.text}
-          onCloseButtonClick={() => setNotification(null)} lowContrast className="um__notification" />
-      )}
 
-      {/* Action panels — above table, full width in Grid */}
-      {action?.type === 'create' && (
-        <Grid className="um__action-grid">
+      {/* ── Create User Modal ──────────────────────────────────── */}
+      <Modal
+        open={action?.type === 'create'}
+        modalHeading={t.settings.users.addUserTitle}
+        primaryButtonText={actionLoading ? t.loadingSpinner.loading : t.settings.users.confirm}
+        secondaryButtonText={t.settings.users.cancel}
+        primaryButtonDisabled={actionLoading || !formUsername || !allPassed}
+        onRequestClose={resetAction}
+        onRequestSubmit={handleCreateUser}
+        className="um__modal"
+        size="sm"
+      >
+        <Grid>
           <Column lg={16} md={8} sm={4}>
-            <div className="um__action-panel">
-              <h4 className="um__action-title">{t.settings.users.addUserTitle}</h4>
-              {actionError && <InlineNotification kind="error" title={actionError} lowContrast hideCloseButton />}
-              <Stack gap={4}>
-                <TextInput id="create-username" labelText={t.settings.users.username}
-                  placeholder={t.settings.users.usernamePlaceholder}
-                  value={formUsername} onChange={(e) => setFormUsername(e.target.value)} size="sm" autoFocus />
+            {actionError && (
+              <InlineNotification kind="error" title={actionError}
+                lowContrast hideCloseButton className="um__modal-error" />
+            )}
+            <Stack gap={5}>
+              <TextInput
+                id="create-username"
+                labelText={t.settings.users.username}
+                placeholder={t.settings.users.usernamePlaceholder}
+                value={formUsername}
+                onChange={(e) => setFormUsername(e.target.value)}
+                autoFocus
+              />
+              <div>
                 <div className="um__password-row">
-                  <PasswordInput id="create-password" labelText={t.settings.users.newPassword}
+                  <PasswordInput
+                    id="create-password"
+                    labelText={t.settings.users.newPassword}
                     placeholder={t.settings.users.newPasswordPlaceholder}
-                    value={formPassword} onChange={(e) => setFormPassword(e.target.value)} size="sm" />
-                  <Button kind="ghost" size="sm" renderIcon={Renew} hasIconOnly
+                    value={formPassword}
+                    onChange={(e) => setFormPassword(e.target.value)}
+                  />
+                  <Button kind="ghost" size="md" renderIcon={Renew} hasIconOnly
                     iconDescription={t.settings.users.generatePassword}
                     onClick={() => setFormPassword(generatePassword())} />
                 </div>
                 {renderChecklist()}
-                <div className="um__action-buttons">
-                  <Button kind="primary" size="sm" onClick={handleCreateUser}
-                    disabled={actionLoading || !formUsername || !allPassed}>
-                    {actionLoading ? t.loadingSpinner.loading : t.settings.users.confirm}
-                  </Button>
-                  <Button kind="ghost" size="sm" onClick={resetAction}>{t.settings.users.cancel}</Button>
-                </div>
-              </Stack>
-            </div>
-          </Column>
-        </Grid>
-      )}
-
-      {action?.type === 'password' && (
-        <Grid className="um__action-grid">
-          <Column lg={16} md={8} sm={4}>
-            <div className="um__action-panel">
-              <h4 className="um__action-title">{t.settings.users.changePasswordTitle}: {action.username}</h4>
-              {actionError && <InlineNotification kind="error" title={actionError} lowContrast hideCloseButton />}
-              <Stack gap={4}>
-                <div className="um__password-row">
-                  <PasswordInput id="change-password" labelText={t.settings.users.newPassword}
-                    placeholder={t.settings.users.newPasswordPlaceholder}
-                    value={formPassword} onChange={(e) => setFormPassword(e.target.value)} size="sm" autoFocus />
-                  <Button kind="ghost" size="sm" renderIcon={Renew} hasIconOnly
-                    iconDescription={t.settings.users.generatePassword}
-                    onClick={() => setFormPassword(generatePassword())} />
-                </div>
-                {renderChecklist()}
-                <div className="um__action-buttons">
-                  <Button kind="primary" size="sm" onClick={() => handleChangePassword(action.username)}
-                    disabled={actionLoading || !allPassed}>
-                    {actionLoading ? t.loadingSpinner.loading : t.settings.users.confirm}
-                  </Button>
-                  <Button kind="ghost" size="sm" onClick={resetAction}>{t.settings.users.cancel}</Button>
-                </div>
-              </Stack>
-            </div>
-          </Column>
-        </Grid>
-      )}
-
-      {action?.type === 'delete' && (
-        <Grid className="um__action-grid">
-          <Column lg={16} md={8} sm={4}>
-            <div className="um__action-panel um__action-panel--danger">
-              <h4 className="um__action-title">{t.settings.users.deleteUserTitle}</h4>
-              {actionError && <InlineNotification kind="error" title={actionError} lowContrast hideCloseButton />}
-              <p className="um__confirm-text">
-                <strong>{action.username}</strong> {t.settings.users.confirmDelete}
-              </p>
-              <div className="um__action-buttons">
-                <Button kind="danger" size="sm" onClick={() => handleDeleteUser(action.username)}
-                  disabled={actionLoading}>
-                  {actionLoading ? t.loadingSpinner.loading : t.settings.users.confirm}
-                </Button>
-                <Button kind="ghost" size="sm" onClick={resetAction}>{t.settings.users.cancel}</Button>
               </div>
-            </div>
+            </Stack>
           </Column>
         </Grid>
-      )}
+      </Modal>
 
-      {action?.type === 'disable-totp' && (
-        <Grid className="um__action-grid">
+      {/* ── Change Password Modal ──────────────────────────────── */}
+      <Modal
+        open={action?.type === 'password'}
+        modalHeading={action?.type === 'password'
+          ? `${t.settings.users.changePasswordTitle}: ${action.username}`
+          : ''}
+        primaryButtonText={actionLoading ? t.loadingSpinner.loading : t.settings.users.confirm}
+        secondaryButtonText={t.settings.users.cancel}
+        primaryButtonDisabled={actionLoading || !allPassed}
+        onRequestClose={resetAction}
+        onRequestSubmit={() => action?.type === 'password' && handleChangePassword(action.username)}
+        className="um__modal"
+        size="sm"
+      >
+        <Grid>
           <Column lg={16} md={8} sm={4}>
-            <div className="um__action-panel um__action-panel--danger">
-              <h4 className="um__action-title">{t.settings.account.totp.disableTitle}: {action.username}</h4>
-              {actionError && <InlineNotification kind="error" title={actionError} lowContrast hideCloseButton />}
-              <Stack gap={4}>
-                <p className="um__confirm-text">{t.settings.account.totp.passwordRequired}</p>
-                <PasswordInput id="disable-totp-pw" labelText={t.settings.account.totp.confirmPassword}
-                  value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)} size="sm" autoFocus />
-                <div className="um__action-buttons">
-                  <Button kind="danger" size="sm" onClick={() => handleDisableTotp(action.username)}
-                    disabled={actionLoading || !disablePassword}>
-                    {actionLoading ? t.loadingSpinner.loading : t.settings.users.confirm}
-                  </Button>
-                  <Button kind="ghost" size="sm" onClick={resetAction}>{t.settings.users.cancel}</Button>
+            {actionError && (
+              <InlineNotification kind="error" title={actionError}
+                lowContrast hideCloseButton className="um__modal-error" />
+            )}
+            <Stack gap={5}>
+              <div>
+                <div className="um__password-row">
+                  <PasswordInput
+                    id="change-password"
+                    labelText={t.settings.users.newPassword}
+                    placeholder={t.settings.users.newPasswordPlaceholder}
+                    value={formPassword}
+                    onChange={(e) => setFormPassword(e.target.value)}
+                    autoFocus
+                  />
+                  <Button kind="ghost" size="md" renderIcon={Renew} hasIconOnly
+                    iconDescription={t.settings.users.generatePassword}
+                    onClick={() => setFormPassword(generatePassword())} />
                 </div>
-              </Stack>
-            </div>
+                {renderChecklist()}
+              </div>
+            </Stack>
           </Column>
         </Grid>
+      </Modal>
+
+      {/* ── Delete User Modal ──────────────────────────────────── */}
+      <Modal
+        open={action?.type === 'delete'}
+        danger
+        modalHeading={t.settings.users.deleteUserTitle}
+        primaryButtonText={actionLoading ? t.loadingSpinner.loading : t.settings.users.confirm}
+        secondaryButtonText={t.settings.users.cancel}
+        primaryButtonDisabled={actionLoading}
+        onRequestClose={resetAction}
+        onRequestSubmit={() => action?.type === 'delete' && handleDeleteUser(action.username)}
+        className="um__modal"
+        size="sm"
+      >
+        <Grid>
+          <Column lg={16} md={8} sm={4}>
+            {actionError && (
+              <InlineNotification kind="error" title={actionError}
+                lowContrast hideCloseButton className="um__modal-error" />
+            )}
+            <p className="um__confirm-text">
+              <strong>{action?.type === 'delete' ? action.username : ''}</strong>{' '}
+              {t.settings.users.confirmDelete}
+            </p>
+          </Column>
+        </Grid>
+      </Modal>
+
+      {/* ── Disable TOTP Modal ─────────────────────────────────── */}
+      <Modal
+        open={action?.type === 'disable-totp'}
+        danger
+        modalHeading={action?.type === 'disable-totp'
+          ? `${t.settings.account.totp.disableTitle}: ${action.username}`
+          : ''}
+        primaryButtonText={actionLoading ? t.loadingSpinner.loading : t.settings.users.confirm}
+        secondaryButtonText={t.settings.users.cancel}
+        primaryButtonDisabled={actionLoading || !disablePassword}
+        onRequestClose={resetAction}
+        onRequestSubmit={() => action?.type === 'disable-totp' && handleDisableTotp(action.username)}
+        className="um__modal"
+        size="sm"
+      >
+        <Grid>
+          <Column lg={16} md={8} sm={4}>
+            {actionError && (
+              <InlineNotification kind="error" title={actionError}
+                lowContrast hideCloseButton className="um__modal-error" />
+            )}
+            <Stack gap={5}>
+              <p className="um__confirm-text">{t.settings.account.totp.passwordRequired}</p>
+              <PasswordInput
+                id="disable-totp-pw"
+                labelText={t.settings.account.totp.confirmPassword}
+                value={disablePassword}
+                onChange={(e) => setDisablePassword(e.target.value)}
+                autoFocus
+              />
+            </Stack>
+          </Column>
+        </Grid>
+      </Modal>
+
+      {/* ── Notification ──────────────────────────────────────── */}
+      {notification && (
+        <InlineNotification
+          kind={notification.kind}
+          title={notification.text}
+          onCloseButtonClick={() => setNotification(null)}
+          lowContrast
+          className="um__notification"
+        />
       )}
 
+      {/* ── Users Table ───────────────────────────────────────── */}
       <DataTable rows={rows} headers={headers}>
         {({ rows: tableRows, headers: tableHeaders, getHeaderProps, getRowProps, getTableProps, getTableContainerProps }) => (
           <TableContainer {...getTableContainerProps()}>

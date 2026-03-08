@@ -1,3 +1,5 @@
+// noinspection JSUnusedGlobalSymbols
+
 declare module '*.mdx' {
   import type { ComponentType } from 'react';
   const Component: ComponentType;
