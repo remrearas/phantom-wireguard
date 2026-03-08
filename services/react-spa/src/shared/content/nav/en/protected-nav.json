@@ -13,18 +13,29 @@
       "roles": ["admin", "superadmin"]
     },
     {
-      "label": "User Operations",
+      "label": "Daemon",
       "roles": ["admin", "superadmin"],
       "defaultExpanded": true,
       "children": [
         {
+          "label": "Clients",
+          "href": "/vpn/clients",
+          "roles": ["admin", "superadmin"]
+        }
+      ]
+    },
+    {
+      "label": "User Operations",
+      "roles": ["admin", "superadmin"],
+      "children": [
+        {
           "label": "Change Password",
-          "href": "/password-change",
+          "href": "/account/password-change",
           "roles": ["admin", "superadmin"]
         },
         {
           "label": "TOTP",
-          "href": "/totp",
+          "href": "/account/totp",
           "roles": ["admin", "superadmin"]
         }
       ]
@@ -32,15 +43,16 @@
     {
       "label": "Admin Operations",
       "roles": ["superadmin"],
+      "defaultExpanded": true,
       "children": [
         {
           "label": "User Management",
-          "href": "/users",
+          "href": "/admin/users",
           "roles": ["superadmin"]
         },
         {
           "label": "Audit Log",
-          "href": "/audit",
+          "href": "/admin/audit",
           "roles": ["superadmin"]
         }
       ]

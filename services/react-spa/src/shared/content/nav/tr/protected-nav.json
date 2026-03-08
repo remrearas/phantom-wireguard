@@ -13,17 +13,29 @@
       "roles": ["admin", "superadmin"]
     },
     {
+      "label": "Daemon",
+      "roles": ["admin", "superadmin"],
+      "defaultExpanded": true,
+      "children": [
+        {
+          "label": "İstemciler",
+          "href": "/vpn/clients",
+          "roles": ["admin", "superadmin"]
+        }
+      ]
+    },
+    {
       "label": "Kullanıcı İşlemleri",
       "roles": ["admin", "superadmin"],
       "children": [
         {
           "label": "Şifre Değiştir",
-          "href": "/password-change",
+          "href": "/account/password-change",
           "roles": ["admin", "superadmin"]
         },
         {
           "label": "TOTP",
-          "href": "/totp",
+          "href": "/account/totp",
           "roles": ["admin", "superadmin"]
         }
       ]
@@ -31,15 +43,16 @@
     {
       "label": "Yönetici İşlemleri",
       "roles": ["superadmin"],
+      "defaultExpanded": true,
       "children": [
         {
           "label": "Kullanıcı Yönetimi",
-          "href": "/users",
+          "href": "/admin/users",
           "roles": ["superadmin"]
         },
         {
           "label": "Denetim Günlüğü",
-          "href": "/audit",
+          "href": "/admin/audit",
           "roles": ["superadmin"]
         }
       ]

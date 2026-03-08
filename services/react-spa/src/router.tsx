@@ -5,78 +5,79 @@ import LoadingSpinner from '@shared/components/ui/LoadingSpinner';
 import ProtectedLayout from '@shared/components/layout/ProtectedLayout';
 import PublicLayout from '@shared/components/layout/PublicLayout';
 import ErrorPage from '@shared/pages/error/ErrorPage';
+import ServerErrorPage from '@shared/pages/error/ServerErrorPage';
+
+// ── public ────────────────────────────────────────────────────────
 import LoginPage from '@pages/login/LoginPage';
+
+// ── account ───────────────────────────────────────────────────────
 import DashboardPage from '@pages/dashboard/pages/index/DashboardPage';
-import TotpPage from '@pages/totp/pages/index/TotpPage';
-import TotpEnablePage from '@pages/totp/pages/enable/TotpEnablePage';
-import TotpDisablePage from '@pages/totp/pages/disable/TotpDisablePage';
-import PasswordChangePage from '@pages/password-change/pages/index/PasswordChangePage';
-import UsersPage from '@pages/users/pages/index/UsersPage';
-import AuditPage from '@pages/audit/pages/index/AuditPage';
+import TotpPage from '@pages/account/totp/pages/index/TotpPage';
+import TotpEnablePage from '@pages/account/totp/pages/enable/TotpEnablePage';
+import TotpDisablePage from '@pages/account/totp/pages/disable/TotpDisablePage';
+import PasswordChangePage from '@pages/account/password-change/pages/index/PasswordChangePage';
+
+// ── admin ─────────────────────────────────────────────────────────
+import UsersPage from '@pages/admin/users/pages/index/UsersPage';
+import AuditPage from '@pages/admin/audit/pages/index/AuditPage';
+
+// ── vpn ───────────────────────────────────────────────────────────
+import ClientsPage from '@pages/vpn/clients/pages/index/ClientsPage';
+
+// ── Route guards ──────────────────────────────────────────────────
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, initializing } = useAuth();
 
-  if (initializing) {
-    return <LoadingSpinner fullscreen />;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (initializing) return <LoadingSpinner fullscreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, initializing } = useAuth();
 
-  if (initializing) {
-    return <LoadingSpinner fullscreen />;
-  }
-
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
+  if (initializing) return <LoadingSpinner fullscreen />;
+  if (isAuthenticated) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
+// ── Router ────────────────────────────────────────────────────────
+
 const router = createBrowserRouter([
+  // Public
   {
-    element: (
-      <PublicRoute>
-        <PublicLayout />
-      </PublicRoute>
-    ),
+    element: <PublicRoute><PublicLayout /></PublicRoute>,
     children: [
       { path: '/login', element: <LoginPage /> },
     ],
   },
+
+  // Protected
   {
-    element: (
-      <ProtectedRoute>
-        <ProtectedLayout />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute><ProtectedLayout /></ProtectedRoute>,
     children: [
-      { path: '/', element: <DashboardPage /> },
-      { path: '/totp', element: <TotpPage /> },
-      { path: '/totp/enable', element: <TotpEnablePage /> },
-      { path: '/totp/disable', element: <TotpDisablePage /> },
-      { path: '/password-change', element: <PasswordChangePage /> },
-      { path: '/users', element: <UsersPage /> },
-      { path: '/audit', element: <AuditPage /> },
+      // account
+      { path: '/',                         element: <DashboardPage /> },
+      { path: '/account/totp',             element: <TotpPage /> },
+      { path: '/account/totp/enable',      element: <TotpEnablePage /> },
+      { path: '/account/totp/disable',     element: <TotpDisablePage /> },
+      { path: '/account/password-change',  element: <PasswordChangePage /> },
+
+      // admin
+      { path: '/admin/users',              element: <UsersPage /> },
+      { path: '/admin/audit',              element: <AuditPage /> },
+
+      // vpn
+      { path: '/vpn/clients',              element: <ClientsPage /> },
     ],
   },
-  {
-    path: '*',
-    element: <ErrorPage />,
-  },
+
+  // Error pages
+  { path: '/server-error', element: <ServerErrorPage /> },
+  { path: '*',             element: <ErrorPage /> },
 ]);
 
-const AppRouter: React.FC = () => {
-  return <RouterProvider router={router} />;
-};
+const AppRouter: React.FC = () => <RouterProvider router={router} />;
 
 export default AppRouter;

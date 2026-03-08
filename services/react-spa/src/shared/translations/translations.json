@@ -72,9 +72,15 @@
       "serverError": {
         "code": "500",
         "title": "Sunucu Hatası",
-        "description": "Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        "description": "Sunucu bağlantısı kesildi. Otomatik olarak yeniden bağlanmaya çalışılıyor...",
         "backHome": "Ana Sayfa",
-        "reload": "Sayfayı Yenile"
+        "reload": "Sayfayı Yenile",
+        "checking": "Bağlantı kontrol ediliyor...",
+        "retryIn": "Sonraki kontrol",
+        "secondsShort": "sn",
+        "restored": "Bağlantı Sağlandı!",
+        "goToDashboard": "Panele Git",
+        "attempt": "Deneme"
       }
     },
     "dashboard": {
@@ -190,6 +196,47 @@
       "itemsPerPage": "Sayfa başına kayıt",
       "filterByAction": "Bu eyleme göre filtrele"
     },
+    "daemon": {
+      "checking": "Daemon bağlantısı kontrol ediliyor...",
+      "unavailable": "Daemon Erişilemiyor",
+      "unavailableDesc": "WireGuard daemon servisi şu anda yanıt vermiyor. Lütfen servisin çalıştığını kontrol edin.",
+      "retry": "Tekrar Dene"
+    },
+    "clients": {
+      "title": "İstemciler",
+      "name": "Ad",
+      "ipv4": "IPv4",
+      "ipv6": "IPv6",
+      "publicKey": "Açık Anahtar",
+      "privateKey": "Özel Anahtar",
+      "presharedKey": "Ön Paylaşımlı Anahtar",
+      "createdAt": "Oluşturulma",
+      "addClient": "İstemci Ekle",
+      "revokeClient": "İptal Et",
+      "getConfig": "Yapılandırma Al",
+      "configVersion": "Sürüm",
+      "configExport": "İstemci Yapılandırması",
+      "confirmRevoke": "adlı istemciyi iptal etmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "noClients": "İstemci bulunamadı.",
+      "filterName": "İsme göre filtrele",
+      "createTitle": "Yeni İstemci Oluştur",
+      "namePlaceholder": "harf, rakam, - veya _",
+      "nameHelperText": "1-64 karakter",
+      "revokeSuccess": "İstemci başarıyla iptal edildi.",
+      "createSuccess": "İstemci başarıyla oluşturuldu.",
+      "copyKey": "Anahtarı kopyala",
+      "loadingDetail": "Detaylar yükleniyor...",
+      "v4": "IPv4 (WireGuard)",
+      "v6": "IPv6 (WireGuard)",
+      "hybrid": "Hibrit (Dual Stack)",
+      "configHint": "Bu yapılandırmayı WireGuard istemcinize aktarın.",
+      "nameInvalid": "Geçersiz isim. Yalnızca harf, rakam, - veya _ kullanın.",
+      "showQr": "QR Kod Göster",
+      "getKeys": "Anahtarları Al",
+      "keysTitle": "İstemci Anahtarları",
+      "showKey": "Göster",
+      "hideKey": "Gizle"
+    },
     "pagination": {
       "backwardText": "Önceki sayfa",
       "forwardText": "Sonraki sayfa",
@@ -271,9 +318,15 @@
       "serverError": {
         "code": "500",
         "title": "Server Error",
-        "description": "An unexpected error occurred. Please try again later.",
+        "description": "Server connection lost. Automatically attempting to reconnect...",
         "backHome": "Home",
-        "reload": "Reload Page"
+        "reload": "Reload Page",
+        "checking": "Checking connection...",
+        "retryIn": "Next check in ",
+        "secondsShort": "s",
+        "restored": "Connection Restored!",
+        "goToDashboard": "Go to Dashboard",
+        "attempt": "Attempt"
       }
     },
     "dashboard": {
@@ -388,6 +441,47 @@
       "loading": "Loading...",
       "itemsPerPage": "Items per page",
       "filterByAction": "Filter by this action"
+    },
+    "daemon": {
+      "checking": "Checking daemon connection...",
+      "unavailable": "Daemon Unavailable",
+      "unavailableDesc": "The WireGuard daemon service is not responding. Please check that the service is running.",
+      "retry": "Retry"
+    },
+    "clients": {
+      "title": "Clients",
+      "name": "Name",
+      "ipv4": "IPv4",
+      "ipv6": "IPv6",
+      "publicKey": "Public Key",
+      "privateKey": "Private Key",
+      "presharedKey": "Preshared Key",
+      "createdAt": "Created",
+      "addClient": "Add Client",
+      "revokeClient": "Revoke",
+      "getConfig": "Get Config",
+      "configVersion": "Version",
+      "configExport": "Client Configuration",
+      "confirmRevoke": "Are you sure you want to revoke this client? This action cannot be undone.",
+      "noClients": "No clients found.",
+      "filterName": "Filter by name",
+      "createTitle": "Create New Client",
+      "namePlaceholder": "letters, numbers, - or _",
+      "nameHelperText": "1-64 characters",
+      "revokeSuccess": "Client revoked successfully.",
+      "createSuccess": "Client created successfully.",
+      "copyKey": "Copy key",
+      "loadingDetail": "Loading details...",
+      "v4": "IPv4 (WireGuard)",
+      "v6": "IPv6 (WireGuard)",
+      "hybrid": "Hybrid (Dual Stack)",
+      "configHint": "Import this configuration into your WireGuard client.",
+      "nameInvalid": "Invalid name. Use only letters, numbers, - or _.",
+      "showQr": "Show QR Code",
+      "getKeys": "Get Keys",
+      "keysTitle": "Client Keys",
+      "showKey": "Show",
+      "hideKey": "Hide"
     },
     "pagination": {
       "backwardText": "Previous page",
