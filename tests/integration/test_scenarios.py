@@ -49,8 +49,12 @@ Scenarios (executed in order):
      Superadmin: paginated response with correct schema.
      filter by action, username. Events from prior scenarios appear.
 
-  9. Rate limiting (last — poisons IP for the window duration)
-     Rapid failed logins from same IP → sliding window fills → 429.
+  9. Proxy audit logging
+     Proxy request (success or 502) creates proxy_request audit entry.
+     Entry has correct schema (method, path, status). Filterable via audit API.
+
+  10. Rate limiting (last — poisons IP for the window duration)
+      Rapid failed logins from same IP → sliding window fills → 429.
 """
 
 from __future__ import annotations
@@ -656,7 +660,88 @@ class TestAuditLog:
         http.delete(f"/auth/users/{self.TEMP_ADMIN}", headers={"Authorization": f"Bearer {admin_token}"})
 
 
-# ── Scenario 9: Rate limiting (last — poisons IP for the window) ─
+# ── Scenario 9: Proxy audit logging ─────────────────────────────
+
+
+class TestProxyAudit:
+    """Proxy requests create proxy_request audit entries."""
+
+    def test_01_proxy_request_creates_audit(self, http, admin_token):
+        """Any proxy request (success or 502) should produce an audit entry."""
+        # Make a proxy request — daemon may or may not be running
+        resp = http.get("/api/core/hello", headers=_bearer(admin_token))
+        # Accept 200 (daemon up) or 502 (daemon down) — both should audit
+        assert resp.status_code in (200, 502)
+
+    def test_02_audit_entry_exists(self, http, admin_token):
+        """proxy_request entries appear in GET /auth/audit."""
+        resp = http.get(
+            "/auth/audit?action=proxy_request",
+            headers=_bearer(admin_token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["total"] > 0, "Expected proxy_request audit entries"
+
+    def test_03_audit_entry_schema(self, http, admin_token):
+        """proxy_request entry has method, path, status in detail."""
+        resp = http.get(
+            "/auth/audit?action=proxy_request&limit=1",
+            headers=_bearer(admin_token),
+        )
+        assert resp.status_code == 200
+        items = resp.json()["data"]["items"]
+        assert len(items) > 0
+        item = items[0]
+        assert item["action"] == "proxy_request"
+        assert item["user_id"] is not None
+        assert item["username"] == ADMIN_USER
+        detail = item["detail"]
+        assert "method" in detail
+        assert "path" in detail
+        assert "status" in detail
+        assert isinstance(detail["status"], int)
+
+    def test_04_proxy_post_audited(self, http, admin_token):
+        """POST proxy request is also audited with correct method."""
+        # This may return 502 if daemon is down — that's fine
+        http.post(
+            "/api/core/clients/assign",
+            json={"name": "audit-test"},
+            headers=_bearer(admin_token),
+        )
+        resp = http.get(
+            "/auth/audit?action=proxy_request&limit=100&order=desc",
+            headers=_bearer(admin_token),
+        )
+        assert resp.status_code == 200
+        items = resp.json()["data"]["items"]
+        post_entries = [i for i in items if i["detail"].get("method") == "POST"]
+        assert len(post_entries) > 0, "Expected POST proxy audit entry"
+
+    def test_05_unauthenticated_proxy_no_audit(self, http, admin_token):
+        """Unauthenticated proxy request should NOT create audit entry."""
+        # Count current proxy_request entries
+        resp = http.get(
+            "/auth/audit?action=proxy_request",
+            headers=_bearer(admin_token),
+        )
+        count_before = resp.json()["data"]["total"]
+
+        # Unauthenticated request — should get 401, no audit
+        resp = http.get("/api/core/hello")
+        assert resp.status_code == 401
+
+        # Count should remain the same
+        resp = http.get(
+            "/auth/audit?action=proxy_request",
+            headers=_bearer(admin_token),
+        )
+        count_after = resp.json()["data"]["total"]
+        assert count_after == count_before, "Unauthenticated proxy should not create audit entry"
+
+
+# ── Scenario 10: Rate limiting (last — poisons IP for the window) ─
 
 
 class TestRateLimit:

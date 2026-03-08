@@ -20,11 +20,26 @@ import logging
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
+from auth_service.audit import audit_log
 from auth_service.crypto.jwt import TokenPayload
 from auth_service.middleware.auth import require_auth
 
 log = logging.getLogger("phantom-auth")
 router = APIRouter(prefix="/api", tags=["proxy"])
+
+
+def _resolve_user_id(request: Request, username: str) -> str | None:
+    """Resolve user_id from username for audit logging."""
+    user = request.app.state.db.get_user_by_username(username)
+    return user.id if user else None
+
+
+def _audit_detail(method: str, path: str, query: str, status: int) -> dict:
+    """Build audit detail dict for a proxy request."""
+    detail: dict = {"method": method, "path": f"/api/{path}", "status": status}
+    if query:
+        detail["query"] = query
+    return detail
 
 
 @router.api_route(
@@ -34,17 +49,24 @@ router = APIRouter(prefix="/api", tags=["proxy"])
 async def proxy(
     path: str,
     request: Request,
-    _payload: TokenPayload = Depends(require_auth),
+    payload: TokenPayload = Depends(require_auth),
 ):
     """Forward authenticated request to daemon over UDS."""
     config = request.app.state.config
     client = request.app.state.proxy_client
+    db = request.app.state.db
     target_url = f"{config.proxy_base_url}/api/{path}"
-    if request.url.query:
-        target_url = f"{target_url}?{request.url.query}"
+    query = str(request.url.query) if request.url.query else ""
+    if query:
+        target_url = f"{target_url}?{query}"
+
+    user_id = _resolve_user_id(request, payload.sub)
 
     body = await request.body()
     if len(body) > config.proxy_max_body:
+        audit_log(db, request, "proxy_request",
+                  detail=_audit_detail(request.method, path, query, 413),
+                  user_id=user_id)
         return JSONResponse(
             status_code=413,
             content={"ok": False, "error": "Request body too large"},
@@ -64,6 +86,9 @@ async def proxy(
         )
     except Exception as exc:
         log.error("Daemon proxy error: %s", exc)
+        audit_log(db, request, "proxy_request",
+                  detail=_audit_detail(request.method, path, query, 502),
+                  user_id=user_id)
         return JSONResponse(
             status_code=502,
             content={"ok": False, "error": "Service temporarily unavailable"},
@@ -74,6 +99,10 @@ async def proxy(
         data = response.json()
     else:
         data = {"ok": True, "data": response.text}
+
+    audit_log(db, request, "proxy_request",
+              detail=_audit_detail(request.method, path, query, response.status_code),
+              user_id=user_id)
 
     return JSONResponse(
         status_code=response.status_code,
