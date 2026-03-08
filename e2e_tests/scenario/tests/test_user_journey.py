@@ -28,6 +28,8 @@ Tests a complete user journey:
     11. Enable ghost mode
     12. Client E2E (wstunnel)
     13. Cleanup
+    14. Client pagination
+    15. Proxy audit log
 
 Run with -s to see live output:
     pytest e2e_tests/scenario/tests/test_user_journey.py -s
@@ -146,7 +148,7 @@ def daemon_ip(container_ip):
 # -- Test class ------------------------------------------------------
 
 class TestUserJourney:
-    """Full user journey through auth-service — 13 phases."""
+    """Full user journey through auth-service — 15 phases."""
 
     _NEW_PASSWORD: str = "Sc3n@r10-E2E-N3wP@ss!"
     _totp_secret: str = ""
@@ -852,6 +854,71 @@ class TestUserJourney:
         assert resp.json()["data"]["total"] == 0
 
         print(f"  Revoked   : {CLIENT_COUNT} clients — total now 0")
+        print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 15 — PROXY AUDIT LOG
+    # ================================================================
+
+    def test_proxy_audit(self, api):
+        """Verify proxy_request entries exist in audit log."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 15 — PROXY AUDIT LOG")
+        print(f"{_SEP}")
+
+        # ── Fetch audit log filtered by proxy_request ─────────
+        resp = api.get("/auth/audit?action=proxy_request&limit=100")
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        items = data["items"]
+        total = data["total"]
+
+        assert total > 0, "No proxy_request audit entries found"
+        print(f"\n  Total proxy_request entries: {total}")
+
+        # ── Verify entry schema ───────────────────────────────
+        sample = items[0]
+        assert "id" in sample
+        assert "user_id" in sample
+        assert sample["user_id"] is not None, "user_id should be resolved"
+        assert "username" in sample
+        assert sample["action"] == "proxy_request"
+        assert "detail" in sample
+        assert isinstance(sample["detail"], dict)
+        assert "method" in sample["detail"]
+        assert "path" in sample["detail"]
+        assert "status" in sample["detail"]
+        assert "ip_address" in sample
+        assert "timestamp" in sample
+        print(f"  Schema      : valid")
+
+        # ── Check known paths exist in audit ──────────────────
+        # Fetch all proxy entries (total may exceed single page due to pagination test)
+        all_items = items
+        if total > 100:
+            resp2 = api.get(f"/auth/audit?action=proxy_request&limit=100&order=asc")
+            assert resp2.status_code == 200
+            all_items = all_items + resp2.json()["data"]["items"]
+        paths = {item["detail"]["path"] for item in all_items}
+        expected_paths = ["/api/core/hello", "/api/core/clients/list"]
+        for ep in expected_paths:
+            assert ep in paths, f"Expected {ep} in audit paths — found: {paths}"
+        print(f"  Known paths : {', '.join(expected_paths)} ✓")
+
+        # ── Verify methods are recorded ───────────────────────
+        methods = {item["detail"]["method"] for item in items}
+        assert "GET" in methods, "GET method should be in audit"
+        assert "POST" in methods, "POST method should be in audit"
+        print(f"  Methods     : {', '.join(sorted(methods))}")
+
+        # ── Verify status codes are recorded ──────────────────
+        statuses = {item["detail"]["status"] for item in items}
+        assert 200 in statuses or 201 in statuses, "Success status should be in audit"
+        print(f"  Statuses    : {sorted(statuses)}")
+
         print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
 
         print(f"\n{_SEP}")
