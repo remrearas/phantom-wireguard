@@ -40,6 +40,7 @@ export default defineConfig(({ mode }) => {
         '@pages': path.resolve(__dirname, './src/pages'),
         '~@ibm/plex-sans': path.resolve(__dirname, './node_modules/@ibm/plex-sans'),
         '~@ibm/plex-mono': path.resolve(__dirname, './node_modules/@ibm/plex-mono'),
+        '~@ibm/plex-serif': path.resolve(__dirname, './node_modules/@ibm/plex-serif'),
         '~@ibm/plex': path.resolve(__dirname, './node_modules/@ibm/plex'),
       },
       extensions: ['.tsx', '.ts', '.jsx', '.js', '.mdx'],

@@ -1,0 +1,7 @@
+node_modules/
+results/
+!results/.gitkeep
+report/
+!report/.gitkeep
+container-data/**
+!container-data/.gitkeep
