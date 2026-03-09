@@ -109,13 +109,14 @@ const TotpEnable: React.FC = () => {
               </span>
             </div>
             <div className="totp-wizard__question totp-wizard__done">
-              <CheckmarkFilled size={64} className="totp-wizard__done-icon" />
+              <CheckmarkFilled size={64} className="totp-wizard__done-icon" data-testid="totp-enable-done" />
               <p className="totp-wizard__done-text">{t.settings.account.totp.enableSuccess}</p>
               <Button
                 kind="primary"
                 renderIcon={ArrowLeft}
                 onClick={() => navigate('/account/totp')}
                 className="totp-wizard__done-btn"
+                data-testid="totp-enable-goback"
               >
                 {t.settings.account.totp.goBack}
               </Button>
@@ -192,6 +193,7 @@ const TotpEnable: React.FC = () => {
                   labelText={t.settings.account.totp.confirmPassword}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  data-testid="totp-enable-password"
                   autoFocus
                 />
               </div>
@@ -211,14 +213,14 @@ const TotpEnable: React.FC = () => {
 
               <div className="totp-wizard__secret">
                 <span className="totp-wizard__secret-label">{t.settings.account.totp.secret}:</span>
-                <code className="totp-wizard__secret-value">{setupData.secret}</code>
+                <code className="totp-wizard__secret-value" data-testid="totp-enable-secret">{setupData.secret}</code>
                 <CopyButton
                   onClick={() => navigator.clipboard.writeText(setupData.secret)}
                   iconDescription={t.settings.account.totp.copied}
                 />
               </div>
 
-              <div className="totp-wizard__backup">
+              <div className="totp-wizard__backup" data-testid="totp-enable-backup">
                 <h4>{t.settings.account.totp.backupCodes}</h4>
                 <CodeSnippet type="multi" feedback={t.settings.account.totp.copied}>
                   {setupData.backup_codes.join('\n')}
@@ -247,6 +249,7 @@ const TotpEnable: React.FC = () => {
                   onChange={(e) => setTotpCode(e.target.value)}
                   maxLength={6}
                   pattern="[0-9]{6}"
+                  data-testid="totp-enable-code"
                   autoFocus
                 />
               </div>
@@ -275,6 +278,7 @@ const TotpEnable: React.FC = () => {
                   onClick={handleSetup}
                   disabled={loading || !password}
                   className="totp-wizard__nav-btn"
+                  data-testid="totp-enable-confirm"
                 >
                   {loading ? t.loadingSpinner.loading : t.settings.account.totp.confirm}
                 </Button>
@@ -290,6 +294,7 @@ const TotpEnable: React.FC = () => {
                   setError(null);
                 }}
                 className="totp-wizard__nav-btn"
+                data-testid="totp-enable-next"
               >
                 {t.settings.account.totp.confirm}
               </Button>
@@ -301,6 +306,7 @@ const TotpEnable: React.FC = () => {
                 onClick={handleConfirm}
                 disabled={loading || totpCode.length < 6}
                 className="totp-wizard__nav-btn"
+                data-testid="totp-enable-verify"
               >
                 {loading ? t.loadingSpinner.loading : t.login.totpSubmit}
               </Button>

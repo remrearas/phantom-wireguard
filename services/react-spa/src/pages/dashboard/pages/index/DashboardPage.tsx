@@ -12,7 +12,7 @@ const CONTENT_MAP: Record<string, React.ComponentType> = {
 const DashboardPage: React.FC = () => {
   const { locale } = useLocale();
   const Content = CONTENT_MAP[locale] || CONTENT_MAP.tr;
-  return <MDXPageRenderer content={Content} className="dashboard-page" />;
+  return <MDXPageRenderer content={Content} className="dashboard-page" data-testid="dashboard-page" />;
 };
 
 export default DashboardPage;

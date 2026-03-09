@@ -52,13 +52,14 @@ const TotpDisable: React.FC = () => {
               </span>
             </div>
             <div className="totp-wizard__question totp-wizard__done">
-              <CheckmarkFilled size={64} className="totp-wizard__done-icon" />
+              <CheckmarkFilled size={64} className="totp-wizard__done-icon" data-testid="totp-disable-done" />
               <p className="totp-wizard__done-text">{t.settings.account.totp.disableSuccess}</p>
               <Button
                 kind="primary"
                 renderIcon={ArrowLeft}
                 onClick={() => navigate('/account/totp')}
                 className="totp-wizard__done-btn"
+                data-testid="totp-disable-goback"
               >
                 {t.settings.account.totp.goBack}
               </Button>
@@ -97,6 +98,7 @@ const TotpDisable: React.FC = () => {
                 labelText={t.settings.account.totp.confirmPassword}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                data-testid="totp-disable-password"
                 autoFocus
               />
             </div>
@@ -115,6 +117,7 @@ const TotpDisable: React.FC = () => {
               onClick={handleDisable}
               disabled={loading || !password}
               className="totp-wizard__nav-btn"
+              data-testid="totp-disable-confirm"
             >
               {loading ? t.loadingSpinner.loading : t.settings.account.totp.confirm}
             </Button>

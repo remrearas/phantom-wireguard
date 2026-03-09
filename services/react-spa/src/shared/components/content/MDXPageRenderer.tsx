@@ -6,11 +6,12 @@ import './styles/MDXContent.scss';
 interface MDXPageRendererProps {
   content: React.ComponentType;
   className?: string;
+  'data-testid'?: string;
 }
 
-const MDXPageRenderer: React.FC<MDXPageRendererProps> = ({ content: Content, className = '' }) => {
+const MDXPageRenderer: React.FC<MDXPageRendererProps> = ({ content: Content, className = '', 'data-testid': testId }) => {
   return (
-    <section className={`mdx-page ${className}`}>
+    <section className={`mdx-page ${className}`} data-testid={testId}>
       <Grid>
         <Column lg={16} md={8} sm={4}>
           <MDXProvider>

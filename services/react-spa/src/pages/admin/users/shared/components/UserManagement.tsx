@@ -133,6 +133,7 @@ const UserManagement: React.FC = () => {
           onCloseButtonClick={() => setNotification(null)}
           lowContrast
           className="um__notification"
+          data-testid="um-notification"
         />
       )}
 
@@ -154,12 +155,13 @@ const UserManagement: React.FC = () => {
                   size="sm"
                   kind="primary"
                   onClick={() => setAction({ type: 'create' })}
+                  data-testid="um-add-user"
                 >
                   {t.settings.users.addUser}
                 </Button>
               </TableToolbarContent>
             </TableToolbar>
-            <Table {...getTableProps()} size="lg">
+            <Table {...getTableProps()} size="lg" data-testid="um-table">
               <TableHead>
                 <TableRow>
                   {tableHeaders.map((header) => {
@@ -175,8 +177,9 @@ const UserManagement: React.FC = () => {
               <TableBody>
                 {tableRows.map((row) => {
                   const { key: _key, ...rowProps } = getRowProps({ row });
+                  const rowUsername = row.cells.find((c) => c.id.split(':')[1] === 'username')?.value as string;
                   return (
-                    <TableRow key={row.id} {...rowProps}>
+                    <TableRow key={row.id} {...rowProps} data-testid={`um-row-${rowUsername}`}>
                       {row.cells.map((cell) => {
                         const ck = cell.id.split(':')[1];
                         if (ck === 'role') {
@@ -216,21 +219,24 @@ const UserManagement: React.FC = () => {
                           const hasTotp = target?.totp_enabled;
                           return (
                             <TableCell key={cell.id}>
-                              <OverflowMenu size="sm" flipped>
+                              <OverflowMenu size="sm" flipped data-testid={`um-overflow-${username}`}>
                                 <OverflowMenuItem
                                   itemText={t.settings.users.changePassword}
                                   onClick={() => setAction({ type: 'password', username })}
+                                  data-testid={`um-action-password-${username}`}
                                 />
                                 <OverflowMenuItem
                                   itemText={t.settings.account.totp.disable}
                                   disabled={!hasTotp}
                                   onClick={() => setAction({ type: 'disable-totp', username })}
+                                  data-testid={`um-action-disable-totp-${username}`}
                                 />
                                 <OverflowMenuItem
                                   itemText={t.settings.users.deleteUser}
                                   isDelete
                                   disabled={isSelf || isSA}
                                   onClick={() => setAction({ type: 'delete', username })}
+                                  data-testid={`um-action-delete-${username}`}
                                 />
                               </OverflowMenu>
                             </TableCell>

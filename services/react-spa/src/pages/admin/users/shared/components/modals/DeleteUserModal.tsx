@@ -49,12 +49,13 @@ const DeleteUserModal: React.FC<Props> = ({ open, username, t, onClose, onSucces
       onRequestSubmit={handleSubmit}
       className="um__modal"
       size="sm"
+      data-testid="um-delete-modal"
     >
       <Grid>
         <Column lg={16} md={8} sm={4}>
           <FormError error={error} className="um__modal-error" />
           <p className="um__confirm-text">
-            <strong>{username}</strong> {t.settings.users.confirmDelete}
+            <strong data-testid="um-delete-username">{username}</strong> {t.settings.users.confirmDelete}
           </p>
         </Column>
       </Grid>

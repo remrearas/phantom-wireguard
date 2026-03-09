@@ -19,7 +19,7 @@ const TotpStatus: React.FC = () => {
     <div className="totp-status">
       <div className="totp-status__row">
         <span className="totp-status__label">{t.settings.account.totp.status}</span>
-        <Tag type={user.totp_enabled ? 'green' : 'cool-gray'} size="sm">
+        <Tag type={user.totp_enabled ? 'green' : 'cool-gray'} size="sm" data-testid="totp-status-tag">
           {user.totp_enabled ? t.settings.account.totp.enabled : t.settings.account.totp.disabled}
         </Tag>
       </div>
@@ -30,6 +30,7 @@ const TotpStatus: React.FC = () => {
           size="md"
           renderIcon={ArrowRight}
           onClick={() => navigate('/account/totp/enable')}
+          data-testid="totp-enable-btn"
         >
           {t.settings.account.totp.enable}
         </Button>
@@ -41,6 +42,7 @@ const TotpStatus: React.FC = () => {
           size="md"
           renderIcon={ArrowRight}
           onClick={() => navigate('/account/totp/disable')}
+          data-testid="totp-disable-btn"
         >
           {t.settings.account.totp.disable}
         </Button>

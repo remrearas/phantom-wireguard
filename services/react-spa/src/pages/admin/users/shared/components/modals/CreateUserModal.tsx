@@ -62,6 +62,7 @@ const CreateUserModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => {
       onRequestSubmit={handleSubmit}
       className="um__modal"
       size="sm"
+      data-testid="um-create-modal"
     >
       <Grid>
         <Column lg={16} md={8} sm={4}>
@@ -73,6 +74,7 @@ const CreateUserModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => {
               placeholder={t.settings.users.usernamePlaceholder}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              data-testid="um-create-username"
               autoFocus
             />
             <div>
@@ -83,6 +85,7 @@ const CreateUserModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => {
                   placeholder={t.settings.users.newPasswordPlaceholder}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  data-testid="um-create-password"
                 />
                 <Button
                   kind="ghost"
@@ -91,9 +94,10 @@ const CreateUserModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => {
                   hasIconOnly
                   iconDescription={t.settings.users.generatePassword}
                   onClick={() => setPassword(generatePassword())}
+                  data-testid="um-create-generate"
                 />
               </div>
-              <ul className="um__checklist">
+              <ul className="um__checklist" data-testid="um-create-checklist">
                 {policyChecks.map((c) => {
                   const passed = c.test(password);
                   return (

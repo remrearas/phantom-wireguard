@@ -294,7 +294,7 @@ const AuditLog: React.FC = () => {
                     showHeader={false}
                   />
                 ) : (
-                  <Table {...getTableProps()} size="md">
+                  <Table {...getTableProps()} size="md" data-testid="audit-table">
                     <TableHead>
                       <TableRow>
                         {tableHeaders.map((header) => {
@@ -406,13 +406,14 @@ const AuditLog: React.FC = () => {
                                 return <TableCell key={cell.id}>{cell.value as string}</TableCell>;
                               })}
                               <TableCell key={`${row.id}-actions`}>
-                                <OverflowMenu size="sm" flipped>
+                                <OverflowMenu size="sm" flipped data-testid={`audit-overflow-${row.id}`}>
                                   <OverflowMenuItem
                                     itemText={t.audit.showDetail}
                                     onClick={() => {
                                       const entry = entryMap.get(row.id);
                                       if (entry) setSelectedEntry(entry);
                                     }}
+                                    data-testid={`audit-show-detail-${row.id}`}
                                   />
                                 </OverflowMenu>
                               </TableCell>

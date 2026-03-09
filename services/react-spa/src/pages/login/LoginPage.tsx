@@ -120,6 +120,7 @@ const LoginPage: React.FC = () => {
               onCloseButtonClick={() => setWarning(null)}
               lowContrast
               className="login-page__notification"
+              data-testid="login-warning"
             />
           </Column>
         )}
@@ -132,13 +133,14 @@ const LoginPage: React.FC = () => {
               onCloseButtonClick={() => setError(null)}
               lowContrast
               className="login-page__notification"
+              data-testid="login-error"
             />
           </Column>
         )}
 
         <Column lg={16} md={8} sm={4}>
           {!mfaToken ? (
-            <Form onSubmit={handleLogin}>
+            <Form onSubmit={handleLogin} data-testid="login-form">
               <Stack gap={6}>
                 <TextInput
                   id="username"
@@ -148,6 +150,7 @@ const LoginPage: React.FC = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
+                  data-testid="login-username"
                   required
                 />
                 <PasswordInput
@@ -157,6 +160,7 @@ const LoginPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
+                  data-testid="login-password"
                   required
                 />
                 <Button
@@ -164,13 +168,14 @@ const LoginPage: React.FC = () => {
                   renderIcon={ArrowRight}
                   disabled={loading || !username || !password}
                   className="login-page__submit"
+                  data-testid="login-submit"
                 >
                   {loading ? t.login.submitting : t.login.submit}
                 </Button>
               </Stack>
             </Form>
           ) : (
-            <Form onSubmit={handleTotp}>
+            <Form onSubmit={handleTotp} data-testid="login-totp-form">
               <Stack gap={6}>
                 {!useBackup ? (
                   <TextInput
@@ -183,6 +188,7 @@ const LoginPage: React.FC = () => {
                     maxLength={6}
                     pattern="[0-9]{6}"
                     autoComplete="one-time-code"
+                    data-testid="login-totp-code"
                     autoFocus
                     required
                   />
@@ -195,12 +201,13 @@ const LoginPage: React.FC = () => {
                     value={backupCode}
                     onChange={(e) => setBackupCode(e.target.value)}
                     maxLength={8}
+                    data-testid="login-backup-code"
                     autoFocus
                     required
                   />
                 )}
                 {mfaCountdown > 0 && (
-                  <p className="login-page__countdown">
+                  <p className="login-page__countdown" data-testid="login-countdown">
                     {t.login.countdown}: {Math.floor(mfaCountdown / 60)}:
                     {String(mfaCountdown % 60).padStart(2, '0')}
                   </p>
@@ -214,12 +221,14 @@ const LoginPage: React.FC = () => {
                     (useBackup ? backupCode.length < 6 : totpCode.length < 6)
                   }
                   className="login-page__submit"
+                  data-testid="login-totp-submit"
                 >
                   {loading ? t.login.submitting : t.login.totpSubmit}
                 </Button>
                 <button
                   type="button"
                   className="login-page__toggle-link"
+                  data-testid="login-toggle-backup"
                   onClick={() => {
                     setUseBackup(!useBackup);
                     setError(null);

@@ -62,6 +62,7 @@ const ChangePasswordModal: React.FC<Props> = ({ open, username, t, onClose, onSu
       onRequestSubmit={handleSubmit}
       className="um__modal"
       size="sm"
+      data-testid="um-password-modal"
     >
       <Grid>
         <Column lg={16} md={8} sm={4}>
@@ -75,6 +76,7 @@ const ChangePasswordModal: React.FC<Props> = ({ open, username, t, onClose, onSu
                   placeholder={t.settings.users.newPasswordPlaceholder}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  data-testid="um-password-input"
                   autoFocus
                 />
                 <Button
@@ -84,9 +86,10 @@ const ChangePasswordModal: React.FC<Props> = ({ open, username, t, onClose, onSu
                   hasIconOnly
                   iconDescription={t.settings.users.generatePassword}
                   onClick={() => setPassword(generatePassword())}
+                  data-testid="um-password-generate"
                 />
               </div>
-              <ul className="um__checklist">
+              <ul className="um__checklist" data-testid="um-password-checklist">
                 {policyChecks.map((c) => {
                   const passed = c.test(password);
                   return (

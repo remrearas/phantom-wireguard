@@ -139,6 +139,7 @@ const ProtectedHeader: React.FC = () => {
                 aria-label={t.header.logout}
                 onClick={handleLogout}
                 tooltipAlignment="end"
+                data-testid="header-logout"
               >
                 <Close size={20} />
               </HeaderGlobalAction>

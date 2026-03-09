@@ -49,6 +49,7 @@ const AuditDetailModal: React.FC<Props> = ({ open, entry, t, actionTagType, onCl
       onRequestSubmit={onClose}
       className="audit-log__modal"
       size="sm"
+      data-testid="audit-detail-modal"
     >
       <Grid>
         <Column lg={16} md={8} sm={4}>

@@ -125,7 +125,7 @@ const PasswordChangeWizard: React.FC = () => {
               </span>
             </div>
             <div className="totp-wizard__question totp-wizard__done">
-              <CheckmarkFilled size={64} className="totp-wizard__done-icon" />
+              <CheckmarkFilled size={64} className="totp-wizard__done-icon" data-testid="pwchange-done" />
               <p className="totp-wizard__done-text">{t.passwordChange.success}</p>
               <div className="pw-change__countdown">
                 <LogoutIcon size={20} />
@@ -155,6 +155,7 @@ const PasswordChangeWizard: React.FC = () => {
               lowContrast
               hideCloseButton
               className="totp-wizard__error"
+              data-testid="pwchange-error"
             />
           )}
 
@@ -169,6 +170,7 @@ const PasswordChangeWizard: React.FC = () => {
                   placeholder={t.passwordChange.currentPasswordPlaceholder}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
+                  data-testid="pwchange-current-password"
                   autoFocus
                 />
               </div>
@@ -186,6 +188,7 @@ const PasswordChangeWizard: React.FC = () => {
                   placeholder={t.passwordChange.newPasswordPlaceholder}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  data-testid="pwchange-new-password"
                   autoFocus
                 />
               </div>
@@ -241,6 +244,7 @@ const PasswordChangeWizard: React.FC = () => {
                   onClick={handleVerify}
                   disabled={loading || !currentPassword}
                   className="totp-wizard__nav-btn"
+                  data-testid="pwchange-verify-confirm"
                 >
                   {loading ? t.loadingSpinner.loading : t.passwordChange.confirm}
                 </Button>
@@ -257,6 +261,7 @@ const PasswordChangeWizard: React.FC = () => {
                   onClick={handleChange}
                   disabled={loading || !allPassed}
                   className="totp-wizard__nav-btn"
+                  data-testid="pwchange-change-confirm"
                 >
                   {loading ? t.loadingSpinner.loading : t.passwordChange.confirm}
                 </Button>
