@@ -42,8 +42,7 @@ const DisableTotpModal: React.FC<Props> = ({ open, username, isSelf, t, onClose,
       reset();
       onSuccess();
     } else {
-      const msg = res.error === 'Invalid password' ? t.settings.account.totp.invalidPassword : res.error;
-      setError(msg);
+      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
     }
   };
 

@@ -51,10 +51,7 @@ const TotpEnable: React.FC = () => {
       setSetupData(res.data);
       setStep('setup');
     } else {
-      const msg = res.error === 'Invalid password' ? t.settings.account.totp.invalidPassword
-        : res.error === 'TOTP already enabled' ? t.settings.account.totp.alreadyEnabled
-        : res.error;
-      setError(msg);
+      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
     }
   };
 
@@ -71,11 +68,11 @@ const TotpEnable: React.FC = () => {
       await mutateUser();
       setStep('done');
     } else {
-      if (res.error === 'Token expired') {
-        setError(t.settings.account.totp.setupExpired);
+      const msg = (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic;
+      if (res.error_code === 'TOKEN_EXPIRED') {
+        setError(msg);
         setStep('failed');
       } else {
-        const msg = res.error === 'Invalid TOTP code' ? t.settings.account.totp.invalidPassword : res.error;
         setError(msg);
       }
     }

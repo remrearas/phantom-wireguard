@@ -44,7 +44,7 @@ const ChangePasswordModal: React.FC<Props> = ({ open, username, t, onClose, onSu
       reset();
       onSuccess();
     } else {
-      setError(res.error);
+      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
     }
   };
 

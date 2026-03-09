@@ -16,23 +16,15 @@ import { translate } from '@shared/translations';
 import PhantomIcon from '@shared/components/ui/PhantomIcon';
 import './styles/LoginPage.scss';
 
-const ERROR_MAP: Record<string, (t: ReturnType<typeof translate>) => string> = {
-  'Invalid credentials':    (t) => t.login.error.invalidCredentials,
-  'Too many login attempts': (t) => t.login.error.rateLimited,
-  'Invalid TOTP code':      (t) => t.login.error.invalidTotp,
-  'Invalid backup code':    (t) => t.login.error.invalidBackupCode,
-  'NETWORK_ERROR':          (t) => t.login.error.networkError,
-};
-
 const LoginPage: React.FC = () => {
   const { login, verifyTotp, verifyBackupCode } = useAuth();
   const { locale } = useLocale();
   const t = translate(locale);
 
-  const localizeError = (raw: string): string => {
-    const mapper = ERROR_MAP[raw];
-    return mapper ? mapper(t) : raw;
-  };
+  const localizeError = (code: string): string =>
+    (t.auth_service_api_codes as Record<string, string>)[code]
+    ?? (t.client_side_api_codes as Record<string, string>)[code]
+    ?? code;
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

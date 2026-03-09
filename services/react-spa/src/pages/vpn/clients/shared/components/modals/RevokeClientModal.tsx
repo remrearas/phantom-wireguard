@@ -29,7 +29,7 @@ const RevokeClientModal: React.FC<Props> = ({ open, clientName, t, onClose, onSu
     if (res.ok) {
       onSuccess();
     } else {
-      setError(res.error);
+      setError((t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic);
     }
   };
 

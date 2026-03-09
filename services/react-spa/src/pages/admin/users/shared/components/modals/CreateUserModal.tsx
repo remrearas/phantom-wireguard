@@ -46,7 +46,7 @@ const CreateUserModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => {
       reset();
       onSuccess();
     } else {
-      setError(res.error.startsWith('User already exists') ? t.settings.users.userAlreadyExists : res.error);
+      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
     }
   };
 

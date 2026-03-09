@@ -37,7 +37,7 @@ const ClientKeysModal: React.FC<Props> = ({ open, clientName, t, onClose }) => {
     const res = await apiClient.post<ClientRecord>('/api/core/clients/get', { name: clientName });
     setLoading(false);
     if (res.ok) setDetail(res.data);
-    else setError(res.error);
+    else setError((t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic);
   }, [clientName]);
 
   // Fetch when opened, reset after close animation

@@ -59,7 +59,7 @@ const ClientConfigModal: React.FC<Props> = ({ open, clientName, t, onClose }) =>
         setPhase('select');
       }
     } else {
-      setError(res.error);
+      setError((t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic);
       setPhase('select');
     }
   };

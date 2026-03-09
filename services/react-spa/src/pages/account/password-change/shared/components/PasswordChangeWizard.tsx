@@ -49,10 +49,7 @@ const PasswordChangeWizard: React.FC = () => {
       setChangeToken(res.data.change_token);
       setStep('newpass');
     } else {
-      const msg = res.error === 'Invalid password'
-        ? t.passwordChange.error.invalidPassword
-        : res.error;
-      setError(msg);
+      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
     }
   };
 
@@ -70,10 +67,7 @@ const PasswordChangeWizard: React.FC = () => {
       sessionStorage.removeItem('auth_warning');
       setStep('done');
     } else {
-      const msg = res.error === 'Token expired'
-        ? t.passwordChange.error.invalidPassword
-        : res.error;
-      setError(msg);
+      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
     }
   };
 
