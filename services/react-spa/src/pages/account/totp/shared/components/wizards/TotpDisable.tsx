@@ -11,7 +11,7 @@ import '../common.scss';
 type DisableStep = 'password' | 'done';
 
 const TotpDisable: React.FC = () => {
-  const { user, mutateUser } = useUser();
+  const { user } = useUser();
   const { locale } = useLocale();
   const t = translate(locale);
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ const TotpDisable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!user?.totp_enabled && step !== 'done') return <Navigate to="/totp" replace />;
+  if (!user?.totp_enabled && step !== 'done') return <Navigate to="/account/totp" replace />;
 
   const totalSteps = 2;
   const currentStep = step === 'password' ? 1 : 2;
@@ -32,7 +32,6 @@ const TotpDisable: React.FC = () => {
     const res = await apiClient.post<{ message: string }>('/auth/totp/disable', { password });
     setLoading(false);
     if (res.ok) {
-      await mutateUser();
       setStep('done');
     } else {
       setError(

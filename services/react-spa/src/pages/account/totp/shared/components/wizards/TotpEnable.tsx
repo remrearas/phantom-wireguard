@@ -29,7 +29,7 @@ interface SetupData {
 type WizardStep = 'password' | 'setup' | 'verify' | 'done' | 'failed';
 
 const TotpEnable: React.FC = () => {
-  const { user, mutateUser } = useUser();
+  const { user } = useUser();
   const { locale } = useLocale();
   const t = translate(locale);
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ const TotpEnable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (user?.totp_enabled) return <Navigate to="/totp" replace />;
+  if (user?.totp_enabled) return <Navigate to="/account/totp" replace />;
 
   const totalSteps = 4;
   const currentStep = step === 'password' ? 1 : step === 'setup' ? 2 : step === 'verify' ? 3 : 4;
@@ -74,7 +74,6 @@ const TotpEnable: React.FC = () => {
     });
     setLoading(false);
     if (res.ok) {
-      await mutateUser();
       setStep('done');
     } else {
       const msg =
