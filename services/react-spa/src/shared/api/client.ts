@@ -5,7 +5,9 @@ export interface ApiOk<T> {
 
 export interface ApiErr {
   ok: false;
-  error: string;
+  error_code?: string;  // auth-service errors + client-side synthetic codes
+  code?: string;        // daemon errors
+  error?: string;       // daemon: full English message for debugging
 }
 
 export type ApiResponse<T> = ApiOk<T> | ApiErr;
@@ -51,21 +53,21 @@ class ApiClient {
       });
     } catch {
       this.redirectToServerError();
-      return { ok: false, error: 'NETWORK_ERROR' };
+      return { ok: false, error_code: 'NETWORK_ERROR' };
     }
 
     if (response.status >= 500) {
       this.redirectToServerError();
-      return { ok: false, error: 'SERVER_ERROR' };
+      return { ok: false, error_code: 'SERVER_ERROR' };
     }
 
     if (response.status === 401 && !AUTH_PATHS.includes(path)) {
       this.onSessionExpired?.();
-      return { ok: false, error: 'SESSION_EXPIRED' };
+      return { ok: false, error_code: 'SESSION_EXPIRED' };
     }
 
     if (response.status === 403) {
-      return { ok: false, error: 'FORBIDDEN' };
+      return { ok: false, error_code: 'FORBIDDEN' };
     }
 
     return response.json();

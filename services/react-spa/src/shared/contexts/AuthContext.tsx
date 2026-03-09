@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (!res.ok) {
-        return { status: 'error', error: res.error };
+        return { status: 'error', error: res.error_code ?? '' };
       }
 
       if ('mfa_required' in res.data) {
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (!res.ok) {
-        return { status: 'error', error: res.error };
+        return { status: 'error', error: res.error_code ?? '' };
       }
 
       await storeToken(res.data.token);
@@ -125,7 +125,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (!res.ok) {
-        return { status: 'error', error: res.error };
+        return { status: 'error', error: res.error_code ?? '' };
       }
 
       await storeToken(res.data.token);

@@ -25,7 +25,7 @@ export function useApi<T>(path: string | null): UseApiResult<T> {
     if (res.ok) {
       setData(res.data);
     } else {
-      setError(res.error);
+      setError(res.error ?? res.error_code ?? null);
     }
     setLoading(false);
   }, []);
