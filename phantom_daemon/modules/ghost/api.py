@@ -21,9 +21,10 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
+from phantom_daemon.base.errors import DaemonHTTPException
 from phantom_daemon.base.services.firewall.service import (
     GHOST_PRESET_NAME,
     resolve_ghost_preset,
@@ -45,14 +46,6 @@ class EnableRequest(BaseModel):
     tls_private_key: str = Field(min_length=1)
 
 
-class EnableResult(BaseModel):
-    status: str
-    domain: str
-    protocol: str
-    port: int
-    restrict_path_prefix: str
-
-
 class GhostStatus(BaseModel):
     enabled: bool
     running: bool
@@ -69,14 +62,14 @@ router = APIRouter(tags=["ghost"])
 
 @router.post(
     "/enable",
-    response_model=ApiOk[EnableResult],
+    response_model=ApiOk[dict],
     status_code=201,
     responses={400: {"model": ApiErr}, 409: {"model": ApiErr}},
 )
 async def enable_ghost(body: EnableRequest, request: Request):
     """Enable ghost mode — start wstunnel server with TLS."""
     if request.app.state.wstunnel is not None:
-        raise HTTPException(status_code=409, detail="Ghost mode is already active")
+        raise DaemonHTTPException(409, "GHOST_ALREADY_ACTIVE", "Ghost mode is already active")
 
     env = request.app.state.env
     fw = request.app.state.fw
@@ -84,17 +77,16 @@ async def enable_ghost(body: EnableRequest, request: Request):
     try:
         tls_cert_pem = base64.b64decode(body.tls_certificate).decode("utf-8")
     except (ValueError, UnicodeDecodeError) as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid tls_certificate: {exc}")
+        raise DaemonHTTPException(400, "INVALID_TLS_CERTIFICATE", f"Invalid tls_certificate: {exc}")
 
     try:
         tls_key_pem = base64.b64decode(body.tls_private_key).decode("utf-8")
     except (ValueError, UnicodeDecodeError) as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid tls_private_key: {exc}")
+        raise DaemonHTTPException(400, "INVALID_TLS_PRIVATE_KEY", f"Invalid tls_private_key: {exc}")
 
     restrict_to = f"127.0.0.1:{env.listen_port}"
     restrict_path_prefix = uuid.uuid4().hex
 
-    # Write TLS files — wstunnel FFI expects file paths, not PEM content
     tls_dir = Path(env.state_dir) / "ghost-tls"
     tls_dir.mkdir(parents=True, exist_ok=True)
     cert_path = tls_dir / "cert.pem"
@@ -115,7 +107,7 @@ async def enable_ghost(body: EnableRequest, request: Request):
         ws.start()
     except (RuntimeError, OSError) as exc:
         ws.close()
-        raise HTTPException(status_code=400, detail=f"Failed to start wstunnel: {exc}")
+        raise DaemonHTTPException(400, "WSTUNNEL_START_FAILED", f"Failed to start wstunnel: {exc}")
 
     ghost_spec = resolve_ghost_preset()
     fw.apply_preset(ghost_spec)
@@ -123,13 +115,14 @@ async def enable_ghost(body: EnableRequest, request: Request):
     request.app.state.wstunnel = ws
     log.info("Ghost mode enabled: %s → %s", GHOST_BIND_URL, restrict_to)
 
-    return ApiOk(data=EnableResult(
-        status="enabled",
-        domain=body.domain,
-        protocol="wss",
-        port=443,
-        restrict_path_prefix=restrict_path_prefix,
-    ))
+    return ApiOk(data={
+        "status": "enabled",
+        "code": "GHOST_ENABLED",
+        "domain": body.domain,
+        "protocol": "wss",
+        "port": 443,
+        "restrict_path_prefix": restrict_path_prefix,
+    })
 
 
 @router.post(
@@ -143,7 +136,7 @@ async def disable_ghost(request: Request):
     fw = request.app.state.fw
 
     if wstunnel is None:
-        return ApiOk(data={"status": "already_disabled"})
+        return ApiOk(data={"status": "already_disabled", "code": "GHOST_ALREADY_DISABLED"})
 
     try:
         fw.remove_preset(GHOST_PRESET_NAME)
@@ -155,7 +148,7 @@ async def disable_ghost(request: Request):
     request.app.state.wstunnel = None
 
     log.info("Ghost mode disabled")
-    return ApiOk(data={"status": "disabled"})
+    return ApiOk(data={"status": "disabled", "code": "GHOST_DISABLED"})
 
 
 @router.get("/status", response_model=ApiOk[GhostStatus])

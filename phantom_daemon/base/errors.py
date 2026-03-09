@@ -15,6 +15,8 @@ Startup error hierarchy for daemon initialisation phases.
 
 from __future__ import annotations
 
+from fastapi import HTTPException
+
 
 class StartupError(Exception):
     """Base error for daemon startup failures."""
@@ -46,3 +48,18 @@ class FirewallError(StartupError):
 
 class WstunnelError(StartupError):
     """Failed to initialise or operate wstunnel bridge."""
+
+
+# ── API error code mechanism ─────────────────────────────────────
+
+
+class DaemonHTTPException(HTTPException):
+    """API error with machine-readable code for frontend i18n.
+
+    Keeps the full English detail for API consumers.
+    Adds code for frontend translation.
+    """
+
+    def __init__(self, status_code: int, code: str, detail: str | None = None) -> None:
+        super().__init__(status_code=status_code, detail=detail or code)
+        self.code = code

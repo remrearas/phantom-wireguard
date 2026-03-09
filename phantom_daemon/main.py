@@ -42,7 +42,6 @@ from phantom_daemon.base import (
     open_wireguard,
     open_wstunnel,
 )
-
 from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME_EXIT
 from phantom_daemon.base.services.wireguard.ipc import build_exit_config
 from phantom_daemon.modules import setup_routers
@@ -163,49 +162,64 @@ def create_app(
     return app
 
 
+_STATUS_CODES: dict[int, str] = {
+    400: "BAD_REQUEST",
+    401: "UNAUTHORIZED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+    405: "METHOD_NOT_ALLOWED",
+    409: "CONFLICT",
+    422: "VALIDATION_ERROR",
+    500: "INTERNAL_ERROR",
+    502: "SERVICE_UNAVAILABLE",
+    503: "SERVICE_UNAVAILABLE",
+}
+
+
 def _register_error_handlers(app: FastAPI) -> None:
-    """Register global exception handlers — all errors return ApiErr envelope."""
+    """Register global exception handlers — all errors return ApiErr envelope with code."""
 
     @app.exception_handler(HTTPException)
     async def _http_error(_request, exc):
+        code = getattr(exc, "code", None) or _STATUS_CODES.get(exc.status_code, "UNKNOWN_ERROR")
         return JSONResponse(
             status_code=exc.status_code,
-            content={"ok": False, "error": exc.detail},
+            content={"ok": False, "error": exc.detail, "code": code},
         )
 
     @app.exception_handler(ExitStoreError)
     async def _exit_store_error(_request, exc):
         return JSONResponse(
             status_code=400,
-            content={"ok": False, "error": str(exc)},
+            content={"ok": False, "error": str(exc), "code": "EXIT_STORE_ERROR"},
         )
 
     @app.exception_handler(WalletFullError)
     async def _wallet_full(_request, exc):
         return JSONResponse(
             status_code=409,
-            content={"ok": False, "error": str(exc)},
+            content={"ok": False, "error": str(exc), "code": "WALLET_FULL"},
         )
 
     @app.exception_handler(WalletError)
     async def _wallet_error(_request, exc):
         return JSONResponse(
             status_code=400,
-            content={"ok": False, "error": str(exc)},
+            content={"ok": False, "error": str(exc), "code": "WALLET_ERROR"},
         )
 
     @app.exception_handler(WstunnelError)
     async def _wstunnel_error(_request, exc):
         return JSONResponse(
             status_code=400,
-            content={"ok": False, "error": str(exc)},
+            content={"ok": False, "error": str(exc), "code": "WSTUNNEL_ERROR"},
         )
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_request, exc):
         return JSONResponse(
             status_code=422,
-            content={"ok": False, "error": str(exc)},
+            content={"ok": False, "error": str(exc), "code": "VALIDATION_ERROR"},
         )
 
 

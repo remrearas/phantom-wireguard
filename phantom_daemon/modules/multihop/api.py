@@ -15,9 +15,10 @@ Multihop exit tunnel endpoints: import, remove, list, enable, disable, status.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
+from phantom_daemon.base.errors import DaemonHTTPException
 from phantom_daemon.base.exit_store import parse_wireguard_config
 from phantom_daemon.base.services.firewall.service import (
     MULTIHOP_PRESET_NAME,
@@ -82,7 +83,7 @@ async def import_exit(body: ImportRequest, request: Request):
     try:
         parsed = parse_wireguard_config(body.config)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise DaemonHTTPException(400, "INVALID_EXIT_CONFIG", str(exc))
 
     result = exit_store.add_exit(
         name=body.name,
@@ -114,7 +115,7 @@ async def remove_exit(body: ExitNameRequest, request: Request):
     """Remove an exit configuration. Must not be active."""
     exit_store = request.app.state.exit_store
     exit_store.remove_exit(body.name)
-    return ApiOk(data={"status": "removed"})
+    return ApiOk(data={"status": "removed", "code": "EXIT_REMOVED"})
 
 
 @router.get("/list", response_model=ApiOk[ExitListResponse])
@@ -163,13 +164,12 @@ async def enable_multihop(body: ExitNameRequest, request: Request):
 
     exit_data = exit_store.get_exit(body.name)
     if exit_data is None:
-        raise HTTPException(status_code=404, detail=f"Exit not found: {body.name}")
+        raise DaemonHTTPException(404, "EXIT_NOT_FOUND", f"Exit not found: {body.name}")
 
     active = exit_store.get_active()
 
-    # Already active with same exit — no-op
     if exit_store.is_enabled() and active == body.name:
-        return ApiOk(data={"status": "already_active"})
+        return ApiOk(data={"status": "already_active", "code": "MULTIHOP_ALREADY_ACTIVE"})
 
     config = build_exit_config(
         private_key_hex=exit_data["private_key_hex"],
@@ -181,7 +181,6 @@ async def enable_multihop(body: ExitNameRequest, request: Request):
     )
 
     if wg_exit is None:
-        # Fresh enable
         wg_exit = open_wireguard(
             state_dir=env.state_dir, mtu=env.mtu,
             ifname=WG_INTERFACE_NAME_EXIT,
@@ -196,17 +195,15 @@ async def enable_multihop(body: ExitNameRequest, request: Request):
 
         request.app.state.wg_exit = wg_exit
     else:
-        # Switch — device already exists
         wg_exit._bridge.ipc_set(config)
 
-        # Update address if switching to a different exit
         if active and active != body.name:
             old_data = exit_store.get_exit(active)
             if old_data and old_data["address"] != exit_data["address"]:
                 wg_exit.update_exit_address(exit_data["address"])
 
     exit_store.activate(body.name)
-    return ApiOk(data={"status": "enabled"})
+    return ApiOk(data={"status": "enabled", "code": "MULTIHOP_ENABLED"})
 
 
 @router.post(
@@ -221,12 +218,12 @@ async def disable_multihop(request: Request):
     wg_exit = request.app.state.wg_exit
 
     if not exit_store.is_enabled():
-        return ApiOk(data={"status": "already_disabled"})
+        return ApiOk(data={"status": "already_disabled", "code": "MULTIHOP_ALREADY_DISABLED"})
 
     try:
         fw.remove_preset(MULTIHOP_PRESET_NAME)
     except (RuntimeError, OSError):
-        pass  # preset may not exist if partially failed
+        pass
 
     if wg_exit is not None:
         wg_exit.down()
@@ -234,7 +231,7 @@ async def disable_multihop(request: Request):
         request.app.state.wg_exit = None
 
     exit_store.deactivate()
-    return ApiOk(data={"status": "disabled"})
+    return ApiOk(data={"status": "disabled", "code": "MULTIHOP_DISABLED"})
 
 
 @router.get("/status", response_model=ApiOk[MultihopStatus])

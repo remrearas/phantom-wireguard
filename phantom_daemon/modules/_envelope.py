@@ -30,3 +30,4 @@ class ApiOk(BaseModel, Generic[T]):
 class ApiErr(BaseModel):
     ok: Literal[False] = False
     error: str
+    code: str

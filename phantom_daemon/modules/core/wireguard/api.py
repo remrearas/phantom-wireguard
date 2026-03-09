@@ -15,9 +15,10 @@ WireGuard status endpoints: device overview and peer lookup.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
+from phantom_daemon.base.errors import DaemonHTTPException
 from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
@@ -63,7 +64,6 @@ async def get_status(request: Request):
 
     status = wg.get_status()
 
-    # Build client lookup by public_key_hex
     clients = wallet.list_clients()
     client_map = {c["public_key_hex"]: c for c in clients}
 
@@ -105,7 +105,7 @@ async def get_peer(body: PeerQuery, request: Request):
 
     client = wallet.get_client(body.name)
     if client is None:
-        raise HTTPException(status_code=404, detail=f"Client not found: {body.name}")
+        raise DaemonHTTPException(404, "CLIENT_NOT_FOUND", f"Client not found: {body.name}")
 
     status = wg.get_status()
 
@@ -124,7 +124,4 @@ async def get_peer(body: PeerQuery, request: Request):
                 )
             )
 
-    raise HTTPException(
-        status_code=404,
-        detail=f"Peer not found in IPC: {body.name}",
-    )
+    raise DaemonHTTPException(404, "PEER_NOT_FOUND", f"Peer not found in IPC: {body.name}")

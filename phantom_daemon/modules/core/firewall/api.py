@@ -17,9 +17,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
+from phantom_daemon.base.errors import DaemonHTTPException
 from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
@@ -103,7 +104,7 @@ async def get_group(body: GroupNameRequest, request: Request):
     try:
         g = fw.get_group(body.name)
     except GroupNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Group not found: {body.name}")
+        raise DaemonHTTPException(404, "GROUP_NOT_FOUND", f"Group not found: {body.name}")
     return ApiOk(data=GroupRecord(**vars(g)))
 
 

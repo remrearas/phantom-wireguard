@@ -18,10 +18,10 @@ from __future__ import annotations
 import base64
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field
 
-from phantom_daemon.base.errors import WalletError
+from phantom_daemon.base.errors import DaemonHTTPException
 from phantom_daemon.base.services.wireguard.config import build_client_config
 from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
@@ -67,10 +67,6 @@ class ClientListResponse(BaseModel):
     limit: int
     pages: int
     order: str
-
-
-class RevokeResponse(BaseModel):
-    status: str
 
 
 # ── Router ───────────────────────────────────────────────────────
@@ -130,7 +126,7 @@ async def get_client(body: ClientNameRequest, request: Request):
     wallet = request.app.state.wallet
     result = wallet.get_client(body.name)
     if result is None:
-        raise HTTPException(status_code=404, detail="Client not found")
+        raise DaemonHTTPException(404, "CLIENT_NOT_FOUND", f"Client not found: {body.name}")
     return ApiOk(data=ClientRecord(**result))
 
 
@@ -146,15 +142,13 @@ async def export_config(body: ConfigExportRequest, request: Request):
 
     client = wallet.get_client(body.name)
     if client is None:
-        raise HTTPException(status_code=404, detail="Client not found")
+        raise DaemonHTTPException(404, "CLIENT_NOT_FOUND", f"Client not found: {body.name}")
 
-    # Endpoint validation
     if body.version in ("v4", "hybrid") and not env.endpoint_v4:
-        raise HTTPException(status_code=400, detail="endpoint_v4 is not configured")
+        raise DaemonHTTPException(400, "ENDPOINT_V4_NOT_CONFIGURED", "endpoint_v4 is not configured")
     if body.version in ("v6", "hybrid") and not env.endpoint_v6:
-        raise HTTPException(status_code=400, detail="endpoint_v6 is not configured")
+        raise DaemonHTTPException(400, "ENDPOINT_V6_NOT_CONFIGURED", "endpoint_v6 is not configured")
 
-    # Resolve endpoint for config
     if body.version in ("v4", "hybrid"):
         endpoint = f"{env.endpoint_v4}:{env.listen_port}"
     else:
@@ -182,7 +176,7 @@ async def export_config(body: ConfigExportRequest, request: Request):
 
 @router.post(
     "/revoke",
-    response_model=ApiOk[RevokeResponse],
+    response_model=ApiOk[dict],
     responses={400: {"model": ApiErr}},
 )
 async def revoke_client(body: ClientNameRequest, request: Request):
@@ -192,7 +186,7 @@ async def revoke_client(body: ClientNameRequest, request: Request):
 
     client = wallet.get_client(body.name)
     if client is None:
-        raise WalletError(f"Client not found: {body.name}")
+        raise DaemonHTTPException(400, "CLIENT_NOT_FOUND", f"Client not found: {body.name}")
 
     wg.remove_peer(client["public_key_hex"])
     try:
@@ -200,4 +194,4 @@ async def revoke_client(body: ClientNameRequest, request: Request):
     except Exception:
         wg.add_peer(client, env.keepalive)
         raise
-    return ApiOk(data=RevokeResponse(status="revoked"))
+    return ApiOk(data={"status": "revoked", "code": "CLIENT_REVOKED"})
