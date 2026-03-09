@@ -1,4 +1,5 @@
 @use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/breakpoint' as bp;
 
 .audit-log {
   width: 100%;
@@ -74,4 +75,39 @@
   color: var(--cds-text-secondary);
   font-size: 0.875rem;
   margin: 0;
+}
+
+// ── Detail modal ──────────────────────────────────────────────────
+
+.audit-log__modal {
+  @include bp.breakpoint-down(md) {
+    .cds--modal-container {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      border-radius: 0;
+    }
+  }
+
+  @include bp.breakpoint(md) {
+    .cds--modal-container {
+      height: auto;
+    }
+  }
+}
+
+.audit-log__detail-mono {
+  font-family: var(--cds-code-02-font-family, 'IBM Plex Mono', monospace), monospace;
+  font-size: 0.75rem;
+}
+
+.audit-log__detail-section {
+  margin-top: spacing.$spacing-05;
+}
+
+.audit-log__detail-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cds-text-secondary);
+  margin-bottom: spacing.$spacing-03;
 }

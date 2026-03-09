@@ -19,6 +19,8 @@ import {
   PopoverContent,
   Select,
   SelectItem,
+  OverflowMenu,
+  OverflowMenuItem,
 } from '@carbon/react';
 import { Filter, FilterRemove } from '@carbon/icons-react';
 import { useUser } from '@shared/contexts/UserContext';
@@ -27,12 +29,13 @@ import { translate } from '@shared/translations';
 import { apiClient } from '@shared/api/client';
 import { formatDateTime } from '@shared/utils/dateUtils';
 import TableLoader from '@shared/components/data/TableLoader';
+import AuditDetailModal from './modals/AuditDetailModal';
 import { Navigate } from 'react-router-dom';
 import './styles/audit-log.scss';
 
 // ── Constants ─────────────────────────────────────────────────────
 
-type TagType = 'green' | 'red' | 'warm-gray' | 'blue' | 'cool-gray';
+type TagType = 'green' | 'red' | 'warm-gray' | 'blue' | 'cool-gray' | 'teal';
 type SortDir = 'ASC' | 'DESC';
 
 const AUDIT_ACTIONS = [
@@ -42,6 +45,7 @@ const AUDIT_ACTIONS = [
   'totp_setup_started', 'totp_enabled', 'totp_disabled',
   'logout', 'password_change_started', 'password_changed',
   'user_created', 'user_deleted',
+  'proxy_request',
 ] as const;
 
 const ACTION_TAG: Record<string, TagType> = {
@@ -61,9 +65,10 @@ const ACTION_TAG: Record<string, TagType> = {
   mfa_challenge:           'blue',
   totp_setup_started:      'blue',
   logout:                  'cool-gray',
+  proxy_request:           'teal',
 };
 
-const COLUMN_COUNT = 5;
+const COLUMN_COUNT = 6;
 const DEFAULT_LIMIT = 25;
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -117,6 +122,9 @@ const AuditLog: React.FC = () => {
   const [actionFilter, setActionFilter] = useState('');
   const [usernameFilter, setUsernameFilter] = useState('');
   const [actionPopoverOpen, setActionPopoverOpen] = useState(false);
+
+  // ── Modal state ─────────────────────────────────────────────
+  const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -191,14 +199,22 @@ const AuditLog: React.FC = () => {
   };
 
   // ── Table rows ────────────────────────────────────────────────
-  const tableRows = useMemo(() => (data?.items ?? []).map((entry) => ({
+  const entries = data?.items ?? [];
+
+  const entryMap = useMemo(
+    () => new Map(entries.map((e) => [String(e.id), e])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data],
+  );
+
+  const tableRows = useMemo(() => entries.map((entry) => ({
     id:         String(entry.id),
     timestamp:  formatDateTime(entry.timestamp, { seconds: true }),
     username:   entry.username ?? '—',
     action:     entry.action,
     detail:     formatDetail(entry.detail),
     ip_address: entry.ip_address || '—',
-  })), [data]);
+  })), [entries]);
 
   const headers = [
     { key: 'timestamp', header: t.audit.timestamp },
@@ -222,6 +238,13 @@ const AuditLog: React.FC = () => {
   return (
     <Grid>
       <Column lg={16} md={8} sm={4}>
+        <AuditDetailModal
+          open={selectedEntry !== null}
+          entry={selectedEntry}
+          t={t}
+          actionTagType={ACTION_TAG[selectedEntry?.action ?? ''] ?? 'cool-gray'}
+          onClose={() => setSelectedEntry(null)}
+        />
         <div className="audit-log">
           <DataTable rows={tableRows} headers={headers}>
             {({ rows, headers: tableHeaders, getTableProps, getHeaderProps, getRowProps, getTableContainerProps }) => (
@@ -307,6 +330,7 @@ const AuditLog: React.FC = () => {
                             </TableHeader>
                           );
                         })}
+                        <TableHeader key="actions-header" />
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -347,6 +371,17 @@ const AuditLog: React.FC = () => {
 
                                 return <TableCell key={cell.id}>{cell.value as string}</TableCell>;
                               })}
+                              <TableCell key={`${row.id}-actions`}>
+                                <OverflowMenu size="sm" flipped>
+                                  <OverflowMenuItem
+                                    itemText={t.audit.showDetail}
+                                    onClick={() => {
+                                      const entry = entryMap.get(row.id);
+                                      if (entry) setSelectedEntry(entry);
+                                    }}
+                                  />
+                                </OverflowMenu>
+                              </TableCell>
                             </TableRow>
                           );
                         })
