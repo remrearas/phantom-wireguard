@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Modal, Grid, Column, Stack, PasswordInput,
-} from '@carbon/react';
+import { Modal, Grid, Column, Stack, PasswordInput } from '@carbon/react';
 import FormError from '@shared/components/forms/FormError';
 import { apiClient } from '@shared/api/client';
 import { translate } from '@shared/translations';
@@ -42,7 +40,10 @@ const DisableTotpModal: React.FC<Props> = ({ open, username, isSelf, t, onClose,
       reset();
       onSuccess();
     } else {
-      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ??
+          t.settings.error.generic
+      );
     }
   };
 

@@ -5,16 +5,25 @@ export interface ApiOk<T> {
 
 export interface ApiErr {
   ok: false;
-  error_code?: string;  // auth-service errors + client-side synthetic codes
-  code?: string;        // daemon errors
-  error?: string;       // daemon: full English message for debugging
+  error_code?: string; // auth-service errors + client-side synthetic codes
+  code?: string; // daemon errors
+  error?: string; // daemon: full English message for debugging
 }
 
 export type ApiResponse<T> = ApiOk<T> | ApiErr;
 
 type SessionExpiredHandler = () => void;
 
-const AUTH_PATHS = ['/auth/login', '/auth/mfa/verify', '/auth/totp/backup', '/auth/totp/setup', '/auth/totp/confirm', '/auth/totp/disable', '/auth/password/verify', '/auth/password/change'];
+const AUTH_PATHS = [
+  '/auth/login',
+  '/auth/mfa/verify',
+  '/auth/totp/backup',
+  '/auth/totp/setup',
+  '/auth/totp/confirm',
+  '/auth/totp/disable',
+  '/auth/password/verify',
+  '/auth/password/change',
+];
 const SERVER_ERROR_PATH = '/server-error';
 
 class ApiClient {

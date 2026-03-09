@@ -9,8 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
-    "translate": "node scripts/convert_translations.js"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@carbon/icons-react": "11.76.0",
@@ -34,7 +33,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "4.7.0",
-    "js-yaml": "4.1.1",
+    "prettier": "3.8.1",
     "sass-embedded": "1.97.3",
     "typescript": "5.9.3",
     "vite": "6.4.1"

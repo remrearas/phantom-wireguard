@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Modal, Grid, Column, Stack, TextInput, PasswordInput, Button,
-} from '@carbon/react';
+import { Modal, Grid, Column, Stack, TextInput, PasswordInput, Button } from '@carbon/react';
 import { Renew, Checkmark, Close } from '@carbon/icons-react';
 import FormError from '@shared/components/forms/FormError';
 import { apiClient } from '@shared/api/client';
@@ -46,7 +44,10 @@ const CreateUserModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => {
       reset();
       onSuccess();
     } else {
-      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ??
+          t.settings.error.generic
+      );
     }
   };
 
@@ -83,9 +84,14 @@ const CreateUserModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <Button kind="ghost" size="md" renderIcon={Renew} hasIconOnly
+                <Button
+                  kind="ghost"
+                  size="md"
+                  renderIcon={Renew}
+                  hasIconOnly
                   iconDescription={t.settings.users.generatePassword}
-                  onClick={() => setPassword(generatePassword())} />
+                  onClick={() => setPassword(generatePassword())}
+                />
               </div>
               <ul className="um__checklist">
                 {policyChecks.map((c) => {

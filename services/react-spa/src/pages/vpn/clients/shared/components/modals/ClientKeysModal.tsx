@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Modal, Grid, Column, Stack, PasswordInput, InlineLoading,
-} from '@carbon/react';
+import { Modal, Grid, Column, Stack, PasswordInput, InlineLoading } from '@carbon/react';
 import FormError from '@shared/components/forms/FormError';
 import { apiClient } from '@shared/api/client';
 import { translate } from '@shared/translations';
@@ -37,7 +35,10 @@ const ClientKeysModal: React.FC<Props> = ({ open, clientName, t, onClose }) => {
     const res = await apiClient.post<ClientRecord>('/api/core/clients/get', { name: clientName });
     setLoading(false);
     if (res.ok) setDetail(res.data);
-    else setError((t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic);
+    else
+      setError(
+        (t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic
+      );
   }, [clientName]);
 
   // Fetch when opened, reset after close animation
@@ -53,11 +54,13 @@ const ClientKeysModal: React.FC<Props> = ({ open, clientName, t, onClose }) => {
     }
   }, [open, fetchKeys]);
 
-  const keys = detail ? [
-    { id: 'key-public',    label: t.clients.publicKey,    value: detail.public_key_hex },
-    { id: 'key-private',   label: t.clients.privateKey,   value: detail.private_key_hex },
-    { id: 'key-preshared', label: t.clients.presharedKey, value: detail.preshared_key_hex },
-  ] : [];
+  const keys = detail
+    ? [
+        { id: 'key-public', label: t.clients.publicKey, value: detail.public_key_hex },
+        { id: 'key-private', label: t.clients.privateKey, value: detail.private_key_hex },
+        { id: 'key-preshared', label: t.clients.presharedKey, value: detail.preshared_key_hex },
+      ]
+    : [];
 
   return (
     <Modal

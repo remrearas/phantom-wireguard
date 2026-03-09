@@ -55,11 +55,11 @@ interface ClientListResponse {
 type ActiveAction =
   | { type: 'create' }
   | { type: 'config'; name: string }
-  | { type: 'keys';   name: string }
+  | { type: 'keys'; name: string }
   | { type: 'revoke'; name: string }
   | null;
 
-const COLUMN_COUNT   = 6;   // 5 data cols + 1 actions col
+const COLUMN_COUNT = 6; // 5 data cols + 1 actions col
 const SEARCH_DEBOUNCE_MS = 400;
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -83,14 +83,17 @@ const ClientManagement: React.FC = () => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Modal state ─────────────────────────────────────────────
-  const [notification, setNotification] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [notification, setNotification] = useState<{
+    kind: 'success' | 'error';
+    text: string;
+  } | null>(null);
   const [action, setAction] = useState<ActiveAction>(null);
 
   // ── Fetch ────────────────────────────────────────────────────
   const fetchClients = useCallback(async (p: number, l: number, s: string) => {
     setLoading(true);
     const params = new URLSearchParams();
-    params.set('page',  String(p));
+    params.set('page', String(p));
     params.set('limit', String(l));
     params.set('order', 'asc');
     if (s) params.set('search', s);
@@ -104,7 +107,7 @@ const ClientManagement: React.FC = () => {
 
   useEffect(() => {
     void fetchClients(page, limit, search);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, fetchClients]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement> | string) => {
@@ -117,7 +120,13 @@ const ClientManagement: React.FC = () => {
     }, SEARCH_DEBOUNCE_MS);
   };
 
-  const handlePaginationChange = ({ page: p, pageSize: ps }: { page: number; pageSize: number }) => {
+  const handlePaginationChange = ({
+    page: p,
+    pageSize: ps,
+  }: {
+    page: number;
+    pageSize: number;
+  }) => {
     setPage(p);
     setLimit(ps);
   };
@@ -135,18 +144,18 @@ const ClientManagement: React.FC = () => {
   const clients = data?.clients ?? [];
 
   const headers = [
-    { key: 'name',       header: t.clients.name },
-    { key: 'ipv4',       header: t.clients.ipv4 },
-    { key: 'ipv6',       header: t.clients.ipv6 },
+    { key: 'name', header: t.clients.name },
+    { key: 'ipv4', header: t.clients.ipv4 },
+    { key: 'ipv6', header: t.clients.ipv6 },
     { key: 'public_key', header: t.clients.publicKey },
     { key: 'created_at', header: t.clients.createdAt },
   ];
 
   const rows = clients.map((c) => ({
-    id:         c.id,
-    name:       c.name,
-    ipv4:       c.ipv4_address,
-    ipv6:       c.ipv6_address,
+    id: c.id,
+    name: c.name,
+    ipv4: c.ipv4_address,
+    ipv6: c.ipv6_address,
     public_key: truncateKey(c.public_key_hex),
     created_at: formatDateTime(c.created_at),
   }));
@@ -166,30 +175,30 @@ const ClientManagement: React.FC = () => {
     <>
       {/* Modals */}
       <CreateClientModal
-            open={action?.type === 'create'}
-            t={t}
-            onClose={closeAction}
-            onSuccess={() => handleSuccess(t.clients.createSuccess)}
-          />
-          <ClientConfigModal
-            open={action?.type === 'config'}
-            clientName={action?.type === 'config' ? action.name : ''}
-            t={t}
-            onClose={closeAction}
-          />
-          <ClientKeysModal
-            open={action?.type === 'keys'}
-            clientName={action?.type === 'keys' ? action.name : ''}
-            t={t}
-            onClose={closeAction}
-          />
-          <RevokeClientModal
-            open={action?.type === 'revoke'}
-            clientName={action?.type === 'revoke' ? action.name : ''}
-            t={t}
-            onClose={closeAction}
-            onSuccess={() => handleSuccess(t.clients.revokeSuccess)}
-          />
+        open={action?.type === 'create'}
+        t={t}
+        onClose={closeAction}
+        onSuccess={() => handleSuccess(t.clients.createSuccess)}
+      />
+      <ClientConfigModal
+        open={action?.type === 'config'}
+        clientName={action?.type === 'config' ? action.name : ''}
+        t={t}
+        onClose={closeAction}
+      />
+      <ClientKeysModal
+        open={action?.type === 'keys'}
+        clientName={action?.type === 'keys' ? action.name : ''}
+        t={t}
+        onClose={closeAction}
+      />
+      <RevokeClientModal
+        open={action?.type === 'revoke'}
+        clientName={action?.type === 'revoke' ? action.name : ''}
+        t={t}
+        onClose={closeAction}
+        onSuccess={() => handleSuccess(t.clients.revokeSuccess)}
+      />
 
       {/* Notification — full-width row */}
       {notification && (
@@ -211,103 +220,131 @@ const ClientManagement: React.FC = () => {
         <Column lg={16} md={8} sm={4}>
           <div className="clients">
             <DataTable rows={rows} headers={headers}>
-            {({ rows: tableRows, headers: tableHeaders, getTableProps, getHeaderProps, getRowProps, getTableContainerProps }) => (
-              <TableContainer {...getTableContainerProps()}>
-                <TableToolbar>
-                  <TableToolbarContent>
-                    <TableToolbarSearch
-                      persistent
-                      placeholder={t.clients.filterName}
-                      value={search}
-                      onChange={handleSearch}
+              {({
+                rows: tableRows,
+                headers: tableHeaders,
+                getTableProps,
+                getHeaderProps,
+                getRowProps,
+                getTableContainerProps,
+              }) => (
+                <TableContainer {...getTableContainerProps()}>
+                  <TableToolbar>
+                    <TableToolbarContent>
+                      <TableToolbarSearch
+                        persistent
+                        placeholder={t.clients.filterName}
+                        value={search}
+                        onChange={handleSearch}
+                      />
+                      <Button
+                        renderIcon={Add}
+                        size="sm"
+                        kind="primary"
+                        onClick={() => setAction({ type: 'create' })}
+                      >
+                        {t.clients.addClient}
+                      </Button>
+                    </TableToolbarContent>
+                  </TableToolbar>
+
+                  {loading ? (
+                    <TableLoader
+                      columnCount={COLUMN_COUNT}
+                      rowCount={Math.min(limit, 10)}
+                      showToolbar={false}
+                      showHeader={false}
                     />
-                    <Button renderIcon={Add} size="sm" kind="primary"
-                      onClick={() => setAction({ type: 'create' })}>
-                      {t.clients.addClient}
-                    </Button>
-                  </TableToolbarContent>
-                </TableToolbar>
-
-                {loading ? (
-                  <TableLoader columnCount={COLUMN_COUNT} rowCount={Math.min(limit, 10)} showToolbar={false} showHeader={false} />
-                ) : (
-                  <Table {...getTableProps()} size="md">
-                    <TableHead>
-                      <TableRow>
-                        {tableHeaders.map((header) => {
-                          const { key: _key, ...hProps } = getHeaderProps({ header });
-                          return (
-                            <TableHeader key={header.key} {...hProps}>
-                              {header.header}
-                            </TableHeader>
-                          );
-                        })}
-                        <TableHeader key="actions-header" />
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {tableRows.length === 0 ? (
+                  ) : (
+                    <Table {...getTableProps()} size="md">
+                      <TableHead>
                         <TableRow>
-                          <TableCell colSpan={COLUMN_COUNT}>
-                            <p style={{ padding: '1rem 0', color: 'var(--cds-text-secondary)', textAlign: 'center', margin: 0 }}>
-                              {t.clients.noClients}
-                            </p>
-                          </TableCell>
+                          {tableHeaders.map((header) => {
+                            const { key: _key, ...hProps } = getHeaderProps({ header });
+                            return (
+                              <TableHeader key={header.key} {...hProps}>
+                                {header.header}
+                              </TableHeader>
+                            );
+                          })}
+                          <TableHeader key="actions-header" />
                         </TableRow>
-                      ) : (
-                        tableRows.map((row) => {
-                          const { key: _key, ...rProps } = getRowProps({ row });
-                          const clientName = row.cells.find((c) => c.id.endsWith(':name'))?.value as string;
-                          return (
-                            <TableRow key={row.id} {...rProps}>
-                              {row.cells.map((cell) => (
-                                <TableCell key={cell.id}>{cell.value as string}</TableCell>
-                              ))}
-                              <TableCell key={`${row.id}-actions`}>
-                                <OverflowMenu size="sm" flipped>
-                                  <OverflowMenuItem
-                                    itemText={t.clients.getConfig}
-                                    onClick={() => setAction({ type: 'config', name: clientName })}
-                                  />
-                                  <OverflowMenuItem
-                                    itemText={t.clients.getKeys}
-                                    onClick={() => setAction({ type: 'keys', name: clientName })}
-                                  />
-                                  <OverflowMenuItem
-                                    itemText={t.clients.revokeClient}
-                                    isDelete
-                                    onClick={() => setAction({ type: 'revoke', name: clientName })}
-                                  />
-                                </OverflowMenu>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
+                      </TableHead>
+                      <TableBody>
+                        {tableRows.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={COLUMN_COUNT}>
+                              <p
+                                style={{
+                                  padding: '1rem 0',
+                                  color: 'var(--cds-text-secondary)',
+                                  textAlign: 'center',
+                                  margin: 0,
+                                }}
+                              >
+                                {t.clients.noClients}
+                              </p>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          tableRows.map((row) => {
+                            const { key: _key, ...rProps } = getRowProps({ row });
+                            const clientName = row.cells.find((c) => c.id.endsWith(':name'))
+                              ?.value as string;
+                            return (
+                              <TableRow key={row.id} {...rProps}>
+                                {row.cells.map((cell) => (
+                                  <TableCell key={cell.id}>{cell.value as string}</TableCell>
+                                ))}
+                                <TableCell key={`${row.id}-actions`}>
+                                  <OverflowMenu size="sm" flipped>
+                                    <OverflowMenuItem
+                                      itemText={t.clients.getConfig}
+                                      onClick={() =>
+                                        setAction({ type: 'config', name: clientName })
+                                      }
+                                    />
+                                    <OverflowMenuItem
+                                      itemText={t.clients.getKeys}
+                                      onClick={() => setAction({ type: 'keys', name: clientName })}
+                                    />
+                                    <OverflowMenuItem
+                                      itemText={t.clients.revokeClient}
+                                      isDelete
+                                      onClick={() =>
+                                        setAction({ type: 'revoke', name: clientName })
+                                      }
+                                    />
+                                  </OverflowMenu>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
 
-                {/* Localized pagination */}
-                <Pagination
-                  totalItems={data?.total ?? 0}
-                  pageSize={limit}
-                  page={page}
-                  pageSizes={[10, 25, 50, 100]}
-                  backwardText={t.pagination.backwardText}
-                  forwardText={t.pagination.forwardText}
-                  itemsPerPageText={t.pagination.itemsPerPageText}
-                  itemRangeText={(min, max, total) =>
-                    `${min}–${max} ${t.pagination.ofText} ${total} ${t.pagination.itemsText}`
-                  }
-                  pageRangeText={(current, total) =>
-                    `${current} ${t.pagination.ofText} ${total} ${t.pagination.pagesText}`
-                  }
-                  onChange={handlePaginationChange}
-                />
-              </TableContainer>
-            )}
-          </DataTable>
+                  {/* Localized pagination */}
+                  <Pagination
+                    totalItems={data?.total ?? 0}
+                    pageSize={limit}
+                    page={page}
+                    pageSizes={[10, 25, 50, 100]}
+                    backwardText={t.pagination.backwardText}
+                    forwardText={t.pagination.forwardText}
+                    itemsPerPageText={t.pagination.itemsPerPageText}
+                    itemRangeText={(min, max, total) =>
+                      `${min}–${max} ${t.pagination.ofText} ${total} ${t.pagination.itemsText}`
+                    }
+                    pageRangeText={(current, total) =>
+                      `${current} ${t.pagination.ofText} ${total} ${t.pagination.pagesText}`
+                    }
+                    onChange={handlePaginationChange}
+                  />
+                </TableContainer>
+              )}
+            </DataTable>
           </div>
         </Column>
       </Grid>

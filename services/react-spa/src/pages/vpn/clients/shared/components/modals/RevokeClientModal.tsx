@@ -24,12 +24,16 @@ const RevokeClientModal: React.FC<Props> = ({ open, clientName, t, onClose, onSu
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
-    const res = await apiClient.post<{ status: string }>('/api/core/clients/revoke', { name: clientName });
+    const res = await apiClient.post<{ status: string }>('/api/core/clients/revoke', {
+      name: clientName,
+    });
     setLoading(false);
     if (res.ok) {
       onSuccess();
     } else {
-      setError((t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic
+      );
     }
   };
 
@@ -50,8 +54,7 @@ const RevokeClientModal: React.FC<Props> = ({ open, clientName, t, onClose, onSu
         <Column lg={16} md={8} sm={4}>
           <FormError error={error} className="clients__modal-error" />
           <p className="clients__confirm-text">
-            <strong>{clientName}</strong>{' '}
-            {t.clients.confirmRevoke}
+            <strong>{clientName}</strong> {t.clients.confirmRevoke}
           </p>
         </Column>
       </Grid>

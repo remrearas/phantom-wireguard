@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Modal, Grid, Column, Stack, PasswordInput, Button,
-} from '@carbon/react';
+import { Modal, Grid, Column, Stack, PasswordInput, Button } from '@carbon/react';
 import { Renew, Checkmark, Close } from '@carbon/icons-react';
 import FormError from '@shared/components/forms/FormError';
 import { apiClient } from '@shared/api/client';
@@ -38,13 +36,18 @@ const ChangePasswordModal: React.FC<Props> = ({ open, username, t, onClose, onSu
     if (!allPassed) return;
     setLoading(true);
     setError(null);
-    const res = await apiClient.post<{ message: string }>(`/auth/users/${username}/password`, { password });
+    const res = await apiClient.post<{ message: string }>(`/auth/users/${username}/password`, {
+      password,
+    });
     setLoading(false);
     if (res.ok) {
       reset();
       onSuccess();
     } else {
-      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ??
+          t.settings.error.generic
+      );
     }
   };
 
@@ -74,9 +77,14 @@ const ChangePasswordModal: React.FC<Props> = ({ open, username, t, onClose, onSu
                   onChange={(e) => setPassword(e.target.value)}
                   autoFocus
                 />
-                <Button kind="ghost" size="md" renderIcon={Renew} hasIconOnly
+                <Button
+                  kind="ghost"
+                  size="md"
+                  renderIcon={Renew}
+                  hasIconOnly
                   iconDescription={t.settings.users.generatePassword}
-                  onClick={() => setPassword(generatePassword())} />
+                  onClick={() => setPassword(generatePassword())}
+                />
               </div>
               <ul className="um__checklist">
                 {policyChecks.map((c) => {

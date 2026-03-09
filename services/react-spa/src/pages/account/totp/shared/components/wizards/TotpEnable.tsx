@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import {
-  Grid, Column, Button, PasswordInput, TextInput,
-  InlineNotification, CopyButton, CodeSnippet,
+  Grid,
+  Column,
+  Button,
+  PasswordInput,
+  TextInput,
+  InlineNotification,
+  CopyButton,
+  CodeSnippet,
 } from '@carbon/react';
 import { ArrowLeft, CheckmarkFilled } from '@carbon/icons-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -51,7 +57,10 @@ const TotpEnable: React.FC = () => {
       setSetupData(res.data);
       setStep('setup');
     } else {
-      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ??
+          t.settings.error.generic
+      );
     }
   };
 
@@ -68,7 +77,9 @@ const TotpEnable: React.FC = () => {
       await mutateUser();
       setStep('done');
     } else {
-      const msg = (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic;
+      const msg =
+        (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ??
+        t.settings.error.generic;
       if (res.error_code === 'TOKEN_EXPIRED') {
         setError(msg);
         setStep('failed');
@@ -100,11 +111,13 @@ const TotpEnable: React.FC = () => {
             </div>
             <div className="totp-wizard__question totp-wizard__done">
               <CheckmarkFilled size={64} className="totp-wizard__done-icon" />
-              <p className="totp-wizard__done-text">
-                {t.settings.account.totp.enableSuccess}
-              </p>
-              <Button kind="primary" renderIcon={ArrowLeft} onClick={() => navigate('/account/totp')}
-                className="totp-wizard__done-btn">
+              <p className="totp-wizard__done-text">{t.settings.account.totp.enableSuccess}</p>
+              <Button
+                kind="primary"
+                renderIcon={ArrowLeft}
+                onClick={() => navigate('/account/totp')}
+                className="totp-wizard__done-btn"
+              >
                 {t.settings.account.totp.goBack}
               </Button>
             </div>
@@ -120,14 +133,22 @@ const TotpEnable: React.FC = () => {
         <Grid>
           <Column xlg={16} lg={16} md={8} sm={4}>
             <div className="totp-wizard__result">
-              <InlineNotification kind="error" title={error || t.settings.account.totp.setupExpired}
-                lowContrast hideCloseButton />
+              <InlineNotification
+                kind="error"
+                title={error || t.settings.account.totp.setupExpired}
+                lowContrast
+                hideCloseButton
+              />
               <div className="totp-wizard__restart">
                 <Button kind="primary" onClick={handleRestart} className="totp-wizard__restart-btn">
                   {t.settings.account.totp.confirm}
                 </Button>
-                <Button kind="ghost" renderIcon={ArrowLeft} onClick={() => navigate('/account/totp')}
-                  className="totp-wizard__restart-btn">
+                <Button
+                  kind="ghost"
+                  renderIcon={ArrowLeft}
+                  onClick={() => navigate('/account/totp')}
+                  className="totp-wizard__restart-btn"
+                >
                   {t.settings.account.totp.cancel}
                 </Button>
               </div>
@@ -153,16 +174,19 @@ const TotpEnable: React.FC = () => {
 
           {/* Error */}
           {error && (
-            <InlineNotification kind="error" title={error} lowContrast hideCloseButton
-              className="totp-wizard__error" />
+            <InlineNotification
+              kind="error"
+              title={error}
+              lowContrast
+              hideCloseButton
+              className="totp-wizard__error"
+            />
           )}
 
           {/* Step 1: Password */}
           {step === 'password' && (
             <div className="totp-wizard__question">
-              <p className="totp-wizard__question-text">
-                {t.settings.account.totp.enterPassword}
-              </p>
+              <p className="totp-wizard__question-text">{t.settings.account.totp.enterPassword}</p>
               <div className="totp-wizard__input">
                 <PasswordInput
                   id="totp-enable-password"
@@ -178,9 +202,7 @@ const TotpEnable: React.FC = () => {
           {/* Step 2: QR + Secret + Backup Codes */}
           {step === 'setup' && setupData && (
             <div className="totp-wizard__question">
-              <p className="totp-wizard__question-text">
-                {t.settings.account.totp.scanQR}
-              </p>
+              <p className="totp-wizard__question-text">{t.settings.account.totp.scanQR}</p>
 
               <div className="totp-wizard__qr-container">
                 <div className="totp-wizard__qr-wrapper">
@@ -202,8 +224,12 @@ const TotpEnable: React.FC = () => {
                 <CodeSnippet type="multi" feedback={t.settings.account.totp.copied}>
                   {setupData.backup_codes.join('\n')}
                 </CodeSnippet>
-                <InlineNotification kind="warning" title={t.settings.account.totp.backupCodesWarning}
-                  lowContrast hideCloseButton />
+                <InlineNotification
+                  kind="warning"
+                  title={t.settings.account.totp.backupCodesWarning}
+                  lowContrast
+                  hideCloseButton
+                />
               </div>
             </div>
           )}
@@ -211,9 +237,7 @@ const TotpEnable: React.FC = () => {
           {/* Step 3: Verify TOTP Code */}
           {step === 'verify' && (
             <div className="totp-wizard__question">
-              <p className="totp-wizard__question-text">
-                {t.settings.account.totp.verifyCode}
-              </p>
+              <p className="totp-wizard__question-text">{t.settings.account.totp.verifyCode}</p>
               <div className="totp-wizard__input">
                 <TextInput
                   id="totp-enable-code"
@@ -233,35 +257,52 @@ const TotpEnable: React.FC = () => {
           {/* Navigation */}
           <div className="totp-wizard__navigation">
             {canGoBack && (
-              <Button kind="secondary" onClick={handleRestart}
-                className="totp-wizard__nav-btn">
+              <Button kind="secondary" onClick={handleRestart} className="totp-wizard__nav-btn">
                 {t.settings.account.totp.cancel}
               </Button>
             )}
 
             {step === 'password' && (
               <>
-                <Button kind="secondary" onClick={() => navigate('/account/totp')}
-                  className="totp-wizard__nav-btn">
+                <Button
+                  kind="secondary"
+                  onClick={() => navigate('/account/totp')}
+                  className="totp-wizard__nav-btn"
+                >
                   {t.settings.account.totp.goBack}
                 </Button>
-                <Button kind="primary" onClick={handleSetup}
-                  disabled={loading || !password} className="totp-wizard__nav-btn">
+                <Button
+                  kind="primary"
+                  onClick={handleSetup}
+                  disabled={loading || !password}
+                  className="totp-wizard__nav-btn"
+                >
                   {loading ? t.loadingSpinner.loading : t.settings.account.totp.confirm}
                 </Button>
               </>
             )}
 
             {canGoNext && (
-              <Button kind="primary" onClick={() => { setStep('verify'); setTotpCode(''); setError(null); }}
-                className="totp-wizard__nav-btn">
+              <Button
+                kind="primary"
+                onClick={() => {
+                  setStep('verify');
+                  setTotpCode('');
+                  setError(null);
+                }}
+                className="totp-wizard__nav-btn"
+              >
                 {t.settings.account.totp.confirm}
               </Button>
             )}
 
             {step === 'verify' && (
-              <Button kind="primary" onClick={handleConfirm}
-                disabled={loading || totpCode.length < 6} className="totp-wizard__nav-btn">
+              <Button
+                kind="primary"
+                onClick={handleConfirm}
+                disabled={loading || totpCode.length < 6}
+                className="totp-wizard__nav-btn"
+              >
                 {loading ? t.loadingSpinner.loading : t.login.totpSubmit}
               </Button>
             )}

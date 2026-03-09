@@ -25,15 +25,23 @@ const TotpStatus: React.FC = () => {
       </div>
 
       {!user.totp_enabled && (
-        <Button kind="primary" size="md" renderIcon={ArrowRight}
-          onClick={() => navigate('/account/totp/enable')}>
+        <Button
+          kind="primary"
+          size="md"
+          renderIcon={ArrowRight}
+          onClick={() => navigate('/account/totp/enable')}
+        >
           {t.settings.account.totp.enable}
         </Button>
       )}
 
       {user.totp_enabled && (
-        <Button kind="danger--tertiary" size="md" renderIcon={ArrowRight}
-          onClick={() => navigate('/account/totp/disable')}>
+        <Button
+          kind="danger--tertiary"
+          size="md"
+          renderIcon={ArrowRight}
+          onClick={() => navigate('/account/totp/disable')}
+        >
           {t.settings.account.totp.disable}
         </Button>
       )}

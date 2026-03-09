@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Grid, Column, Button, PasswordInput, InlineNotification } from '@carbon/react';
 import {
-  Grid, Column, Button, PasswordInput, InlineNotification,
-} from '@carbon/react';
-import { CheckmarkFilled, Checkmark, Close, Renew, Logout as LogoutIcon } from '@carbon/icons-react';
+  CheckmarkFilled,
+  Checkmark,
+  Close,
+  Renew,
+  Logout as LogoutIcon,
+} from '@carbon/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '@shared/hooks';
 import { useAuth } from '@shared/contexts/AuthContext';
@@ -49,7 +53,10 @@ const PasswordChangeWizard: React.FC = () => {
       setChangeToken(res.data.change_token);
       setStep('newpass');
     } else {
-      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ??
+          t.settings.error.generic
+      );
     }
   };
 
@@ -67,7 +74,10 @@ const PasswordChangeWizard: React.FC = () => {
       sessionStorage.removeItem('auth_warning');
       setStep('done');
     } else {
-      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ??
+          t.settings.error.generic
+      );
     }
   };
 
@@ -116,9 +126,7 @@ const PasswordChangeWizard: React.FC = () => {
             </div>
             <div className="totp-wizard__question totp-wizard__done">
               <CheckmarkFilled size={64} className="totp-wizard__done-icon" />
-              <p className="totp-wizard__done-text">
-                {t.passwordChange.success}
-              </p>
+              <p className="totp-wizard__done-text">{t.passwordChange.success}</p>
               <div className="pw-change__countdown">
                 <LogoutIcon size={20} />
                 <span className="pw-change__countdown-number">{countdown}</span>
@@ -141,16 +149,19 @@ const PasswordChangeWizard: React.FC = () => {
           </div>
 
           {error && (
-            <InlineNotification kind="error" title={error} lowContrast hideCloseButton
-              className="totp-wizard__error" />
+            <InlineNotification
+              kind="error"
+              title={error}
+              lowContrast
+              hideCloseButton
+              className="totp-wizard__error"
+            />
           )}
 
           {/* Step 1: Verify current password */}
           {step === 'verify' && (
             <div className="totp-wizard__question">
-              <p className="totp-wizard__question-text">
-                {t.passwordChange.description}
-              </p>
+              <p className="totp-wizard__question-text">{t.passwordChange.description}</p>
               <div className="totp-wizard__input">
                 <PasswordInput
                   id="current-password"
@@ -167,9 +178,7 @@ const PasswordChangeWizard: React.FC = () => {
           {/* Step 2: New password with policy checklist */}
           {step === 'newpass' && (
             <div className="totp-wizard__question">
-              <p className="totp-wizard__question-text">
-                {t.passwordChange.newPassword}
-              </p>
+              <p className="totp-wizard__question-text">{t.passwordChange.newPassword}</p>
               <div className="totp-wizard__input">
                 <PasswordInput
                   id="new-password"
@@ -180,20 +189,34 @@ const PasswordChangeWizard: React.FC = () => {
                   autoFocus
                 />
               </div>
-              <Button kind="ghost" size="sm" renderIcon={Renew}
+              <Button
+                kind="ghost"
+                size="sm"
+                renderIcon={Renew}
                 onClick={() => setNewPassword(generatePassword())}
-                className="pw-change__generate">
+                className="pw-change__generate"
+              >
                 {t.passwordChange.generate}
               </Button>
               <ul className="pw-change__checklist">
                 {policyChecks.map((check) => {
                   const passed = check.test(newPassword);
                   return (
-                    <li key={check.key} className={`pw-change__check ${passed ? 'pw-change__check--pass' : ''}`}>
-                      {passed
-                        ? <Checkmark size={16} className="pw-change__check-icon pw-change__check-icon--pass" />
-                        : <Close size={16} className="pw-change__check-icon pw-change__check-icon--fail" />
-                      }
+                    <li
+                      key={check.key}
+                      className={`pw-change__check ${passed ? 'pw-change__check--pass' : ''}`}
+                    >
+                      {passed ? (
+                        <Checkmark
+                          size={16}
+                          className="pw-change__check-icon pw-change__check-icon--pass"
+                        />
+                      ) : (
+                        <Close
+                          size={16}
+                          className="pw-change__check-icon pw-change__check-icon--fail"
+                        />
+                      )}
                       <span>{check.label}</span>
                     </li>
                   );
@@ -206,13 +229,19 @@ const PasswordChangeWizard: React.FC = () => {
           <div className="totp-wizard__navigation">
             {step === 'verify' && (
               <>
-                <Button kind="secondary" onClick={() => navigate('/')}
-                  className="totp-wizard__nav-btn">
+                <Button
+                  kind="secondary"
+                  onClick={() => navigate('/')}
+                  className="totp-wizard__nav-btn"
+                >
                   {t.passwordChange.goBack}
                 </Button>
-                <Button kind="primary" onClick={handleVerify}
+                <Button
+                  kind="primary"
+                  onClick={handleVerify}
                   disabled={loading || !currentPassword}
-                  className="totp-wizard__nav-btn">
+                  className="totp-wizard__nav-btn"
+                >
                   {loading ? t.loadingSpinner.loading : t.passwordChange.confirm}
                 </Button>
               </>
@@ -220,13 +249,15 @@ const PasswordChangeWizard: React.FC = () => {
 
             {step === 'newpass' && (
               <>
-                <Button kind="secondary" onClick={handleRestart}
-                  className="totp-wizard__nav-btn">
+                <Button kind="secondary" onClick={handleRestart} className="totp-wizard__nav-btn">
                   {t.passwordChange.goBack}
                 </Button>
-                <Button kind="primary" onClick={handleChange}
+                <Button
+                  kind="primary"
+                  onClick={handleChange}
                   disabled={loading || !allPassed}
-                  className="totp-wizard__nav-btn">
+                  className="totp-wizard__nav-btn"
+                >
                   {loading ? t.loadingSpinner.loading : t.passwordChange.confirm}
                 </Button>
               </>

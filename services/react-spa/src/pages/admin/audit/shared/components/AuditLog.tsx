@@ -39,33 +39,43 @@ type TagType = 'green' | 'red' | 'warm-gray' | 'blue' | 'cool-gray' | 'teal';
 type SortDir = 'ASC' | 'DESC';
 
 const AUDIT_ACTIONS = [
-  'login_success', 'login_failed', 'login_rate_limited',
-  'mfa_challenge', 'mfa_success', 'mfa_failed',
-  'backup_code_failed', 'backup_code_used',
-  'totp_setup_started', 'totp_enabled', 'totp_disabled',
-  'logout', 'password_change_started', 'password_changed',
-  'user_created', 'user_deleted',
+  'login_success',
+  'login_failed',
+  'login_rate_limited',
+  'mfa_challenge',
+  'mfa_success',
+  'mfa_failed',
+  'backup_code_failed',
+  'backup_code_used',
+  'totp_setup_started',
+  'totp_enabled',
+  'totp_disabled',
+  'logout',
+  'password_change_started',
+  'password_changed',
+  'user_created',
+  'user_deleted',
   'proxy_request',
 ] as const;
 
 const ACTION_TAG: Record<string, TagType> = {
-  login_success:           'green',
-  mfa_success:             'green',
-  backup_code_used:        'green',
-  totp_enabled:            'green',
-  user_created:            'green',
-  login_failed:            'red',
-  mfa_failed:              'red',
-  backup_code_failed:      'red',
-  login_rate_limited:      'red',
-  user_deleted:            'red',
-  totp_disabled:           'warm-gray',
-  password_changed:        'warm-gray',
+  login_success: 'green',
+  mfa_success: 'green',
+  backup_code_used: 'green',
+  totp_enabled: 'green',
+  user_created: 'green',
+  login_failed: 'red',
+  mfa_failed: 'red',
+  backup_code_failed: 'red',
+  login_rate_limited: 'red',
+  user_deleted: 'red',
+  totp_disabled: 'warm-gray',
+  password_changed: 'warm-gray',
   password_change_started: 'blue',
-  mfa_challenge:           'blue',
-  totp_setup_started:      'blue',
-  logout:                  'cool-gray',
-  proxy_request:           'teal',
+  mfa_challenge: 'blue',
+  totp_setup_started: 'blue',
+  logout: 'cool-gray',
+  proxy_request: 'teal',
 };
 
 const COLUMN_COUNT = 6;
@@ -141,30 +151,27 @@ const AuditLog: React.FC = () => {
   }, [actionPopoverOpen]);
 
   // ── Fetch ─────────────────────────────────────────────────────
-  const fetchLogs = useCallback(async (
-    p: number,
-    l: number,
-    action: string,
-    username: string,
-    order: SortDir,
-  ) => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    params.set('page', String(p));
-    params.set('limit', String(l));
-    params.set('order', order.toLowerCase());
-    params.set('sort_by', 'timestamp');
-    if (action)   params.set('action',   action);
-    if (username) params.set('username', username);
+  const fetchLogs = useCallback(
+    async (p: number, l: number, action: string, username: string, order: SortDir) => {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.set('page', String(p));
+      params.set('limit', String(l));
+      params.set('order', order.toLowerCase());
+      params.set('sort_by', 'timestamp');
+      if (action) params.set('action', action);
+      if (username) params.set('username', username);
 
-    const res = await apiClient.get<AuditPage>(`/auth/audit?${params.toString()}`);
-    if (res.ok) setData(res.data);
-    setLoading(false);
-  }, []);
+      const res = await apiClient.get<AuditPage>(`/auth/audit?${params.toString()}`);
+      if (res.ok) setData(res.data);
+      setLoading(false);
+    },
+    []
+  );
 
   useEffect(() => {
     void fetchLogs(page, limit, actionFilter, usernameFilter, sortDir);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, actionFilter, sortDir, fetchLogs]);
 
   // ── Handlers ──────────────────────────────────────────────────
@@ -187,7 +194,13 @@ const AuditLog: React.FC = () => {
     void fetchLogs(1, limit, val, usernameFilter, sortDir);
   };
 
-  const handlePaginationChange = ({ page: p, pageSize: ps }: { page: number; pageSize: number }) => {
+  const handlePaginationChange = ({
+    page: p,
+    pageSize: ps,
+  }: {
+    page: number;
+    pageSize: number;
+  }) => {
     setPage(p);
     setLimit(ps);
   };
@@ -204,24 +217,28 @@ const AuditLog: React.FC = () => {
   const entryMap = useMemo(
     () => new Map(entries.map((e) => [String(e.id), e])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data],
+    [data]
   );
 
-  const tableRows = useMemo(() => entries.map((entry) => ({
-    id:         String(entry.id),
-    timestamp:  formatDateTime(entry.timestamp, { seconds: true }),
-    username:   entry.username ?? '—',
-    action:     entry.action,
-    detail:     formatDetail(entry.detail),
-    ip_address: entry.ip_address || '—',
-  })), [entries]);
+  const tableRows = useMemo(
+    () =>
+      entries.map((entry) => ({
+        id: String(entry.id),
+        timestamp: formatDateTime(entry.timestamp, { seconds: true }),
+        username: entry.username ?? '—',
+        action: entry.action,
+        detail: formatDetail(entry.detail),
+        ip_address: entry.ip_address || '—',
+      })),
+    [entries]
+  );
 
   const headers = [
     { key: 'timestamp', header: t.audit.timestamp },
-    { key: 'username',  header: t.audit.username  },
-    { key: 'action',    header: t.audit.action    },
-    { key: 'detail',    header: t.audit.detail    },
-    { key: 'ip_address',header: t.audit.ipAddress },
+    { key: 'username', header: t.audit.username },
+    { key: 'action', header: t.audit.action },
+    { key: 'detail', header: t.audit.detail },
+    { key: 'ip_address', header: t.audit.ipAddress },
   ];
 
   // ── Render ────────────────────────────────────────────────────
@@ -247,9 +264,15 @@ const AuditLog: React.FC = () => {
         />
         <div className="audit-log">
           <DataTable rows={tableRows} headers={headers}>
-            {({ rows, headers: tableHeaders, getTableProps, getHeaderProps, getRowProps, getTableContainerProps }) => (
+            {({
+              rows,
+              headers: tableHeaders,
+              getTableProps,
+              getHeaderProps,
+              getRowProps,
+              getTableContainerProps,
+            }) => (
               <TableContainer {...getTableContainerProps()}>
-
                 {/* ── Toolbar ── */}
                 <TableToolbar>
                   <TableToolbarContent>
@@ -276,12 +299,16 @@ const AuditLog: React.FC = () => {
                       <TableRow>
                         {tableHeaders.map((header) => {
                           const { key: _key, ...hProps } = getHeaderProps({ header });
-                          const isTs     = header.key === 'timestamp';
+                          const isTs = header.key === 'timestamp';
                           const isAction = header.key === 'action';
 
                           if (isAction) {
                             return (
-                              <TableHeader key={header.key} {...hProps} className="audit-log__action-header">
+                              <TableHeader
+                                key={header.key}
+                                {...hProps}
+                                className="audit-log__action-header"
+                              >
                                 <span>{header.header}</span>
                                 <div ref={popoverRef} className="audit-log__action-popover-anchor">
                                   <button
@@ -290,7 +317,11 @@ const AuditLog: React.FC = () => {
                                     onClick={() => setActionPopoverOpen((o) => !o)}
                                     title={t.audit.action}
                                   >
-                                    {actionFilter ? <FilterRemove size={14} /> : <Filter size={14} />}
+                                    {actionFilter ? (
+                                      <FilterRemove size={14} />
+                                    ) : (
+                                      <Filter size={14} />
+                                    )}
                                   </button>
                                   <Popover
                                     open={actionPopoverOpen}
@@ -362,7 +393,10 @@ const AuditLog: React.FC = () => {
                                 if (ck === 'detail') {
                                   return (
                                     <TableCell key={cell.id}>
-                                      <span className="audit-log__detail" title={cell.value as string}>
+                                      <span
+                                        className="audit-log__detail"
+                                        title={cell.value as string}
+                                      >
                                         {cell.value as string}
                                       </span>
                                     </TableCell>

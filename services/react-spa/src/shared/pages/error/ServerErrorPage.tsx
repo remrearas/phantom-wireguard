@@ -40,7 +40,9 @@ const ErrorState: React.FC<ErrorStateProps> = ({ phase, countdown, attempts, t }
 
       {/* Timer ring */}
       <div className="server-error__timer">
-        <div className={`server-error__ring-wrap${phase === 'checking' ? ' server-error__ring-wrap--spin' : ''}`}>
+        <div
+          className={`server-error__ring-wrap${phase === 'checking' ? ' server-error__ring-wrap--spin' : ''}`}
+        >
           <svg viewBox="0 0 120 120" className="server-error__ring">
             <circle cx="60" cy="60" r={RING_RADIUS} className="server-error__ring-bg" />
             {phase === 'waiting' && (
@@ -151,9 +153,11 @@ const ServerErrorPage: React.FC = () => {
   return (
     <div className="server-error">
       <div className="server-error__content">
-        {phase === 'restored'
-          ? <RestoredState t={t} onNavigate={() => navigate('/')} />
-          : <ErrorState phase={phase} countdown={countdown} attempts={attempts} t={t} />}
+        {phase === 'restored' ? (
+          <RestoredState t={t} onNavigate={() => navigate('/')} />
+        ) : (
+          <ErrorState phase={phase} countdown={countdown} attempts={attempts} t={t} />
+        )}
       </div>
     </div>
   );

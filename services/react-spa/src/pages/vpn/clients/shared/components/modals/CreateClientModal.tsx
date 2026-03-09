@@ -45,7 +45,9 @@ const CreateClientModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => 
       reset();
       onSuccess();
     } else {
-      setError((t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic
+      );
     }
   };
 

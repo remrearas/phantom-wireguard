@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Modal, Grid, Column, Stack, Select, SelectItem, CodeSnippet, InlineLoading, Toggle,
+  Modal,
+  Grid,
+  Column,
+  Stack,
+  Select,
+  SelectItem,
+  CodeSnippet,
+  InlineLoading,
+  Toggle,
 } from '@carbon/react';
 import { QRCodeSVG } from 'qrcode.react';
 import FormError from '@shared/components/forms/FormError';
@@ -59,16 +67,19 @@ const ClientConfigModal: React.FC<Props> = ({ open, clientName, t, onClose }) =>
         setPhase('select');
       }
     } else {
-      setError((t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.daemon_api_codes as Record<string, string>)[res.code ?? ''] ?? t.settings.error.generic
+      );
       setPhase('select');
     }
   };
 
-  const primaryText = phase === 'loading'
-    ? t.loadingSpinner.loading
-    : phase === 'loaded'
-      ? t.settings.account.totp.close
-      : t.clients.getConfig;
+  const primaryText =
+    phase === 'loading'
+      ? t.loadingSpinner.loading
+      : phase === 'loaded'
+        ? t.settings.account.totp.close
+        : t.clients.getConfig;
 
   const handleSubmit = () => {
     if (phase === 'select') void handleGenerate();
@@ -112,9 +123,7 @@ const ClientConfigModal: React.FC<Props> = ({ open, clientName, t, onClose }) =>
               <SelectItem value="hybrid" text={t.clients.hybrid} />
             </Select>
 
-            {phase === 'loading' && (
-              <InlineLoading description={t.loadingSpinner.loading} />
-            )}
+            {phase === 'loading' && <InlineLoading description={t.loadingSpinner.loading} />}
           </Stack>
 
           {/* Config içeriği — Stack dışında, serbest akış */}
@@ -132,11 +141,7 @@ const ClientConfigModal: React.FC<Props> = ({ open, clientName, t, onClose }) =>
 
               {showQr && (
                 <div className="clients__qr-wrap">
-                  <QRCodeSVG
-                    value={config}
-                    size={200}
-                    className="clients__qr"
-                  />
+                  <QRCodeSVG value={config} size={200} className="clients__qr" />
                 </div>
               )}
 

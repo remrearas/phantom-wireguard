@@ -89,10 +89,7 @@ const ProtectedHeader: React.FC = () => {
             />
 
             <HeaderName href="/" prefix="" onClick={(e: React.MouseEvent) => nav(e, '/')}>
-              <GatewayVpn
-                size={20}
-                style={{ marginRight: '0.5rem', verticalAlign: 'middle' }}
-              />
+              <GatewayVpn size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
               Phantom-WG
             </HeaderName>
 
@@ -182,9 +179,7 @@ const ProtectedHeader: React.FC = () => {
                         key={`mobile-${item.href}`}
                         href={item.href}
                         isActive={item.href ? isActive(item.href) : false}
-                        onClick={(e: React.MouseEvent) =>
-                          nav(e, item.href!, onClickSideNavExpand)
-                        }
+                        onClick={(e: React.MouseEvent) => nav(e, item.href!, onClickSideNavExpand)}
                       >
                         {item.label}
                       </HeaderMenuItem>
@@ -219,9 +214,7 @@ const ProtectedHeader: React.FC = () => {
                       key={item.href}
                       href={item.href}
                       isActive={item.href ? isActive(item.href) : false}
-                      onClick={(e: React.MouseEvent) =>
-                        nav(e, item.href!, onClickSideNavExpand)
-                      }
+                      onClick={(e: React.MouseEvent) => nav(e, item.href!, onClickSideNavExpand)}
                     >
                       {item.label}
                     </SideNavLink>

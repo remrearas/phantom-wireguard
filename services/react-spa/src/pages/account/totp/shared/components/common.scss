@@ -16,7 +16,6 @@
   color: theme.$text-primary;
 }
 
-
 // ── TotpEnable Wizard ───────────────────────────────────────────
 
 .totp-wizard {
@@ -48,8 +47,12 @@
   font-weight: 600;
   color: theme.$text-primary;
 
-  @include bp.breakpoint-down(md) { font-size: 1.25rem; }
-  @include bp.breakpoint-down(sm) { font-size: 1.125rem; }
+  @include bp.breakpoint-down(md) {
+    font-size: 1.25rem;
+  }
+  @include bp.breakpoint-down(sm) {
+    font-size: 1.125rem;
+  }
 }
 
 .totp-wizard__error {
@@ -73,8 +76,12 @@
   margin: 0 0 spacing.$spacing-04;
   line-height: 1.4;
 
-  @include bp.breakpoint-down(sm) { font-size: 0.875rem; }
-  @include bp.breakpoint-up(lg) { font-size: 1.125rem; }
+  @include bp.breakpoint-down(sm) {
+    font-size: 0.875rem;
+  }
+  @include bp.breakpoint-up(lg) {
+    font-size: 1.125rem;
+  }
 }
 
 .totp-wizard__input {
@@ -172,8 +179,12 @@
   color: theme.$text-primary;
   margin: 0 0 spacing.$spacing-07;
 
-  @include bp.breakpoint-down(sm) { font-size: 0.875rem; }
-  @include bp.breakpoint-up(lg) { font-size: 1.125rem; }
+  @include bp.breakpoint-down(sm) {
+    font-size: 0.875rem;
+  }
+  @include bp.breakpoint-up(lg) {
+    font-size: 1.125rem;
+  }
 }
 
 .totp-wizard__done-btn {
@@ -222,21 +233,35 @@
 
 // Animation
 @keyframes totpFadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 // Breakpoint overrides
 @include bp.breakpoint(md) {
-  .totp-wizard__progress { padding: spacing.$spacing-06; }
-  .totp-wizard__question { padding: spacing.$spacing-06; }
+  .totp-wizard__progress {
+    padding: spacing.$spacing-06;
+  }
+  .totp-wizard__question {
+    padding: spacing.$spacing-06;
+  }
 }
 
 @include bp.breakpoint(lg) {
-  .totp-wizard { padding: spacing.$spacing-09 0; }
+  .totp-wizard {
+    padding: spacing.$spacing-09 0;
+  }
   .totp-wizard__progress {
     padding: spacing.$spacing-07;
-    .totp-wizard__progress-text { font-size: 1.75rem; }
+    .totp-wizard__progress-text {
+      font-size: 1.75rem;
+    }
   }
   .totp-wizard__question {
     padding: spacing.$spacing-07;

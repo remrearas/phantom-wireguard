@@ -30,7 +30,10 @@ const DeleteUserModal: React.FC<Props> = ({ open, username, t, onClose, onSucces
       setError(null);
       onSuccess();
     } else {
-      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ??
+          t.settings.error.generic
+      );
     }
   };
 
@@ -51,8 +54,7 @@ const DeleteUserModal: React.FC<Props> = ({ open, username, t, onClose, onSucces
         <Column lg={16} md={8} sm={4}>
           <FormError error={error} className="um__modal-error" />
           <p className="um__confirm-text">
-            <strong>{username}</strong>{' '}
-            {t.settings.users.confirmDelete}
+            <strong>{username}</strong> {t.settings.users.confirmDelete}
           </p>
         </Column>
       </Grid>

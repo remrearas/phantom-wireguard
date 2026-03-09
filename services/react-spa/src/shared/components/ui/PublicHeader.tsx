@@ -27,10 +27,7 @@ const PublicHeader: React.FC = () => {
         <Header aria-label={t.header.appName}>
           <SkipToContent href="#main-content" />
           <HeaderName href="/login" prefix="">
-            <GatewayVpn
-              size={20}
-              style={{ marginRight: '0.5rem', verticalAlign: 'middle' }}
-            />
+            <GatewayVpn size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
             Phantom-WG
           </HeaderName>
           <HeaderGlobalBar>

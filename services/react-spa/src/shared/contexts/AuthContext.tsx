@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  ReactNode,
+} from 'react';
 import { apiClient } from '@shared/api/client';
 import { useUser } from '@shared/contexts/UserContext';
 
@@ -73,11 +81,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [token, clearUser]);
 
-  const storeToken = useCallback(async (newToken: string) => {
-    localStorage.setItem('token', newToken);
-    setToken(newToken);
-    await mutateUser();
-  }, [mutateUser]);
+  const storeToken = useCallback(
+    async (newToken: string) => {
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+      await mutateUser();
+    },
+    [mutateUser]
+  );
 
   const login = useCallback(
     async (username: string, password: string): Promise<LoginResult> => {
@@ -91,7 +102,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if ('mfa_required' in res.data) {
-        return { status: 'mfa_required', mfa_token: res.data.mfa_token, expires_in: res.data.expires_in };
+        return {
+          status: 'mfa_required',
+          mfa_token: res.data.mfa_token,
+          expires_in: res.data.expires_in,
+        };
       }
 
       await storeToken(res.data.token);

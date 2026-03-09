@@ -1,8 +1,20 @@
 import React, { useState } from 'react';
 import {
-  DataTable, Table, TableHead, TableRow, TableHeader, TableBody, TableCell,
-  TableContainer, TableToolbar, TableToolbarContent,
-  Button, Tag, OverflowMenu, OverflowMenuItem, InlineNotification,
+  DataTable,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeader,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableToolbar,
+  TableToolbarContent,
+  Button,
+  Tag,
+  OverflowMenu,
+  OverflowMenuItem,
+  InlineNotification,
 } from '@carbon/react';
 import { Add } from '@carbon/icons-react';
 import { useUser, type UserInfo } from '@shared/contexts/UserContext';
@@ -37,7 +49,10 @@ const UserManagement: React.FC = () => {
   const { data: usersData, loading, refetch: refetchUsers } = useApi<UserInfo[]>('/auth/users');
   const users = usersData ?? [];
 
-  const [notification, setNotification] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [notification, setNotification] = useState<{
+    kind: 'success' | 'error';
+    text: string;
+  } | null>(null);
   const [action, setAction] = useState<ActiveAction>(null);
 
   const closeAction = () => setAction(null);
@@ -66,15 +81,18 @@ const UserManagement: React.FC = () => {
   ];
 
   const rows = users.map((u) => ({
-    id: u.id, username: u.username, role: u.role,
-    totp_enabled: u.totp_enabled, created_at: u.created_at, actions: u.username,
+    id: u.id,
+    username: u.username,
+    role: u.role,
+    totp_enabled: u.totp_enabled,
+    created_at: u.created_at,
+    actions: u.username,
   }));
 
   // ── Render ────────────────────────────────────────────────────
 
   return (
     <div className="um">
-
       {/* ── Modals ── */}
       <CreateUserModal
         open={action?.type === 'create'}
@@ -102,7 +120,9 @@ const UserManagement: React.FC = () => {
         isSelf={action?.type === 'disable-totp' ? user?.username === action.username : false}
         t={t}
         onClose={closeAction}
-        onSuccess={() => action?.type === 'disable-totp' && handleDisableTotpSuccess(action.username)}
+        onSuccess={() =>
+          action?.type === 'disable-totp' && handleDisableTotpSuccess(action.username)
+        }
       />
 
       {/* ── Notification ── */}
@@ -118,12 +138,23 @@ const UserManagement: React.FC = () => {
 
       {/* ── Users Table ── */}
       <DataTable rows={rows} headers={headers}>
-        {({ rows: tableRows, headers: tableHeaders, getHeaderProps, getRowProps, getTableProps, getTableContainerProps }) => (
+        {({
+          rows: tableRows,
+          headers: tableHeaders,
+          getHeaderProps,
+          getRowProps,
+          getTableProps,
+          getTableContainerProps,
+        }) => (
           <TableContainer {...getTableContainerProps()}>
             <TableToolbar>
               <TableToolbarContent>
-                <Button renderIcon={Add} size="sm" kind="primary"
-                  onClick={() => setAction({ type: 'create' })}>
+                <Button
+                  renderIcon={Add}
+                  size="sm"
+                  kind="primary"
+                  onClick={() => setAction({ type: 'create' })}
+                >
                   {t.settings.users.addUser}
                 </Button>
               </TableToolbarContent>
@@ -133,7 +164,11 @@ const UserManagement: React.FC = () => {
                 <TableRow>
                   {tableHeaders.map((header) => {
                     const { key: _key, ...headerProps } = getHeaderProps({ header });
-                    return <TableHeader key={header.key} {...headerProps}>{header.header}</TableHeader>;
+                    return (
+                      <TableHeader key={header.key} {...headerProps}>
+                        {header.header}
+                      </TableHeader>
+                    );
                   })}
                 </TableRow>
               </TableHead>
@@ -149,7 +184,9 @@ const UserManagement: React.FC = () => {
                           return (
                             <TableCell key={cell.id}>
                               <Tag type={role === 'superadmin' ? 'purple' : 'blue'} size="sm">
-                                {role === 'superadmin' ? t.settings.users.superadmin : t.settings.users.admin}
+                                {role === 'superadmin'
+                                  ? t.settings.users.superadmin
+                                  : t.settings.users.admin}
                               </Tag>
                             </TableCell>
                           );
@@ -158,12 +195,19 @@ const UserManagement: React.FC = () => {
                           return (
                             <TableCell key={cell.id}>
                               <Tag type={cell.value ? 'green' : 'cool-gray'} size="sm">
-                                {cell.value ? t.settings.account.totp.enabled : t.settings.account.totp.disabled}
+                                {cell.value
+                                  ? t.settings.account.totp.enabled
+                                  : t.settings.account.totp.disabled}
                               </Tag>
                             </TableCell>
                           );
                         }
-                        if (ck === 'created_at') return <TableCell key={cell.id}>{formatDateTime(cell.value as string)}</TableCell>;
+                        if (ck === 'created_at')
+                          return (
+                            <TableCell key={cell.id}>
+                              {formatDateTime(cell.value as string)}
+                            </TableCell>
+                          );
                         if (ck === 'actions') {
                           const username = cell.value as string;
                           const isSelf = user?.username === username;
@@ -173,14 +217,21 @@ const UserManagement: React.FC = () => {
                           return (
                             <TableCell key={cell.id}>
                               <OverflowMenu size="sm" flipped>
-                                <OverflowMenuItem itemText={t.settings.users.changePassword}
-                                  onClick={() => setAction({ type: 'password', username })} />
-                                <OverflowMenuItem itemText={t.settings.account.totp.disable}
+                                <OverflowMenuItem
+                                  itemText={t.settings.users.changePassword}
+                                  onClick={() => setAction({ type: 'password', username })}
+                                />
+                                <OverflowMenuItem
+                                  itemText={t.settings.account.totp.disable}
                                   disabled={!hasTotp}
-                                  onClick={() => setAction({ type: 'disable-totp', username })} />
-                                <OverflowMenuItem itemText={t.settings.users.deleteUser} isDelete
+                                  onClick={() => setAction({ type: 'disable-totp', username })}
+                                />
+                                <OverflowMenuItem
+                                  itemText={t.settings.users.deleteUser}
+                                  isDelete
                                   disabled={isSelf || isSA}
-                                  onClick={() => setAction({ type: 'delete', username })} />
+                                  onClick={() => setAction({ type: 'delete', username })}
+                                />
                               </OverflowMenu>
                             </TableCell>
                           );
@@ -191,7 +242,11 @@ const UserManagement: React.FC = () => {
                           return (
                             <TableCell key={cell.id}>
                               {username}
-                              {isSelf && <Tag type="blue" size="sm" style={{ marginLeft: '0.5rem' }}>{t.settings.users.you}</Tag>}
+                              {isSelf && (
+                                <Tag type="blue" size="sm" style={{ marginLeft: '0.5rem' }}>
+                                  {t.settings.users.you}
+                                </Tag>
+                              )}
                             </TableCell>
                           );
                         }
@@ -206,7 +261,11 @@ const UserManagement: React.FC = () => {
         )}
       </DataTable>
 
-      {loading && <p style={{ color: 'var(--cds-text-secondary)', marginTop: '1rem' }}>{t.loadingSpinner.loading}</p>}
+      {loading && (
+        <p style={{ color: 'var(--cds-text-secondary)', marginTop: '1rem' }}>
+          {t.loadingSpinner.loading}
+        </p>
+      )}
     </div>
   );
 };

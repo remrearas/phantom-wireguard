@@ -47,35 +47,41 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const router = createBrowserRouter([
   // Public
   {
-    element: <PublicRoute><PublicLayout /></PublicRoute>,
-    children: [
-      { path: '/login', element: <LoginPage /> },
-    ],
+    element: (
+      <PublicRoute>
+        <PublicLayout />
+      </PublicRoute>
+    ),
+    children: [{ path: '/login', element: <LoginPage /> }],
   },
 
   // Protected
   {
-    element: <ProtectedRoute><ProtectedLayout /></ProtectedRoute>,
+    element: (
+      <ProtectedRoute>
+        <ProtectedLayout />
+      </ProtectedRoute>
+    ),
     children: [
       // account
-      { path: '/',                         element: <DashboardPage /> },
-      { path: '/account/totp',             element: <TotpPage /> },
-      { path: '/account/totp/enable',      element: <TotpEnablePage /> },
-      { path: '/account/totp/disable',     element: <TotpDisablePage /> },
-      { path: '/account/password-change',  element: <PasswordChangePage /> },
+      { path: '/', element: <DashboardPage /> },
+      { path: '/account/totp', element: <TotpPage /> },
+      { path: '/account/totp/enable', element: <TotpEnablePage /> },
+      { path: '/account/totp/disable', element: <TotpDisablePage /> },
+      { path: '/account/password-change', element: <PasswordChangePage /> },
 
       // admin
-      { path: '/admin/users',              element: <UsersPage /> },
-      { path: '/admin/audit',              element: <AuditPage /> },
+      { path: '/admin/users', element: <UsersPage /> },
+      { path: '/admin/audit', element: <AuditPage /> },
 
       // vpn
-      { path: '/vpn/clients',              element: <ClientsPage /> },
+      { path: '/vpn/clients', element: <ClientsPage /> },
     ],
   },
 
   // Error pages
   { path: '/server-error', element: <ServerErrorPage /> },
-  { path: '*',             element: <ErrorPage /> },
+  { path: '*', element: <ErrorPage /> },
 ]);
 
 const AppRouter: React.FC = () => <RouterProvider router={router} />;

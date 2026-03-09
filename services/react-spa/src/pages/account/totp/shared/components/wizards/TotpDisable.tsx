@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Grid, Column, Button, PasswordInput, InlineNotification,
-} from '@carbon/react';
+import { Grid, Column, Button, PasswordInput, InlineNotification } from '@carbon/react';
 import { ArrowLeft, CheckmarkFilled } from '@carbon/icons-react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useUser } from '@shared/contexts/UserContext';
@@ -37,7 +35,10 @@ const TotpDisable: React.FC = () => {
       await mutateUser();
       setStep('done');
     } else {
-      setError((t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ?? t.settings.error.generic);
+      setError(
+        (t.auth_service_api_codes as Record<string, string>)[res.error_code ?? ''] ??
+          t.settings.error.generic
+      );
     }
   };
 
@@ -53,11 +54,13 @@ const TotpDisable: React.FC = () => {
             </div>
             <div className="totp-wizard__question totp-wizard__done">
               <CheckmarkFilled size={64} className="totp-wizard__done-icon" />
-              <p className="totp-wizard__done-text">
-                {t.settings.account.totp.disableSuccess}
-              </p>
-              <Button kind="primary" renderIcon={ArrowLeft} onClick={() => navigate('/account/totp')}
-                className="totp-wizard__done-btn">
+              <p className="totp-wizard__done-text">{t.settings.account.totp.disableSuccess}</p>
+              <Button
+                kind="primary"
+                renderIcon={ArrowLeft}
+                onClick={() => navigate('/account/totp')}
+                className="totp-wizard__done-btn"
+              >
                 {t.settings.account.totp.goBack}
               </Button>
             </div>
@@ -78,14 +81,17 @@ const TotpDisable: React.FC = () => {
           </div>
 
           {error && (
-            <InlineNotification kind="error" title={error} lowContrast hideCloseButton
-              className="totp-wizard__error" />
+            <InlineNotification
+              kind="error"
+              title={error}
+              lowContrast
+              hideCloseButton
+              className="totp-wizard__error"
+            />
           )}
 
           <div className="totp-wizard__question">
-            <p className="totp-wizard__question-text">
-              {t.settings.account.totp.passwordRequired}
-            </p>
+            <p className="totp-wizard__question-text">{t.settings.account.totp.passwordRequired}</p>
             <div className="totp-wizard__input">
               <PasswordInput
                 id="totp-disable-password"
@@ -98,12 +104,19 @@ const TotpDisable: React.FC = () => {
           </div>
 
           <div className="totp-wizard__navigation">
-            <Button kind="secondary" onClick={() => navigate('/account/totp')}
-              className="totp-wizard__nav-btn">
+            <Button
+              kind="secondary"
+              onClick={() => navigate('/account/totp')}
+              className="totp-wizard__nav-btn"
+            >
               {t.settings.account.totp.goBack}
             </Button>
-            <Button kind="danger" onClick={handleDisable}
-              disabled={loading || !password} className="totp-wizard__nav-btn">
+            <Button
+              kind="danger"
+              onClick={handleDisable}
+              disabled={loading || !password}
+              className="totp-wizard__nav-btn"
+            >
               {loading ? t.loadingSpinner.loading : t.settings.account.totp.confirm}
             </Button>
           </div>

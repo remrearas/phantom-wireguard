@@ -22,15 +22,15 @@ interface UserContextValue {
 const UserContext = createContext<UserContextValue | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { data: user = null, isLoading, mutate } = useSWR<UserInfo | null>(
-    USER_KEY,
-    swrFetcher,
-    {
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      dedupingInterval: 1000,
-    },
-  );
+  const {
+    data: user = null,
+    isLoading,
+    mutate,
+  } = useSWR<UserInfo | null>(USER_KEY, swrFetcher, {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 1000,
+  });
 
   const mutateUser = useCallback(async () => {
     await mutate();
@@ -44,7 +44,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = useMemo(
     () => ({ user, isLoading, isSuperadmin, mutateUser, clearUser }),
-    [user, isLoading, isSuperadmin, mutateUser, clearUser],
+    [user, isLoading, isSuperadmin, mutateUser, clearUser]
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

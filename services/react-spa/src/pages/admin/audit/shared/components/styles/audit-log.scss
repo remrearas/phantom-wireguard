@@ -34,7 +34,9 @@
   border-radius: 2px;
   cursor: pointer;
   color: var(--cds-icon-secondary);
-  transition: background-color 70ms ease, color 70ms ease;
+  transition:
+    background-color 70ms ease,
+    color 70ms ease;
   flex-shrink: 0;
 
   &:hover {

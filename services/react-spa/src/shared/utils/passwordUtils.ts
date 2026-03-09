@@ -1,5 +1,6 @@
 const PASSWORD_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_+-=';
-const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:'",.<>?/`~\\]).{8,256}$/;
+const PASSWORD_PATTERN =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:'",.<>?/`~\\]).{8,256}$/;
 
 export function generatePassword(length = 16): string {
   const array = new Uint8Array(length);
@@ -35,6 +36,10 @@ export function getPolicyChecks(labels: {
     { key: 'uppercase', label: labels.uppercase, test: (pw) => /[A-Z]/.test(pw) },
     { key: 'lowercase', label: labels.lowercase, test: (pw) => /[a-z]/.test(pw) },
     { key: 'digit', label: labels.digit, test: (pw) => /\d/.test(pw) },
-    { key: 'special', label: labels.special, test: (pw) => /[!@#$%^&*()_+\-=\[\]{}|;:'",.<>?/`~\\]/.test(pw) },
+    {
+      key: 'special',
+      label: labels.special,
+      test: (pw) => /[!@#$%^&*()_+\-=\[\]{}|;:'",.<>?/`~\\]/.test(pw),
+    },
   ];
 }

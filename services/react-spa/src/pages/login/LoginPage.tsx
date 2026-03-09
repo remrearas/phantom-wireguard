@@ -22,9 +22,9 @@ const LoginPage: React.FC = () => {
   const t = translate(locale);
 
   const localizeError = (code: string): string =>
-    (t.auth_service_api_codes as Record<string, string>)[code]
-    ?? (t.client_side_api_codes as Record<string, string>)[code]
-    ?? code;
+    (t.auth_service_api_codes as Record<string, string>)[code] ??
+    (t.client_side_api_codes as Record<string, string>)[code] ??
+    code;
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -201,13 +201,18 @@ const LoginPage: React.FC = () => {
                 )}
                 {mfaCountdown > 0 && (
                   <p className="login-page__countdown">
-                    {t.login.countdown}: {Math.floor(mfaCountdown / 60)}:{String(mfaCountdown % 60).padStart(2, '0')}
+                    {t.login.countdown}: {Math.floor(mfaCountdown / 60)}:
+                    {String(mfaCountdown % 60).padStart(2, '0')}
                   </p>
                 )}
                 <Button
                   type="submit"
                   renderIcon={ArrowRight}
-                  disabled={loading || mfaCountdown <= 0 || (useBackup ? backupCode.length < 6 : totpCode.length < 6)}
+                  disabled={
+                    loading ||
+                    mfaCountdown <= 0 ||
+                    (useBackup ? backupCode.length < 6 : totpCode.length < 6)
+                  }
                   className="login-page__submit"
                 >
                   {loading ? t.login.submitting : t.login.totpSubmit}
@@ -215,7 +220,10 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   className="login-page__toggle-link"
-                  onClick={() => { setUseBackup(!useBackup); setError(null); }}
+                  onClick={() => {
+                    setUseBackup(!useBackup);
+                    setError(null);
+                  }}
                 >
                   {useBackup ? t.login.useTotpCode : t.login.useBackupCode}
                 </button>

@@ -1,7 +1,14 @@
 import React from 'react';
 import {
-  Modal, Grid, Column, StructuredListWrapper, StructuredListBody,
-  StructuredListRow, StructuredListCell, Tag, CodeSnippet,
+  Modal,
+  Grid,
+  Column,
+  StructuredListWrapper,
+  StructuredListBody,
+  StructuredListRow,
+  StructuredListCell,
+  Tag,
+  CodeSnippet,
 } from '@carbon/react';
 import { translate } from '@shared/translations';
 
@@ -68,7 +75,9 @@ const AuditDetailModal: React.FC<Props> = ({ open, entry, t, actionTagType, onCl
               <StructuredListRow>
                 <StructuredListCell>{t.audit.action}</StructuredListCell>
                 <StructuredListCell>
-                  <Tag type={actionTagType as never} size="sm">{entry.action}</Tag>
+                  <Tag type={actionTagType as never} size="sm">
+                    {entry.action}
+                  </Tag>
                 </StructuredListCell>
               </StructuredListRow>
               <StructuredListRow>
