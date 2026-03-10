@@ -22,14 +22,15 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from auth_service import __version__
 from auth_service.config import load_auth_config
 from auth_service.crypto.keys import build_signing_key, build_verify_key, load_auth_keys
-from auth_service.db.repository import open_auth_db
+from auth_service.db.repository import open_auth_db, resolve_db_path
 from auth_service.middleware.rate_limit import RateLimiter
 from auth_service.routes import setup_routers
 
@@ -49,9 +50,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         verify_key = build_verify_key(keys)
         log.info("Auth keys loaded")
 
-        # Phase 3: Open auth database (must exist — created by tools/setup.sh)
-        db = open_auth_db(db_dir=config.db_dir)
-        log.info("Auth database ready")
+        # Phase 3: Validate auth database path (must exist — created by tools/setup.sh)
+        db_path = resolve_db_path(db_dir=config.db_dir)
+        log.info("Auth database ready: %s", db_path)
 
         # Phase 4: Build httpx client for daemon proxy
         if config.proxy_is_uds:
@@ -73,7 +74,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.keys = keys
         app.state.signing_key = signing_key
         app.state.verify_key = verify_key
-        app.state.db = db
+        app.state.db_path = db_path
         app.state.proxy_client = proxy_client
         app.state.rate_limiter = rate_limiter
     except Exception as exc:
@@ -83,8 +84,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
     await proxy_client.aclose()
-    db.close()
     log.info("Auth service stopped")
+
+
+class _DBMiddleware(BaseHTTPMiddleware):
+    """Open a per-request SQLite connection on request.state.db, close after response."""
+
+    async def dispatch(self, request: Request, call_next):
+        db = open_auth_db(request.app.state.db_path)
+        request.state.db = db
+        try:
+            response = await call_next(request)
+        finally:
+            db.close()
+        return response
 
 
 def create_app(
@@ -98,6 +111,7 @@ def create_app(
         redoc_url=None,
         lifespan=lifespan_func,
     )
+    app.add_middleware(_DBMiddleware)
     setup_routers(app)
     _register_error_handlers(app)
     return app

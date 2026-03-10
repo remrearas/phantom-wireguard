@@ -35,7 +35,7 @@ def create_user(
     payload: TokenPayload = Depends(require_superadmin),
 ):
     """Create a new admin user. Superadmin only."""
-    db = request.app.state.db
+    db = request.state.db
     try:
         user = db.create_user(
             username=body.username,
@@ -58,7 +58,7 @@ def list_users(
     _payload: TokenPayload = Depends(require_superadmin),
 ):
     """List all users. Superadmin only."""
-    db = request.app.state.db
+    db = request.state.db
     return ApiOk(data=[user_info(u) for u in db.list_users()])
 
 
@@ -71,7 +71,7 @@ def delete_user(
     """Delete a user. Superadmin only. Cannot delete self."""
     if username == payload.sub:
         raise ApiException(400, "CANNOT_DELETE_SELF")
-    db = request.app.state.db
+    db = request.state.db
     user = db.get_user_by_username(username)
     if user is None:
         raise ApiException(404, "USER_NOT_FOUND")
@@ -95,7 +95,7 @@ def change_password(
     """Change password. Superadmin: any user. Admin: only self."""
     if payload.role != "superadmin" and username != payload.sub:
         raise ApiException(403, "CANNOT_CHANGE_OTHERS_PASSWORD")
-    db = request.app.state.db
+    db = request.state.db
     if not db.update_password(username, hash_password(body.password)):
         raise ApiException(404, "USER_NOT_FOUND")
     audit_log(

@@ -37,7 +37,7 @@ def get_audit_log(
     sort_by: str = Query("timestamp", pattern="^timestamp$", description="Sort column (timestamp only)"),
 ):
     """Paginated audit log with filtering and ordering. Superadmin only."""
-    db = request.app.state.db
+    db = request.state.db
     result = db.get_audit_logs_paginated(
         page=page, limit=limit, action=action, username=username, ip=ip,
         order=order, sort_by=sort_by,

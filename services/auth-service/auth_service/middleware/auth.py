@@ -31,8 +31,8 @@ def require_auth(request: Request) -> TokenPayload:
 
     raw_token = auth_header[7:]
     verify_key = request.app.state.verify_key
-    db = request.app.state.db
     config = request.app.state.config
+    db = request.state.db
 
     try:
         payload = decode_token(verify_key, raw_token)

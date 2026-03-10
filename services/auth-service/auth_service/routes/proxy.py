@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api", tags=["proxy"])
 
 def _resolve_user_id(request: Request, username: str) -> str | None:
     """Resolve user_id from username for audit logging."""
-    user = request.app.state.db.get_user_by_username(username)
+    user = request.state.db.get_user_by_username(username)
     return user.id if user else None
 
 
@@ -54,7 +54,7 @@ async def proxy(
     """Forward authenticated request to daemon over UDS."""
     config = request.app.state.config
     client = request.app.state.proxy_client
-    db = request.app.state.db
+    db = request.state.db
     target_url = f"{config.proxy_base_url}/api/{path}"
     query = str(request.url.query) if request.url.query else ""
     if query:

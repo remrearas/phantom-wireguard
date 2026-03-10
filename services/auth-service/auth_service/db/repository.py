@@ -423,22 +423,30 @@ class AuthDB:
         }
 
 
-def open_auth_db(db_dir: str) -> AuthDB:
-    """Open existing auth.db. Raises if DB directory missing."""
+def resolve_db_path(db_dir: str) -> str:
+    """Resolve and validate auth.db path. Raises if not found."""
     path = Path(db_dir)
     db_file = path / "auth.db"
     if not db_file.exists():
         raise AuthDatabaseError(
             f"Auth database not found: {db_file} — run tools/setup.sh first"
         )
-    conn = open_connection(str(db_file))
+    return str(db_file)
+
+
+def open_auth_db(db_path: str) -> AuthDB:
+    """Open a per-request AuthDB connection."""
+    conn = open_connection(db_path)
     return AuthDB(conn)
 
 
-def bootstrap_auth_db(db_dir: str) -> AuthDB:
-    """Create auth.db with schema. Used by tools/setup.sh bootstrap."""
+def bootstrap_auth_db(db_dir: str) -> tuple[AuthDB, str]:
+    """Create auth.db with schema. Returns (AuthDB, db_path).
+
+    Used by tools/setup.sh bootstrap and test fixtures.
+    """
     path = Path(db_dir)
     path.mkdir(parents=True, exist_ok=True)
     db_path = str(path / "auth.db")
     conn = open_connection(db_path)
-    return AuthDB(conn)
+    return AuthDB(conn), db_path

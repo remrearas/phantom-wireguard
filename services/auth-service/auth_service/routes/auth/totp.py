@@ -53,7 +53,7 @@ def totp_setup(
     payload: TokenPayload = Depends(require_auth),
 ):
     """Start TOTP setup. Verify password, return setup token with secret and backup codes."""
-    db = request.app.state.db
+    db = request.state.db
     config = request.app.state.config
     signing_key = request.app.state.signing_key
 
@@ -98,7 +98,7 @@ def totp_confirm(
     payload: TokenPayload = Depends(require_auth),
 ):
     """Confirm TOTP setup by verifying a code. Activates TOTP on success."""
-    db = request.app.state.db
+    db = request.state.db
 
     try:
         claims = decode_token_claims(request.app.state.verify_key, body.setup_token)
@@ -143,7 +143,7 @@ def totp_disable(
     payload: TokenPayload = Depends(require_auth),
 ):
     """Disable TOTP. Self: own password. Superadmin: any user with own password."""
-    db = request.app.state.db
+    db = request.state.db
 
     target_username = body.username or payload.sub
     if target_username != payload.sub and payload.role != "superadmin":
