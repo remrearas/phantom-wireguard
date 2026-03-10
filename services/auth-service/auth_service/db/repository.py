@@ -384,23 +384,20 @@ class AuthDB:
             f"{where}"
         )
 
-        # Wrap both queries in a single read transaction to prevent
-        # a concurrent write from locking between COUNT and SELECT.
-        self._conn.execute("BEGIN")
-        try:
-            total: int = self._conn.execute(
-                f"SELECT COUNT(*) {base_query}", params
-            ).fetchone()[0]
+        # Single query with COUNT(*) OVER() to get total and rows atomically,
+        # avoiding a race between separate COUNT and SELECT statements.
+        offset = (page - 1) * limit
+        rows = self._conn.execute(
+            f"SELECT al.id, al.user_id, u.username, al.action, al.detail, "
+            f"al.ip_address, al.timestamp, COUNT(*) OVER() AS _total "
+            f"{base_query} "
+            f"ORDER BY {safe_sort_key} {safe_order} LIMIT ? OFFSET ?",
+            [*params, limit, offset],
+        ).fetchall()
 
-            offset = (page - 1) * limit
-            rows = self._conn.execute(
-                f"SELECT al.id, al.user_id, u.username, al.action, al.detail, "
-                f"al.ip_address, al.timestamp {base_query} "
-                f"ORDER BY {safe_sort_key} {safe_order} LIMIT ? OFFSET ?",
-                [*params, limit, offset],
-            ).fetchall()
-        finally:
-            self._conn.execute("COMMIT")
+        total = rows[0]["_total"] if rows else self._conn.execute(
+            f"SELECT COUNT(*) {base_query}", params
+        ).fetchone()[0]
 
         import math
         pages = math.ceil(total / limit) if total > 0 else 1
@@ -408,6 +405,7 @@ class AuthDB:
         items = []
         for r in rows:
             row_dict = dict(r)
+            row_dict.pop("_total", None)
             try:
                 row_dict["detail"] = json.loads(row_dict["detail"] or "{}")
             except (json.JSONDecodeError, TypeError):
