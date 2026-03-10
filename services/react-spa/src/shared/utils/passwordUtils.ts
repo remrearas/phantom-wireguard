@@ -3,15 +3,29 @@ const PASSWORD_PATTERN =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:'",.<>?/`~\\]).{8,256}$/;
 
 export function generatePassword(length = 16): string {
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
-  let pw = '';
-  for (const byte of array) pw += PASSWORD_CHARS[byte % PASSWORD_CHARS.length];
-  if (!/[a-z]/.test(pw)) pw = pw.slice(0, -1) + 'a';
-  if (!/[A-Z]/.test(pw)) pw = pw.slice(0, -1) + 'A';
-  if (!/\d/.test(pw)) pw = pw.slice(0, -1) + '1';
-  if (!/[!@#$%^&*_+\-=]/.test(pw)) pw = pw.slice(0, -1) + '!';
-  return pw;
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const special = '!@#$%^&*_+-=';
+
+  const pick = (chars: string) => chars[crypto.getRandomValues(new Uint8Array(1))[0] % chars.length];
+
+  // Guarantee one from each required category
+  const required = [pick(lower), pick(upper), pick(digits), pick(special)];
+
+  // Fill remaining slots from the full character set
+  const remaining = new Uint8Array(length - required.length);
+  crypto.getRandomValues(remaining);
+  for (const byte of remaining) required.push(PASSWORD_CHARS[byte % PASSWORD_CHARS.length]);
+
+  // Shuffle with Fisher-Yates to avoid predictable positions
+  const arr = required;
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = crypto.getRandomValues(new Uint8Array(1))[0] % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+
+  return arr.join('');
 }
 
 export function isPasswordValid(password: string): boolean {
