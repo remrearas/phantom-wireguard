@@ -88,9 +88,9 @@ services:
 
 secrets:
   wg_private_key:
-    file: ../../container-data/secrets/development/wg_private_key
+    file: ./container-data/secrets/wg_private_key
   wg_public_key:
-    file: ../../container-data/secrets/development/wg_public_key
+    file: ./container-data/secrets/wg_public_key
 
 volumes:
   daemon-sock:

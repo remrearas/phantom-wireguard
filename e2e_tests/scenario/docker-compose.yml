@@ -58,7 +58,7 @@ services:
     volumes:
       - daemon-sock:/var/run/phantom
       - ../../services/auth-service/auth_service:/app/auth_service:ro
-      - ../../container-data/auth-db:/var/lib/phantom/auth
+      - ./container-data/auth-db:/var/lib/phantom/auth
     secrets: [auth_signing_key, auth_verify_key]
     environment:
       PYTHONUNBUFFERED: "1"
@@ -76,7 +76,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ../../e2e_tests:/app/e2e_tests:ro
-      - ../../container-data/secrets/development/.admin_password:/run/secrets/admin_password:ro
+      - ./container-data/secrets/.admin_password:/run/secrets/admin_password:ro
     environment:
       PYTHONUNBUFFERED: "1"
       PHANTOM_AUTH_URL: "http://auth-service:8443"
@@ -102,13 +102,13 @@ services:
 
 secrets:
   wg_private_key:
-    file: ../../container-data/secrets/development/wg_private_key
+    file: ./container-data/secrets/wg_private_key
   wg_public_key:
-    file: ../../container-data/secrets/development/wg_public_key
+    file: ./container-data/secrets/wg_public_key
   auth_signing_key:
-    file: ../../container-data/secrets/development/auth_signing_key
+    file: ./container-data/secrets/auth_signing_key
   auth_verify_key:
-    file: ../../container-data/secrets/development/auth_verify_key
+    file: ./container-data/secrets/auth_verify_key
 
 volumes:
   daemon-sock:

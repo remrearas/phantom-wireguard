@@ -46,6 +46,7 @@ logging.basicConfig(
 log = logging.getLogger("e2e.scenario")
 
 COMPOSE_PATH = str(RUNNER_DIR / "docker-compose.yml")
+BOOTSTRAP_SCRIPT = RUNNER_DIR / "helpers" / "bootstrap.sh"
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,6 +70,14 @@ def main() -> None:
     env = E2ETestEnvironment("sc", compose_path=COMPOSE_PATH)
 
     try:
+        # Fresh secrets + DB every run
+        step("Bootstrapping secrets and auth DB")
+        subprocess.run(
+            ["bash", str(BOOTSTRAP_SCRIPT)],
+            cwd=str(REPO_ROOT),
+            check=True,
+        )
+
         env.up()
 
         # Wait for services to be ready
