@@ -30,7 +30,7 @@ router = APIRouter()
 @router.post("/logout")
 def logout(request: Request, payload: TokenPayload = Depends(require_auth)):
     """Revoke current session."""
-    db = request.app.state.db
+    db = request.state.db
     db.revoke_session(payload.jti)
     audit_log(db, request, "logout", {"username": payload.sub})
     return ApiOk(data=ActionResult(success_code="LOGGED_OUT"))
@@ -39,7 +39,7 @@ def logout(request: Request, payload: TokenPayload = Depends(require_auth)):
 @router.get("/me")
 def me(request: Request, payload: TokenPayload = Depends(require_auth)):
     """Get current user info."""
-    db = request.app.state.db
+    db = request.state.db
     user = db.get_user_by_username(payload.sub)
     if user is None:
         raise ApiException(404, "USER_NOT_FOUND")

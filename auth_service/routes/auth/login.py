@@ -37,7 +37,7 @@ router = APIRouter()
 @router.post("/login")
 def login(body: LoginRequest, request: Request):
     """Authenticate with username+password. Returns JWT or MFA challenge."""
-    db = request.app.state.db
+    db = request.state.db
     rate_limiter = request.app.state.rate_limiter
     ip = get_client_ip(request)
 
@@ -78,7 +78,7 @@ def login(body: LoginRequest, request: Request):
 @router.post("/mfa/verify")
 def mfa_verify(body: MFAVerifyRequest, request: Request):
     """Verify TOTP code and issue access token."""
-    db = request.app.state.db
+    db = request.state.db
 
     try:
         payload = _decode_mfa_token(request.app.state.verify_key, body.mfa_token)
@@ -105,7 +105,7 @@ def mfa_verify(body: MFAVerifyRequest, request: Request):
 @router.post("/totp/backup")
 def mfa_backup(body: MFAVerifyRequest, request: Request):
     """Verify backup code and issue access token."""
-    db = request.app.state.db
+    db = request.state.db
 
     try:
         payload = _decode_mfa_token(request.app.state.verify_key, body.mfa_token)

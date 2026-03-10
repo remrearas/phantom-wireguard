@@ -31,6 +31,7 @@ class AuthTestEnvironment:
     signing_key: SigningKey
     verify_key: VerifyKey
     db: AuthDB
+    db_path: str
     db_dir: str
     rate_limiter: RateLimiter
 
@@ -116,7 +117,7 @@ class AuthTestEnvironment:
         app.state.keys = self.keys
         app.state.signing_key = self.signing_key
         app.state.verify_key = self.verify_key
-        app.state.db = self.db
+        app.state.db_path = self.db_path
         app.state.rate_limiter = rate_limiter or self.rate_limiter
         app.state.proxy_client = proxy_client
         return TestClient(app)
@@ -164,7 +165,7 @@ def auth_env(tmp_path):
     )
 
     keys = AuthSigningKeys(signing_key_hex=signing_hex, verify_key_hex=verify_hex)
-    db = bootstrap_auth_db(db_dir=db_dir)
+    db, db_path = bootstrap_auth_db(db_dir=db_dir)
     rate_limiter = RateLimiter(window=60, max_attempts=5)
 
     env = AuthTestEnvironment(
@@ -173,6 +174,7 @@ def auth_env(tmp_path):
         signing_key=sk,
         verify_key=vk,
         db=db,
+        db_path=db_path,
         db_dir=db_dir,
         rate_limiter=rate_limiter,
     )

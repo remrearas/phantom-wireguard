@@ -29,7 +29,7 @@ def issue_access_token(request: Request, username: str, user_id: str, role: str 
     """Create session + issue access JWT."""
     config = request.app.state.config
     signing_key = request.app.state.signing_key
-    db = request.app.state.db
+    db = request.state.db
 
     jti = uuid.uuid4().hex
     token = encode_token(

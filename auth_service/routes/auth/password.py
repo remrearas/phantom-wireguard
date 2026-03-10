@@ -42,7 +42,7 @@ def password_verify(
     payload: TokenPayload = Depends(require_auth),
 ):
     """Step 1: Verify current password → issue short-lived change token."""
-    db = request.app.state.db
+    db = request.state.db
     config = request.app.state.config
     signing_key = request.app.state.signing_key
 
@@ -74,7 +74,7 @@ def password_change(
     payload: TokenPayload = Depends(require_auth),
 ):
     """Step 2: Change password using verified change token."""
-    db = request.app.state.db
+    db = request.state.db
 
     try:
         claims = decode_token_claims(request.app.state.verify_key, body.change_token)
