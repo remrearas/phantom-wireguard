@@ -97,6 +97,7 @@ const ClientConfigModal: React.FC<Props> = ({ open, clientName, t, onClose }) =>
       onRequestSubmit={handleSubmit}
       className="clients__modal"
       size="sm"
+      data-testid="vpn-cl-config-modal"
     >
       <Grid>
         <Column lg={16} md={8} sm={4}>
@@ -109,6 +110,7 @@ const ClientConfigModal: React.FC<Props> = ({ open, clientName, t, onClose }) =>
               labelText={t.clients.configVersion}
               value={version}
               disabled={phase === 'loading' || phase === 'loaded'}
+              data-testid="vpn-cl-config-version"
               onChange={(e) => {
                 setVersion(e.target.value as ConfigVersion);
                 if (phase === 'loaded') {
@@ -145,7 +147,7 @@ const ClientConfigModal: React.FC<Props> = ({ open, clientName, t, onClose }) =>
                 </div>
               )}
 
-              <CodeSnippet type="multi" feedback="Copied!">
+              <CodeSnippet type="multi" feedback="Copied!" data-testid="vpn-cl-config-snippet">
                 {config}
               </CodeSnippet>
             </div>

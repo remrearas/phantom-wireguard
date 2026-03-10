@@ -210,6 +210,7 @@ const ClientManagement: React.FC = () => {
               onCloseButtonClick={() => setNotification(null)}
               lowContrast
               className="clients__notification"
+              data-testid="vpn-cl-notification"
             />
           </Column>
         </Grid>
@@ -242,6 +243,7 @@ const ClientManagement: React.FC = () => {
                         size="sm"
                         kind="primary"
                         onClick={() => setAction({ type: 'create' })}
+                        data-testid="vpn-cl-add-client"
                       >
                         {t.clients.addClient}
                       </Button>
@@ -256,7 +258,7 @@ const ClientManagement: React.FC = () => {
                       showHeader={false}
                     />
                   ) : (
-                    <Table {...getTableProps()} size="md">
+                    <Table {...getTableProps()} size="md" data-testid="vpn-cl-table">
                       <TableHead>
                         <TableRow>
                           {tableHeaders.map((header) => {
@@ -292,25 +294,28 @@ const ClientManagement: React.FC = () => {
                             const clientName = row.cells.find((c) => c.id.endsWith(':name'))
                               ?.value as string;
                             return (
-                              <TableRow key={row.id} {...rProps}>
+                              <TableRow key={row.id} {...rProps} data-testid={`vpn-cl-row-${clientName}`}>
                                 {row.cells.map((cell) => (
                                   <TableCell key={cell.id}>{cell.value as string}</TableCell>
                                 ))}
                                 <TableCell key={`${row.id}-actions`}>
-                                  <OverflowMenu size="sm" flipped>
+                                  <OverflowMenu size="sm" flipped data-testid={`vpn-cl-overflow-${clientName}`}>
                                     <OverflowMenuItem
                                       itemText={t.clients.getConfig}
+                                      data-testid={`vpn-cl-action-config-${clientName}`}
                                       onClick={() =>
                                         setAction({ type: 'config', name: clientName })
                                       }
                                     />
                                     <OverflowMenuItem
                                       itemText={t.clients.getKeys}
+                                      data-testid={`vpn-cl-action-keys-${clientName}`}
                                       onClick={() => setAction({ type: 'keys', name: clientName })}
                                     />
                                     <OverflowMenuItem
                                       itemText={t.clients.revokeClient}
                                       isDelete
+                                      data-testid={`vpn-cl-action-revoke-${clientName}`}
                                       onClick={() =>
                                         setAction({ type: 'revoke', name: clientName })
                                       }

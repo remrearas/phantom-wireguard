@@ -49,12 +49,13 @@ const RevokeClientModal: React.FC<Props> = ({ open, clientName, t, onClose, onSu
       onRequestSubmit={handleSubmit}
       className="clients__modal"
       size="sm"
+      data-testid="vpn-cl-revoke-modal"
     >
       <Grid>
         <Column lg={16} md={8} sm={4}>
           <FormError error={error} className="clients__modal-error" />
           <p className="clients__confirm-text">
-            <strong>{clientName}</strong> {t.clients.confirmRevoke}
+            <strong data-testid="vpn-cl-revoke-name">{clientName}</strong> {t.clients.confirmRevoke}
           </p>
         </Column>
       </Grid>

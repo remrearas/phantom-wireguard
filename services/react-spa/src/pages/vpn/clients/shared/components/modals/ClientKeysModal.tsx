@@ -71,6 +71,7 @@ const ClientKeysModal: React.FC<Props> = ({ open, clientName, t, onClose }) => {
       onRequestSubmit={onClose}
       className="clients__modal"
       size="sm"
+      data-testid="vpn-cl-keys-modal"
     >
       <Grid>
         <Column lg={16} md={8} sm={4}>

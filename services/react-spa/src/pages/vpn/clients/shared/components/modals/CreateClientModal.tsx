@@ -62,6 +62,7 @@ const CreateClientModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => 
       onRequestSubmit={handleSubmit}
       className="clients__modal"
       size="sm"
+      data-testid="vpn-cl-create-modal"
     >
       <Grid>
         <Column lg={16} md={8} sm={4}>
@@ -76,6 +77,7 @@ const CreateClientModal: React.FC<Props> = ({ open, t, onClose, onSuccess }) => 
             invalid={name.length > 0 && !isValid}
             invalidText={t.clients.nameInvalid}
             autoFocus
+            data-testid="vpn-cl-create-name"
           />
         </Column>
       </Grid>
