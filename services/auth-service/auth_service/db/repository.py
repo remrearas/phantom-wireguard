@@ -384,17 +384,23 @@ class AuthDB:
             f"{where}"
         )
 
-        total: int = self._conn.execute(
-            f"SELECT COUNT(*) {base_query}", params
-        ).fetchone()[0]
+        # Wrap both queries in a single read transaction to prevent
+        # a concurrent write from locking between COUNT and SELECT.
+        self._conn.execute("BEGIN")
+        try:
+            total: int = self._conn.execute(
+                f"SELECT COUNT(*) {base_query}", params
+            ).fetchone()[0]
 
-        offset = (page - 1) * limit
-        rows = self._conn.execute(
-            f"SELECT al.id, al.user_id, u.username, al.action, al.detail, "
-            f"al.ip_address, al.timestamp {base_query} "
-            f"ORDER BY {safe_sort_key} {safe_order} LIMIT ? OFFSET ?",
-            [*params, limit, offset],
-        ).fetchall()
+            offset = (page - 1) * limit
+            rows = self._conn.execute(
+                f"SELECT al.id, al.user_id, u.username, al.action, al.detail, "
+                f"al.ip_address, al.timestamp {base_query} "
+                f"ORDER BY {safe_sort_key} {safe_order} LIMIT ? OFFSET ?",
+                [*params, limit, offset],
+            ).fetchall()
+        finally:
+            self._conn.execute("COMMIT")
 
         import math
         pages = math.ceil(total / limit) if total > 0 else 1
