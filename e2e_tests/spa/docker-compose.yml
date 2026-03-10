@@ -38,9 +38,11 @@ services:
       WIREGUARD_LISTEN_PORT: "51820"
       WIREGUARD_MTU: "1420"
       WIREGUARD_ENDPOINT_V4: "172.31.0.10"
+      WIREGUARD_ENDPOINT_V6: "fd00:e2e:1::10"
     networks:
       e2e:
         ipv4_address: 172.31.0.10
+        ipv6_address: fd00:e2e:1::10
 
   auth-service:
     build:
@@ -84,9 +86,11 @@ services:
 
 networks:
   e2e:
+    enable_ipv6: true
     ipam:
       config:
         - subnet: 172.31.0.0/24
+        - subnet: fd00:e2e:1::/64
 
 secrets:
   wg_private_key:

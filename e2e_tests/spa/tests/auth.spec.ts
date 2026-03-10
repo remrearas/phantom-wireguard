@@ -260,4 +260,33 @@ test.describe.serial("Auth flow", () => {
     await expect(page).toHaveURL("/");
     await expect(page.getByTestId("dashboard-page")).toBeVisible();
   });
+
+  test("Re-login & Restore Password", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByTestId("login-username").fill(ADMIN_USER);
+    await page.getByTestId("login-password").fill(newPassword);
+    await page.getByTestId("login-submit").click();
+    await expect(page).toHaveURL("/");
+
+    await page.goto("/account/password-change");
+
+    // Step 1: verify current (changed) password
+    await page.getByTestId("pwchange-current-password").fill(newPassword);
+    await page.getByTestId("pwchange-verify-confirm").click();
+
+    // Step 2: restore original password
+    await page.getByTestId("pwchange-new-password").fill(adminPassword);
+    await page.getByTestId("pwchange-change-confirm").click();
+
+    // Step 3: done — wait for auto-logout countdown to redirect
+    await expect(page.getByTestId("pwchange-done")).toBeVisible();
+    await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+
+    // Re-login with restored password and verify dashboard
+    await page.getByTestId("login-username").fill(ADMIN_USER);
+    await page.getByTestId("login-password").fill(adminPassword);
+    await page.getByTestId("login-submit").click();
+    await expect(page).toHaveURL("/");
+    await expect(page.getByTestId("dashboard-page")).toBeVisible();
+  });
 });
