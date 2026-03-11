@@ -21,6 +21,11 @@
           "label": "Clients",
           "href": "/vpn/clients",
           "roles": ["admin", "superadmin"]
+        },
+        {
+          "label": "WireGuard",
+          "href": "/vpn/wireguard",
+          "roles": ["admin", "superadmin"]
         }
       ]
     },
