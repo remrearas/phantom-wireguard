@@ -71,17 +71,32 @@ services:
     secrets: [tls_cert, tls_key]
     networks: [e2e]
 
+  wg-client:
+    build:
+      context: .
+      dockerfile: wg-client.Dockerfile
+    privileged: true
+    cap_add: [NET_ADMIN]
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    command: sleep infinity
+    networks:
+      e2e:
+        ipv4_address: 172.31.0.20
+
   playwright:
     build:
       context: .
       dockerfile: playwright.Dockerfile
-    depends_on: [nginx]
+    depends_on: [nginx, wg-client]
     volumes:
       - ./results:/app/results
       - ./report:/app/report
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       BASE_URL: "https://nginx"
       ADMIN_PASSWORD: ""
+      COMPOSE_PROJECT_NAME: ""
     networks: [e2e]
 
 networks:

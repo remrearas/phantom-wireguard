@@ -128,6 +128,7 @@ def main() -> None:
             "-p", env.project_name,
             "exec",
             "-e", f"ADMIN_PASSWORD={admin_password}",
+            "-e", f"COMPOSE_PROJECT_NAME={env.project_name}",
             "-T", "playwright",
             *pw_cmd,
         ]
