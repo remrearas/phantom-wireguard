@@ -26,6 +26,11 @@
           "label": "WireGuard",
           "href": "/vpn/wireguard",
           "roles": ["admin", "superadmin"]
+        },
+        {
+          "label": "Güvenlik Duvarı",
+          "href": "/vpn/firewall",
+          "roles": ["admin", "superadmin"]
         }
       ]
     },

@@ -242,6 +242,26 @@
     "showKey": "Show",
     "hideKey": "Hide"
   },
+  "firewall": {
+    "title": "Firewall",
+    "name": "Name",
+    "type": "Type",
+    "enabled": "Enabled",
+    "priority": "Priority",
+    "active": "Active",
+    "inactive": "Inactive",
+    "noGroups": "No firewall groups found.",
+    "refresh": "Refresh",
+    "viewDetails": "View Details",
+    "viewRawTable": "Raw Table",
+    "groupDetails": "Group Details",
+    "group": "Group",
+    "rules": "Firewall Rules",
+    "routing": "Routing Rules",
+    "rawTable": "Raw nftables Table",
+    "loading": "Loading...",
+    "close": "Close"
+  },
   "wireguard": {
     "title": "WireGuard",
     "interfaceTitle": "Interface",

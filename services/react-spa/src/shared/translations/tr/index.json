@@ -242,6 +242,26 @@
     "showKey": "Göster",
     "hideKey": "Gizle"
   },
+  "firewall": {
+    "title": "Güvenlik Duvarı",
+    "name": "Ad",
+    "type": "Tür",
+    "enabled": "Durum",
+    "priority": "Öncelik",
+    "active": "Aktif",
+    "inactive": "Pasif",
+    "noGroups": "Güvenlik duvarı grubu bulunamadı.",
+    "refresh": "Yenile",
+    "viewDetails": "Detayları Görüntüle",
+    "viewRawTable": "Ham Tablo",
+    "groupDetails": "Grup Detayları",
+    "group": "Grup",
+    "rules": "Güvenlik Duvarı Kuralları",
+    "routing": "Yönlendirme Kuralları",
+    "rawTable": "Ham nftables Tablosu",
+    "loading": "Yükleniyor...",
+    "close": "Kapat"
+  },
   "wireguard": {
     "title": "WireGuard",
     "interfaceTitle": "Arayüz",
