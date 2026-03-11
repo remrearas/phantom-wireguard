@@ -148,7 +148,7 @@ jobs:
         working-directory: services/react-spa
 
       - name: Run SPA E2E tests
-        run: python e2e_tests/spa/runner.py
+        run: python e2e_tests/spa/runner.py --wg-clients 5
 
       - name: Upload results
         if: always()

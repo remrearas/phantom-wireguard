@@ -59,6 +59,10 @@ def parse_args() -> argparse.Namespace:
         help="Keep containers after tests (for debugging)",
     )
     parser.add_argument(
+        "--wg-clients", type=int, default=1, metavar="N",
+        help="Number of wg-client replicas (default: 1)",
+    )
+    parser.add_argument(
         "playwright_args", nargs="*",
         help="Extra arguments passed to Playwright (e.g. --grep 'login')",
     )
@@ -95,6 +99,7 @@ def main() -> None:
     start_time = time.time()
     rc = 1
 
+    wg_count = args.wg_clients
     env = E2ETestEnvironment("spa", compose_path=COMPOSE_PATH)
 
     try:
@@ -105,6 +110,20 @@ def main() -> None:
         build_spa()
 
         env.up()
+
+        # Scale wg-client replicas if requested (bridge ignores deploy.replicas)
+        if wg_count > 1:
+            step(f"Scaling wg-client to {wg_count} replicas")
+            subprocess.run(
+                [
+                    "docker", "compose",
+                    "-f", COMPOSE_PATH,
+                    "-p", env.project_name,
+                    "up", "-d", "--scale", f"wg-client={wg_count}",
+                    "--no-recreate", "wg-client",
+                ],
+                check=True,
+            )
 
         # Wait for backend services
         env.wait_for_log("daemon", "Application startup complete", timeout=60)
@@ -129,6 +148,7 @@ def main() -> None:
             "exec",
             "-e", f"ADMIN_PASSWORD={admin_password}",
             "-e", f"COMPOSE_PROJECT_NAME={env.project_name}",
+            "-e", f"WG_CLIENT_COUNT={wg_count}",
             "-T", "playwright",
             *pw_cmd,
         ]

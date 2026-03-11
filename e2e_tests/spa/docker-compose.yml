@@ -80,9 +80,7 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     command: sleep infinity
-    networks:
-      e2e:
-        ipv4_address: 172.31.0.20
+    networks: [e2e]
 
   playwright:
     build:
