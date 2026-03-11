@@ -242,6 +242,17 @@
     "showKey": "Göster",
     "hideKey": "Gizle"
   },
+  "dns": {
+    "title": "DNS",
+    "primary": "Birincil",
+    "secondary": "İkincil",
+    "edit": "DNS Düzenle",
+    "save": "Kaydet",
+    "saving": "Kaydediliyor...",
+    "cancel": "İptal",
+    "saved": "DNS ayarları kaydedildi.",
+    "refresh": "Yenile"
+  },
   "firewall": {
     "title": "Güvenlik Duvarı",
     "name": "Ad",

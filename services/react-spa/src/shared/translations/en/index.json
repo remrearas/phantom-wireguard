@@ -242,6 +242,17 @@
     "showKey": "Show",
     "hideKey": "Hide"
   },
+  "dns": {
+    "title": "DNS",
+    "primary": "Primary",
+    "secondary": "Secondary",
+    "edit": "Edit DNS",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "saved": "DNS settings saved.",
+    "refresh": "Refresh"
+  },
   "firewall": {
     "title": "Firewall",
     "name": "Name",

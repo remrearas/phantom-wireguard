@@ -1,0 +1,90 @@
+@use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/breakpoint' as bp;
+
+// ── Tile cards ────────────────────────────────────────────────────
+
+.dns__tile {
+  margin-bottom: spacing.$spacing-05;
+}
+
+.dns__tile--skeleton {
+  min-height: 120px;
+}
+
+.dns__tile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: spacing.$spacing-05;
+}
+
+.dns__tile-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cds-text-secondary);
+  margin: 0;
+}
+
+.dns__tile-actions {
+  display: flex;
+  gap: spacing.$spacing-02;
+}
+
+.dns__kv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: spacing.$spacing-05;
+}
+
+.dns__kv {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-02;
+}
+
+.dns__kv-label {
+  font-size: 0.75rem;
+  color: var(--cds-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dns__kv-value {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: var(--cds-text-primary);
+  word-break: break-all;
+}
+
+// ── Modal ─────────────────────────────────────────────────────────
+
+.dns__modal {
+  @include bp.breakpoint-down(md) {
+    .cds--modal-container {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      border-radius: 0;
+    }
+  }
+
+  @include bp.breakpoint(md) {
+    .cds--modal-container {
+      height: auto;
+    }
+  }
+}
+
+.dns__modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-05;
+}
+
+// ── Notification ──────────────────────────────────────────────────
+
+.dns__notification {
+  margin-bottom: spacing.$spacing-05;
+}

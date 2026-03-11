@@ -25,6 +25,7 @@ import AuditPage from '@pages/admin/audit/pages/index/AuditPage';
 import ClientsPage from '@pages/vpn/clients/pages/index/ClientsPage';
 import WireGuardPage from '@pages/vpn/wireguard/pages/index/WireGuardPage';
 import FirewallPage from '@pages/vpn/firewall/pages/index/FirewallPage';
+import DnsPage from '@pages/vpn/dns/pages/index/DnsPage';
 
 // ── Route guards ──────────────────────────────────────────────────
 
@@ -80,6 +81,7 @@ const router = createBrowserRouter([
       { path: '/vpn/clients', element: <ClientsPage /> },
       { path: '/vpn/wireguard', element: <WireGuardPage /> },
       { path: '/vpn/firewall', element: <FirewallPage /> },
+      { path: '/vpn/dns', element: <DnsPage /> },
     ],
   },
 
