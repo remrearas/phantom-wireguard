@@ -36,6 +36,11 @@
           "label": "DNS",
           "href": "/vpn/dns",
           "roles": ["admin", "superadmin"]
+        },
+        {
+          "label": "Network",
+          "href": "/vpn/network",
+          "roles": ["admin", "superadmin"]
         }
       ]
     },
@@ -54,6 +59,11 @@
           "roles": ["admin", "superadmin"]
         }
       ]
+    },
+    {
+      "label": "Documentation",
+      "href": "/documentation",
+      "roles": ["admin", "superadmin"]
     },
     {
       "label": "Admin Operations",

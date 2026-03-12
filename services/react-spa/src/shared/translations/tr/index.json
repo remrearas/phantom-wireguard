@@ -253,6 +253,29 @@
     "saved": "DNS ayarları kaydedildi.",
     "refresh": "Yenile"
   },
+  "network": {
+    "title": "Ağ",
+    "subnet": "Alt Ağ",
+    "dns": "DNS",
+    "pool": "IP Havuzu",
+    "total": "Toplam",
+    "assigned": "Atanmış",
+    "free": "Boş",
+    "refresh": "Yenile",
+    "changeCidr": "CIDR Değiştir",
+    "prefix": "Prefix Uzunluğu",
+    "capacity": "Kapasite",
+    "capacityExceeded": "Mevcut istemciler için yeterli kapasite yok",
+    "apply": "Uygula",
+    "saving": "Uygulanıyor...",
+    "cancel": "İptal",
+    "cidrSaved": "Ağ CIDR başarıyla güncellendi.",
+    "cidrWarning": "CIDR değişikliği tüm istemci IP adreslerini yeniden atayacaktır. Mevcut WireGuard yapılandırmalarının yeniden dışa aktarılması gerekecektir.",
+    "validate": "Havuzu Doğrula",
+    "validating": "Doğrulanıyor...",
+    "poolValid": "IP havuzu tutarlı.",
+    "poolInvalid": "IP havuzunda bütünlük hataları var."
+  },
   "firewall": {
     "title": "Güvenlik Duvarı",
     "name": "Ad",
@@ -396,5 +419,92 @@
     "GHOST_ENABLED": "Ghost modu etkinleştirildi.",
     "GHOST_DISABLED": "Ghost modu devre dışı bırakıldı.",
     "GHOST_ALREADY_DISABLED": "Ghost modu zaten devre dışı."
+  },
+  "mermaid": {
+    "loading": {
+      "title": "Diyagram Yükleniyor",
+      "subtitle": "Lütfen bekleyin..."
+    },
+    "error": {
+      "title": "Diyagram Yüklenemedi",
+      "subtitle": "Diyagram render edilirken bir hata oluştu",
+      "containerNotReady": "Diyagram konteyneri hazır değil",
+      "emptyContent": "Boş diyagram içeriği",
+      "svgNotFound": "SVG elementi bulunamadı",
+      "svgEmpty": "SVG içeriği boş",
+      "renderFailed": "Diyagram render edilemedi",
+      "syntaxError": "Diyagram sözdizimi hatalı. Lütfen kontrol edin.",
+      "unsupportedType": "Desteklenmeyen diyagram türü veya komut.",
+      "helpTitle": "Mermaid diyagram sözdizimini kontrol edin. Yaygın hatalar",
+      "commonErrors": {
+        "arrows": "Eksik veya hatalı ok işaretleri",
+        "specialChars": "Düğüm adlarında özel karakterler",
+        "indentation": "Hatalı girintileme veya boşluk kullanımı",
+        "unsupported": "Desteklenmeyen diyagram türü"
+      },
+      "codeTitle": "Diyagram Kodu",
+      "retry": "Tekrar Dene",
+      "copyCode": "Kodu Kopyala"
+    },
+    "controls": {
+      "zoomIn": "Yakınlaştır",
+      "zoomOut": "Uzaklaştır",
+      "resetZoom": "Sıfırla",
+      "fullscreen": "Tam Ekran",
+      "copyCode": "Kodu Kopyala",
+      "download": "SVG İndir",
+      "refresh": "Yenile"
+    },
+    "modal": {
+      "close": "Kapat"
+    }
+  },
+  "documentation": {
+    "title": "Dokümantasyon",
+    "topics": {
+      "terazi": {
+        "title": "Terazi Sistemi",
+        "description": "IPv4/IPv6 adreslerini deterministik olarak eşleyen dengeleme mekanizması. Çift-yığın havuzun nasıl oluşturulduğunu, dengelendiğini ve doğrulandığını öğrenin."
+      }
+    },
+    "formulaInfo": {
+      "pairingLabel": "Eşleme kuralı bilgisi",
+      "pairingTitle": "Eşleme Kuralı",
+      "forAll": "her biri için (evrensel niceleyici)",
+      "range": "kullanılabilir slot'ların index aralığı",
+      "indexTwo": "ilk kullanılabilir slot (0 = ağ adresi, 1 = sunucu/gateway atlanır)",
+      "indexNMinus2": "son kullanılabilir slot (n−1 = broadcast atlanır)",
+      "bijection": "i index'indeki IPv4 adresi, aynı i index'indeki IPv6 adresiyle eşlenir",
+      "symmetryLabel": "Simetri sonucu bilgisi",
+      "symmetryTitle": "Simetri Sonucu",
+      "cardinality": "sayısı (kardinalite)",
+      "identical": "özdeş olarak eşittir",
+      "symmetrySummary": "Atanmış IPv4 adreslerinin sayısı her zaman atanmış IPv6 adreslerinin sayısına eşittir. Birini atamak her zaman diğerini de atar."
+    },
+    "poolSimulator": {
+      "assign": "İstemci Ekle",
+      "revoke": "İstemci Kaldır",
+      "cidrSim": "CIDR Değişikliği",
+      "assigned": "atanmış",
+      "free": "boş",
+      "caption": "Simüle wallet.db users tablosu — alt ağ",
+      "slots": "kullanılabilir slot",
+      "phaseBackup": "İstemciler yedekleniyor",
+      "phaseClear": "Havuz temizleniyor",
+      "phaseRebuild": "Yeni alt ağla yeniden oluşturuluyor",
+      "phaseReassign": "İstemciler yeniden atanıyor",
+      "phaseDone": "Tamamlandı",
+      "cinemaStart": "CIDR değişikliği simülasyonu başladı",
+      "cinemaStage": "Aşama",
+      "cinemaFillStart": "Havuz kapasiteye dolduruluyor",
+      "cinemaFull": "Havuz dolu — CIDR genişlemesi tetikleniyor",
+      "cinemaSubnet": "Sahneleme alt ağı",
+      "cinemaAddClients": "demo istemci eklendi",
+      "cinemaBackedUp": "istemci yedeklendi",
+      "cinemaCleared": "Havuz temizlendi",
+      "cinemaNewSubnet": "Yeni havuz hazır —",
+      "cinemaRestore": "Orijinal durumunuz geri yükleniyor",
+      "cinemaDone": "Bitti — durumunuz geri yüklendi"
+    }
   }
 }

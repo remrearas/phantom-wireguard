@@ -253,6 +253,29 @@
     "saved": "DNS settings saved.",
     "refresh": "Refresh"
   },
+  "network": {
+    "title": "Network",
+    "subnet": "Subnet",
+    "dns": "DNS",
+    "pool": "IP Pool",
+    "total": "Total",
+    "assigned": "Assigned",
+    "free": "Free",
+    "refresh": "Refresh",
+    "changeCidr": "Change CIDR",
+    "prefix": "Prefix Length",
+    "capacity": "Capacity",
+    "capacityExceeded": "Not enough capacity for existing clients",
+    "apply": "Apply",
+    "saving": "Applying...",
+    "cancel": "Cancel",
+    "cidrSaved": "Network CIDR updated successfully.",
+    "cidrWarning": "Changing the CIDR will reassign all client IP addresses. Existing WireGuard configurations will need to be re-exported.",
+    "validate": "Validate Pool",
+    "validating": "Validating...",
+    "poolValid": "IP pool is consistent.",
+    "poolInvalid": "IP pool has integrity errors."
+  },
   "firewall": {
     "title": "Firewall",
     "name": "Name",
@@ -396,5 +419,92 @@
     "SERVER_ERROR": "A server error occurred. Please try again later.",
     "SESSION_EXPIRED": "Your session has expired. Please sign in again.",
     "FORBIDDEN": "You do not have permission for this action."
+  },
+  "mermaid": {
+    "loading": {
+      "title": "Loading Diagram",
+      "subtitle": "Please wait..."
+    },
+    "error": {
+      "title": "Diagram Failed to Load",
+      "subtitle": "An error occurred while rendering the diagram",
+      "containerNotReady": "Diagram container is not ready",
+      "emptyContent": "Empty diagram content",
+      "svgNotFound": "SVG element not found",
+      "svgEmpty": "SVG content is empty",
+      "renderFailed": "Failed to render diagram",
+      "syntaxError": "Diagram syntax error. Please check.",
+      "unsupportedType": "Unsupported diagram type or command.",
+      "helpTitle": "Check Mermaid diagram syntax. Common errors",
+      "commonErrors": {
+        "arrows": "Missing or incorrect arrow notation",
+        "specialChars": "Special characters in node names",
+        "indentation": "Incorrect indentation or spacing",
+        "unsupported": "Unsupported diagram type"
+      },
+      "codeTitle": "Diagram Code",
+      "retry": "Try Again",
+      "copyCode": "Copy Code"
+    },
+    "controls": {
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "resetZoom": "Reset",
+      "fullscreen": "Fullscreen",
+      "copyCode": "Copy Code",
+      "download": "Download SVG",
+      "refresh": "Refresh"
+    },
+    "modal": {
+      "close": "Close"
+    }
+  },
+  "documentation": {
+    "title": "Documentation",
+    "topics": {
+      "terazi": {
+        "title": "Balance System (Terazi)",
+        "description": "Deterministic IPv4/IPv6 address pairing mechanism. Learn how the dual-stack pool is built, balanced, and validated."
+      }
+    },
+    "formulaInfo": {
+      "pairingLabel": "Pairing rule info",
+      "pairingTitle": "Pairing Rule",
+      "forAll": "for every (universal quantifier)",
+      "range": "index range of usable slots",
+      "indexTwo": "first usable slot (0 = network, 1 = server/gateway are skipped)",
+      "indexNMinus2": "last usable slot (n−1 = broadcast is skipped)",
+      "bijection": "IPv4 at index i is paired with IPv6 at the same index i",
+      "symmetryLabel": "Symmetry result info",
+      "symmetryTitle": "Symmetry Result",
+      "cardinality": "count of (cardinality)",
+      "identical": "is identically equal to",
+      "symmetrySummary": "The number of assigned IPv4 addresses is always equal to the number of assigned IPv6 addresses. Assigning one always assigns the other."
+    },
+    "poolSimulator": {
+      "assign": "Add Client",
+      "revoke": "Revoke Client",
+      "cidrSim": "CIDR Change",
+      "assigned": "assigned",
+      "free": "free",
+      "caption": "Simulated wallet.db users table — subnet",
+      "slots": "usable slots",
+      "phaseBackup": "Backing up clients",
+      "phaseClear": "Clearing pool",
+      "phaseRebuild": "Rebuilding with new subnet",
+      "phaseReassign": "Reassigning clients",
+      "phaseDone": "Complete",
+      "cinemaStart": "CIDR change simulation started",
+      "cinemaStage": "Stage",
+      "cinemaFillStart": "Filling pool to capacity",
+      "cinemaFull": "Pool full — triggering CIDR expansion",
+      "cinemaSubnet": "Staging subnet",
+      "cinemaAddClients": "demo clients added",
+      "cinemaBackedUp": "clients backed up",
+      "cinemaCleared": "Pool cleared",
+      "cinemaNewSubnet": "New pool ready —",
+      "cinemaRestore": "Restoring your original state",
+      "cinemaDone": "Done — your state has been restored"
+    }
   }
 }
