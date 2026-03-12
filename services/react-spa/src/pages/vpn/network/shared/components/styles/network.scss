@@ -1,0 +1,149 @@
+@use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/breakpoint' as bp;
+
+// ── Tile cards ────────────────────────────────────────────────────
+
+.network__tile {
+  margin-bottom: spacing.$spacing-05;
+}
+
+.network__tile--skeleton {
+  min-height: 160px;
+}
+
+.network__tile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: spacing.$spacing-05;
+}
+
+.network__tile-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cds-text-secondary);
+  margin: 0;
+}
+
+.network__tile-actions {
+  display: flex;
+  gap: spacing.$spacing-02;
+}
+
+.network__kv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: spacing.$spacing-05;
+}
+
+.network__kv-grid--pool {
+  margin-top: spacing.$spacing-05;
+  grid-template-columns: repeat(3, 1fr);
+
+  @include bp.breakpoint-down(md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.network__kv {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-02;
+}
+
+.network__kv-label {
+  font-size: 0.75rem;
+  color: var(--cds-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.network__kv-value {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: var(--cds-text-primary);
+  word-break: break-all;
+}
+
+// ── ProgressBar ──────────────────────────────────────────────────
+
+.network__progress {
+  margin-bottom: spacing.$spacing-03;
+}
+
+// ── Modal ─────────────────────────────────────────────────────────
+
+.network__modal {
+  @include bp.breakpoint-down(md) {
+    .cds--modal-container {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      border-radius: 0;
+    }
+  }
+
+  @include bp.breakpoint(md) {
+    .cds--modal-container {
+      height: auto;
+    }
+  }
+}
+
+.network__modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-05;
+}
+
+// ── CIDR Preview ─────────────────────────────────────────────────
+
+.network__preview {
+  background: var(--cds-layer-02);
+  border-radius: 4px;
+  padding: spacing.$spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-03;
+}
+
+.network__preview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.network__preview-label {
+  font-size: 0.75rem;
+  color: var(--cds-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.network__preview-value {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--cds-text-primary);
+}
+
+.network__preview-warning {
+  margin-top: spacing.$spacing-02;
+}
+
+.network__destructive-note {
+  font-size: 0.75rem;
+  color: var(--cds-support-error);
+  line-height: 1.5;
+  margin: 0;
+}
+
+// ── Notification ──────────────────────────────────────────────────
+
+.network__notification {
+  margin-bottom: spacing.$spacing-05;
+  max-width: 100%;
+  width: 100%;
+}
