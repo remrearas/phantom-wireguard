@@ -37,4 +37,11 @@
     border-top: 1px solid var(--cds-border-subtle-00);
     margin: spacing.$spacing-07 0;
   }
+
+  // ── Notifications ──────────────────────────────────────────────
+  .cds--inline-notification {
+    max-width: 100%;
+    width: 100%;
+    margin-bottom: spacing.$spacing-05;
+  }
 }
