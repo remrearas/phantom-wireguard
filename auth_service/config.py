@@ -70,7 +70,7 @@ def load_auth_config() -> AuthConfig:
         mfa_token_lifetime=int(os.environ.get("AUTH_MFA_TOKEN_LIFETIME", "120")),
         totp_setup_lifetime=int(os.environ.get("AUTH_TOTP_SETUP_LIFETIME", "300")),
         proxy_timeout=float(os.environ.get("AUTH_PROXY_TIMEOUT", "30.0")),
-        proxy_max_body=int(os.environ.get("AUTH_PROXY_MAX_BODY", "65536")),
+        proxy_max_body=int(os.environ.get("AUTH_PROXY_MAX_BODY", "67108864")),
         rate_limit_window=int(os.environ.get("AUTH_RATE_LIMIT_WINDOW", "60")),
         rate_limit_max=int(os.environ.get("AUTH_RATE_LIMIT_MAX", "5")),
     )

@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from auth_service.audit import audit_log
 from auth_service.crypto.jwt import TokenPayload
@@ -94,22 +94,28 @@ async def proxy(
             content={"ok": False, "error_code": "SERVICE_UNAVAILABLE"},
         )
 
-    content_type = response.headers.get("content-type", "")
-    if content_type.startswith("application/json"):
-        data = response.json()
-    else:
-        data = {"ok": True, "data": response.text}
-
     audit_log(db, request, "proxy_request",
               detail=_audit_detail(request.method, path, query, response.status_code),
               user_id=user_id)
 
-    return JSONResponse(
+    passthrough_headers = {
+        k: v
+        for k, v in response.headers.items()
+        if k.lower() not in ("content-length", "transfer-encoding", "content-encoding")
+    }
+
+    content_type = response.headers.get("content-type", "")
+    if content_type.startswith("application/json"):
+        return JSONResponse(
+            status_code=response.status_code,
+            content=response.json(),
+            headers=passthrough_headers,
+        )
+
+    # Binary/non-JSON responses — pass through raw bytes
+    return Response(
+        content=response.content,
         status_code=response.status_code,
-        content=data,
-        headers={
-            k: v
-            for k, v in response.headers.items()
-            if k.lower() not in ("content-length", "transfer-encoding", "content-encoding")
-        },
+        media_type=content_type,
+        headers=passthrough_headers,
     )
