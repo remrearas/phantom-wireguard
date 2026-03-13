@@ -76,16 +76,6 @@ class TestWalletCreate:
         with open_wallet(str(tmp_path)) as w:
             assert w.count_assigned() == 0
 
-    def test_audit_log_entry(self, tmp_path):
-        with open_wallet(str(tmp_path)) as w:
-            # noinspection SqlNoDataSourceInspection
-            row = w._conn.execute(
-                "SELECT action, detail FROM audit_log LIMIT 1"
-            ).fetchone()
-            assert row[0] == "wallet.created"
-            detail = json.loads(row[1])
-            assert detail["ipv4_subnet"] == "10.8.0.0/24"
-
 
 # ── Wallet open ──────────────────────────────────────────────────
 

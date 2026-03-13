@@ -16,10 +16,8 @@ Exit store: persistent storage for multihop exit tunnel configurations.
 from __future__ import annotations
 
 import importlib.resources
-import json
 import sqlite3
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -51,11 +49,6 @@ def _create_store(db_path: Path) -> sqlite3.Connection:
         conn.executescript(schema)
         conn.execute("PRAGMA wal_autocheckpoint = 1")
 
-        now = datetime.now(timezone.utc).isoformat()
-        conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            ("exit_store.created", "{}", now),
-        )
         conn.commit()
     except Exception:
         conn.close()
@@ -139,11 +132,6 @@ class ExitStore:
              public_key_hex, preshared_key_hex, allowed_ips, keepalive),
         )
 
-        now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            ("exit.added", json.dumps({"name": name}), now),
-        )
         self._conn.commit()
 
         return {
@@ -174,11 +162,6 @@ class ExitStore:
 
         self._conn.execute("DELETE FROM exits WHERE name = ?", (name,))
 
-        now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            ("exit.removed", json.dumps({"name": name}), now),
-        )
         self._conn.commit()
 
     def get_exit(self, name: str) -> Optional[dict]:
@@ -213,11 +196,6 @@ class ExitStore:
             (name,),
         )
 
-        now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            ("exit.activated", json.dumps({"name": name}), now),
-        )
         self._conn.commit()
 
     def deactivate(self) -> None:
@@ -229,11 +207,6 @@ class ExitStore:
             "UPDATE config SET value = '' WHERE key = 'active_exit'"
         )
 
-        now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            ("exit.deactivated", "{}", now),
-        )
         self._conn.commit()
 
     # ── Lifecycle ────────────────────────────────────────────────

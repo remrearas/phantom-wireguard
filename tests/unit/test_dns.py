@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from phantom_daemon.base.errors import WalletError
@@ -58,16 +56,10 @@ class TestChangeDns:
 
     def test_change_same_noop(self, tmp_path):
         with open_wallet(str(tmp_path)) as w:
-            # Count audit entries before
-            before = w._conn.execute(
-                "SELECT count(*) FROM audit_log"
-            ).fetchone()[0]
-            # Same as default → no-op
             w.change_dns("v4", "9.9.9.9", "149.112.112.112")
-            after = w._conn.execute(
-                "SELECT count(*) FROM audit_log"
-            ).fetchone()[0]
-            assert after == before
+            # Should remain default (no-op)
+            dns = w.get_dns("v4")
+            assert dns == {"primary": "9.9.9.9", "secondary": "149.112.112.112"}
 
     def test_invalid_v4_address(self, tmp_path):
         with open_wallet(str(tmp_path)) as w:
@@ -83,20 +75,6 @@ class TestChangeDns:
         with open_wallet(str(tmp_path)) as w:
             with pytest.raises(WalletError, match="Unknown DNS family"):
                 w.change_dns("v8", "1.1.1.1", "1.0.0.1")
-
-    def test_audit_logged(self, tmp_path):
-        with open_wallet(str(tmp_path)) as w:
-            w.change_dns("v4", "8.8.8.8", "8.8.4.4")
-            row = w._conn.execute(
-                "SELECT action, detail FROM audit_log "
-                "WHERE action = 'dns.changed' ORDER BY id DESC LIMIT 1"
-            ).fetchone()
-            assert row is not None
-            assert row[0] == "dns.changed"
-            detail = json.loads(row[1])
-            assert detail["family"] == "v4"
-            assert detail["old"] == {"primary": "9.9.9.9", "secondary": "149.112.112.112"}
-            assert detail["new"] == {"primary": "8.8.8.8", "secondary": "8.8.4.4"}
 
     def test_change_v4_then_v6(self, tmp_path):
         with open_wallet(str(tmp_path)) as w:

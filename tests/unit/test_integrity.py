@@ -289,15 +289,6 @@ class TestIntegrity:
                 assert client["id"] is not None
             print(f"  Spot check    : PASS  (first client from each stage verified)")
 
-            # Audit trail
-            audit_count = w._conn.execute(
-                "SELECT count(*) FROM audit_log"
-            ).fetchone()[0]
-            cidr_changes = w._conn.execute(
-                "SELECT count(*) FROM audit_log WHERE action='cidr.changed'"
-            ).fetchone()[0]
-            print(f"  Audit log     : {audit_count:,} entries  ({cidr_changes} CIDR changes)")
-
             # Summary
             print(f"\n{_THIN}")
             print(f"  Total assigns : {cumulative_assigns:,}")
@@ -476,18 +467,6 @@ class TestIntegrity:
             # All clients gone
             assert w.get_client("s0-00000") is None
             print(f"  Client check  : PASS  (all clients revoked, s0-00000 = None)")
-
-            # Audit trail
-            audit_count = w._conn.execute(
-                "SELECT count(*) FROM audit_log"
-            ).fetchone()[0]
-            cidr_changes = w._conn.execute(
-                "SELECT count(*) FROM audit_log WHERE action='cidr.changed'"
-            ).fetchone()[0]
-            revoke_count = w._conn.execute(
-                "SELECT count(*) FROM audit_log WHERE action='client.revoked'"
-            ).fetchone()[0]
-            print(f"  Audit log     : {audit_count:,} entries  ({cidr_changes} CIDR changes, {revoke_count:,} revocations)")
 
             # Summary
             print(f"\n{_THIN}")

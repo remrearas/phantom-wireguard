@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from phantom_daemon.base.errors import WalletError
@@ -56,23 +54,9 @@ class TestChangeCidr:
     def test_same_subnet_noop(self, tmp_path):
         with open_wallet(str(tmp_path)) as w:
             w.assign_client("alice")
-            w.change_cidr(24)  # same as default
-            # No audit entry for cidr.changed
-            row = w._conn.execute(
-                "SELECT count(*) FROM audit_log WHERE action='cidr.changed'"
-            ).fetchone()
-            assert row[0] == 0
-
-    def test_audit_logged(self, tmp_path):
-        with open_wallet(str(tmp_path)) as w:
-            w.change_cidr(22)
-            row = w._conn.execute(
-                "SELECT detail FROM audit_log WHERE action='cidr.changed'"
-            ).fetchone()
-            detail = json.loads(row[0])
-            assert detail["old"] == "10.8.0.0/24"
-            assert detail["new"] == "10.8.0.0/22"
-            assert detail["preserved"] == 0
+            w.change_cidr(24)  # same as default → no-op
+            assert w.count_users() == 253
+            assert w.get_client("alice") is not None
 
 
 # ── Validate Pool ─────────────────────────────────────────────────

@@ -37,15 +37,3 @@ CREATE TABLE IF NOT EXISTS users (
     created_at          TEXT,                            -- ISO 8601
     updated_at          TEXT                             -- ISO 8601
 );
-
--- ─── Audit Log (append-only) ────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS audit_log (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    action          TEXT    NOT NULL,
-    detail          TEXT    NOT NULL DEFAULT '{}',       -- JSON
-    timestamp       TEXT    NOT NULL                     -- ISO 8601
-);
-
-CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action);
-CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(timestamp);

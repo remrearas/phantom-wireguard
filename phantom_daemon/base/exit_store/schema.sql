@@ -20,13 +20,3 @@ CREATE TABLE IF NOT EXISTS config (
 
 INSERT OR IGNORE INTO config (key, value) VALUES ('active_exit', '');
 INSERT OR IGNORE INTO config (key, value) VALUES ('multihop_enabled', '0');
-
-CREATE TABLE IF NOT EXISTS audit_log (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    action    TEXT NOT NULL,
-    detail    TEXT NOT NULL DEFAULT '{}',
-    timestamp TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log (action);
-CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log (timestamp);

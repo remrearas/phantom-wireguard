@@ -155,13 +155,6 @@ def _create_wallet(db_path: Path) -> sqlite3.Connection:
         # IP pool
         _populate_ip_pool(conn, ipv4_str, ipv6_str)
 
-        # Audit log
-        now = datetime.now(timezone.utc).isoformat()
-        conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            ("wallet.created", json.dumps({"ipv4_subnet": ipv4_str}), now),
-        )
-
         conn.commit()
     except Exception:
         conn.close()
@@ -246,11 +239,6 @@ class Wallet:
             (client_id, name, private_key, public_key, preshared_key, now, now, ipv4),
         )
 
-        # Audit
-        self._conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            ("client.assigned", json.dumps({"name": name, "ipv4": ipv4}), now),
-        )
         self._conn.commit()
 
         return {
@@ -277,7 +265,6 @@ class Wallet:
             raise WalletError(f"Client not found: {name}")
 
         ipv4 = row[0]
-        now = datetime.now(timezone.utc).isoformat()
 
         self._conn.execute(
             "UPDATE users SET id=NULL, name=NULL, private_key_hex=NULL, "
@@ -287,10 +274,6 @@ class Wallet:
             (ipv4,),
         )
 
-        self._conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            ("client.revoked", json.dumps({"name": name, "ipv4": ipv4}), now),
-        )
         self._conn.commit()
 
     @staticmethod
@@ -408,16 +391,6 @@ class Wallet:
             "UPDATE config SET value=? WHERE key=?",
             (json.dumps(new), key),
         )
-
-        now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            (
-                "dns.changed",
-                json.dumps({"family": family, "old": old, "new": new}),
-                now,
-            ),
-        )
         self._conn.commit()
 
     # ── Subnet Change ───────────────────────────────────────────
@@ -476,20 +449,6 @@ class Wallet:
             "UPDATE config SET value=? WHERE key='ipv6_subnet'", (new_v6,)
         )
 
-        # Audit
-        now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            "INSERT INTO audit_log (action, detail, timestamp) VALUES (?, ?, ?)",
-            (
-                "cidr.changed",
-                json.dumps({
-                    "old": current_v4,
-                    "new": new_v4,
-                    "preserved": len(backups),
-                }),
-                now,
-            ),
-        )
         self._conn.commit()
 
     # ── Pool Validation ───────────────────────────────────────────
