@@ -59,7 +59,6 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 # Bridge env vars — tier-1 FFI discovery
 ENV WIREGUARD_GO_BRIDGE_LIB_PATH="${VENDOR_DIR}/wireguard_go_bridge/wireguard_go_bridge.so"
 ENV FIREWALL_BRIDGE_LIB_PATH="${VENDOR_DIR}/firewall_bridge/libfirewall_bridge_linux.so"
-ENV WSTUNNEL_BRIDGE_LIB_PATH="${VENDOR_DIR}/wstunnel_bridge/libwstunnel_bridge_linux.so"
 ENV PYTHONPATH="${VENDOR_DIR}"
 
 # Runtime settings

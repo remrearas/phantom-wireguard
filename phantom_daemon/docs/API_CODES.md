@@ -61,15 +61,6 @@ All responses carry a `code` field for frontend translation. The `error` field i
 | `EXIT_ALREADY_EXISTS` | 400  | `ExitStoreError` — duplicate name on import      |
 | `EXIT_IS_ACTIVE`      | 400  | `ExitStoreError` — remove attempted while active |
 
-### Ghost (`/api/ghost/`)
-
-| Code                      | HTTP | Trigger                                         |
-|---------------------------|------|-------------------------------------------------|
-| `GHOST_ALREADY_ACTIVE`    | 409  | `wstunnel` is already running                   |
-| `INVALID_TLS_CERTIFICATE` | 400  | Base64 decode or UTF-8 decode failed            |
-| `INVALID_TLS_PRIVATE_KEY` | 400  | Base64 decode or UTF-8 decode failed            |
-| `WSTUNNEL_START_FAILED`   | 400  | `RuntimeError` / `OSError` from wstunnel bridge |
-
 ### Generic (Global Handler — Business Exceptions)
 
 `error` contains the full `str(exc)` message. `code` is fixed per exception type.
@@ -79,7 +70,6 @@ All responses carry a `code` field for frontend translation. The `error` field i
 | `WALLET_FULL`      | 409  | `WalletFullError`                   |
 | `WALLET_ERROR`     | 400  | `WalletError`                       |
 | `EXIT_STORE_ERROR` | 400  | `ExitStoreError`                    |
-| `WSTUNNEL_ERROR`   | 400  | `WstunnelError`                     |
 | `VALIDATION_ERROR` | 422  | `RequestValidationError` (Pydantic) |
 
 ### Generic Fallbacks (Framework `HTTPException`)
@@ -119,10 +109,3 @@ Carried in `data.code` alongside `data.status` for action endpoints.
 | `MULTIHOP_ALREADY_DISABLED` | `POST /api/multihop/disable` | `"already_disabled"` |
 | `EXIT_REMOVED`              | `POST /api/multihop/remove`  | `"removed"`          |
 
-### Ghost
-
-| Code                     | Endpoint                  | `data.status`        |
-|--------------------------|---------------------------|----------------------|
-| `GHOST_ENABLED`          | `POST /api/ghost/enable`  | `"enabled"`          |
-| `GHOST_DISABLED`         | `POST /api/ghost/disable` | `"disabled"`         |
-| `GHOST_ALREADY_DISABLED` | `POST /api/ghost/disable` | `"already_disabled"` |

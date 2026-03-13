@@ -46,10 +46,6 @@ class FirewallError(StartupError):
     """Failed to initialise or configure firewall bridge."""
 
 
-class WstunnelError(StartupError):
-    """Failed to initialise or operate wstunnel bridge."""
-
-
 # ── API error code mechanism ─────────────────────────────────────
 
 

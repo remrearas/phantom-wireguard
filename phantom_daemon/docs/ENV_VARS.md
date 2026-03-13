@@ -7,7 +7,7 @@ All variables are optional. Daemon exits with code 1 on startup if required secr
 | Variable            | Default                     | Type | Description                                            |
 |---------------------|-----------------------------|------|--------------------------------------------------------|
 | `PHANTOM_DB_DIR`    | `/var/lib/phantom/db`       | path | SQLite database directory (wallet + exit store)        |
-| `PHANTOM_STATE_DIR` | `/var/lib/phantom/state/db` | path | Bridge state directory (WireGuard, firewall, wstunnel) |
+| `PHANTOM_STATE_DIR` | `/var/lib/phantom/state/db` | path | Bridge state directory (WireGuard, firewall) |
 
 ## WireGuard
 

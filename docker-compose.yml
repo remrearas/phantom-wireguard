@@ -7,7 +7,6 @@
 #
 # Topology:
 #   Internet → :8443 (nginx, TLS) → auth-service:8443 → daemon (UDS)
-#   Internet → :443/tcp (ghost/wstunnel, DPI bypass) → daemon
 #   Internet → :51820/udp (WireGuard) → daemon
 #
 # All environment variables have defaults. Set WIREGUARD_ENDPOINT_V4
@@ -49,13 +48,6 @@ services:
       - /dev/net/tun:/dev/net/tun
     ports:
       - "51820:51820/udp"
-      # ── Ghost Mode (wstunnel) ────────────────────────────────
-      # wstunnel listens on 443/tcp inside the container to
-      # disguise WireGuard traffic as HTTPS (DPI bypass).
-      # Remove this line if ghost mode is not needed.
-      # NOTE: If nginx also uses host port 443, change one of
-      #       them (e.g. nginx → 8443:443) to avoid conflict.
-      - "443:443/tcp"
 
   auth-service:
     build:
@@ -99,9 +91,7 @@ services:
       - tls_cert
       - tls_key
     ports:
-      # Default: 443. If ghost mode uses host port 443 (daemon),
-      # change this to another port (e.g. 8443:443).
-      - "8443:443"
+      - "443:443"
 
 secrets:
   wg_private_key:

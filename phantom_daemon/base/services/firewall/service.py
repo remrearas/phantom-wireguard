@@ -34,7 +34,6 @@ from phantom_daemon.base.wallet.wallet import Wallet
 log = logging.getLogger("phantom-daemon")
 
 CORE_PRESET_NAME = "core"
-GHOST_PRESET_NAME = "ghost"
 MULTIHOP_PRESET_NAME = "multihop-exit"
 
 
@@ -97,18 +96,6 @@ def _read_multihop_preset() -> dict:
     ).joinpath("multihop.yaml")
     return yaml.safe_load(ref.read_text(encoding="utf-8"))
 
-
-def _read_ghost_preset() -> dict:
-    """Read ghost.yaml from package resources."""
-    ref = importlib.resources.files(
-        "phantom_daemon.base.services.firewall.presets"
-    ).joinpath("ghost.yaml")
-    return yaml.safe_load(ref.read_text(encoding="utf-8"))
-
-
-def resolve_ghost_preset() -> dict:
-    """Load ghost preset YAML — no templates needed (port 443 is fixed)."""
-    return _read_ghost_preset()
 
 
 def resolve_multihop_preset(

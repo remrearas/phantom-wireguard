@@ -50,8 +50,8 @@ services:
       - PHANTOM_STATE_DIR=/var/lib/phantom/state/db
       - WIREGUARD_LISTEN_PORT=51820
       - WIREGUARD_MTU=1420
-      - WIREGUARD_ENDPOINT_V4=
-      - WIREGUARD_ENDPOINT_V6=
+      - WIREGUARD_ENDPOINT_V4=203.0.113.10
+      - WIREGUARD_ENDPOINT_V6=2001:db8::10
 
   gateway:
     image: alpine/socat:latest

@@ -22,13 +22,11 @@ from phantom_daemon.base.errors import (
     WalletError,
     WalletFullError,
     WireGuardError,
-    WstunnelError,
 )
 from phantom_daemon.base.exit_store import ExitStore, open_exit_store
 from phantom_daemon.base.secrets import ServerKeys, load_secrets
 from phantom_daemon.base.services.firewall import FirewallService, open_firewall
 from phantom_daemon.base.services.wireguard import WireGuardService, open_wireguard
-from phantom_daemon.base.services.wstunnel import WstunnelService, open_wstunnel
 from phantom_daemon.base.wallet import Wallet, open_wallet
 
 __all__ = [
@@ -45,13 +43,10 @@ __all__ = [
     "WalletFullError",
     "WireGuardError",
     "WireGuardService",
-    "WstunnelError",
-    "WstunnelService",
     "load_env",
     "load_secrets",
     "open_exit_store",
     "open_firewall",
     "open_wallet",
     "open_wireguard",
-    "open_wstunnel",
 ]

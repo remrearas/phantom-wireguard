@@ -18,7 +18,6 @@ from __future__ import annotations
 import logging
 import sys
 from collections.abc import AsyncIterator
-from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -33,14 +32,12 @@ from phantom_daemon.base import (
     StartupError,
     WalletError,
     WalletFullError,
-    WstunnelError,
     load_env,
     load_secrets,
     open_exit_store,
     open_firewall,
     open_wallet,
     open_wireguard,
-    open_wstunnel,
 )
 from phantom_daemon.base.services.wireguard import WG_INTERFACE_NAME_EXIT
 from phantom_daemon.base.services.wireguard.ipc import build_exit_config
@@ -104,22 +101,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             fw.bootstrap(env=env, wallet=wallet)
         fw.start()
 
-        # Phase 3d: Ghost mode (wstunnel) recovery
-        # Firewall ghost preset is already replayed by fw.start() above.
-        wstunnel = None
-        wstunnel_db = Path(env.state_dir) / "wstunnel.db"
-        if wstunnel_db.exists():
-            try:
-                ws = open_wstunnel(state_dir=env.state_dir)
-                if ws.was_running():
-                    ws.start()
-                    wstunnel = ws
-                    log.info("Ghost mode recovered")
-                else:
-                    ws.close()
-            except (RuntimeError, OSError) as exc:
-                log.warning("Ghost mode recovery failed: %s", exc)
-
         app.state.server_keys = server_keys
         app.state.env = env
         app.state.wallet = wallet
@@ -127,15 +108,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.fw = fw
         app.state.exit_store = exit_store
         app.state.wg_exit = wg_exit
-        app.state.wstunnel = wstunnel
     except StartupError as exc:
         log.critical("Startup failed: %s", exc)
         sys.exit(1)
 
     yield
 
-    if wstunnel is not None:
-        wstunnel.close()
     if wg_exit is not None:
         wg_exit.down()
         wg_exit.close()
@@ -206,13 +184,6 @@ def _register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=400,
             content={"ok": False, "error": str(exc), "code": "WALLET_ERROR"},
-        )
-
-    @app.exception_handler(WstunnelError)
-    async def _wstunnel_error(_request, exc):
-        return JSONResponse(
-            status_code=400,
-            content={"ok": False, "error": str(exc), "code": "WSTUNNEL_ERROR"},
         )
 
     @app.exception_handler(RequestValidationError)

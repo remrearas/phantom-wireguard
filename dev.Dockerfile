@@ -45,7 +45,6 @@ RUN set -e; \
 # Setting env vars = tier-1 hit, zero probing.
 ENV WIREGUARD_GO_BRIDGE_LIB_PATH="${VENDOR_DIR}/wireguard_go_bridge/wireguard_go_bridge.so"
 ENV FIREWALL_BRIDGE_LIB_PATH="${VENDOR_DIR}/firewall_bridge/libfirewall_bridge_linux.so"
-ENV WSTUNNEL_BRIDGE_LIB_PATH="${VENDOR_DIR}/wstunnel_bridge/libwstunnel_bridge_linux.so"
 
 # Make bridge packages importable
 ENV PYTHONPATH="${VENDOR_DIR}"
