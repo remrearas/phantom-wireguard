@@ -28,7 +28,7 @@ jobs:
         run: ./tools/dev.sh build
 
       - name: Generate dev secrets
-        run: ./tools/gen-keys-dev.sh
+        run: ./tools/dev.sh gen-keys
 
       - name: Bootstrap auth service
         run: ./tools/dev.sh setup-auth
