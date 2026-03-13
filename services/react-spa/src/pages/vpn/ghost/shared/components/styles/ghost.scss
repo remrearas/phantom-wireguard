@@ -1,0 +1,204 @@
+@use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/theme' as theme;
+@use '@carbon/react/scss/breakpoint' as bp;
+
+// ── Ghost Status ──────────────────────────────────────────────────
+
+.ghost-status {
+  padding: spacing.$spacing-07 0;
+}
+
+.ghost-status__card {
+  background-color: theme.$layer-01;
+  padding: spacing.$spacing-06;
+  border-radius: 4px;
+}
+
+.ghost-status__header {
+  margin-bottom: spacing.$spacing-05;
+}
+
+.ghost-status__tags {
+  display: flex;
+  gap: spacing.$spacing-03;
+  flex-wrap: wrap;
+}
+
+.ghost-status__list {
+  margin-bottom: spacing.$spacing-06;
+
+  .cds--structured-list-row {
+    border-bottom: none;
+  }
+}
+
+.ghost-status__copy-row {
+  display: flex;
+  align-items: center;
+  gap: spacing.$spacing-03;
+
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.875rem;
+    word-break: break-all;
+  }
+}
+
+
+// ── Ghost Wizard ──────────────────────────────────────────────────
+
+.ghost-wizard__textarea {
+  margin-bottom: spacing.$spacing-05;
+
+  .cds--text-area {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8125rem;
+  }
+}
+
+.ghost-wizard__cert-preview {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-02;
+  padding: spacing.$spacing-04;
+  background-color: theme.$layer-02;
+  border-radius: 4px;
+  margin-bottom: spacing.$spacing-05;
+  font-size: 0.875rem;
+  color: theme.$text-secondary;
+
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    color: theme.$text-primary;
+    word-break: break-all;
+  }
+}
+
+.ghost-wizard__generate-link {
+  display: inline-block;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: theme.$link-primary;
+  margin-bottom: spacing.$spacing-05;
+  text-decoration: underline;
+
+  &:hover {
+    color: theme.$link-primary-hover;
+  }
+}
+
+.ghost-wizard__generate-form {
+  background-color: theme.$layer-02;
+  border-left: 4px solid theme.$border-interactive;
+  border-radius: 4px;
+  padding: spacing.$spacing-05;
+  margin-bottom: spacing.$spacing-05;
+  animation: totpFadeIn 0.2s ease-in-out;
+
+  .totp-wizard__input {
+    margin-bottom: spacing.$spacing-05;
+  }
+}
+
+.ghost-wizard__sans-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: theme.$text-primary;
+  margin-bottom: spacing.$spacing-03;
+}
+
+.ghost-wizard__sans {
+  margin-bottom: spacing.$spacing-05;
+}
+
+.ghost-wizard__san-row {
+  display: flex;
+  align-items: flex-end;
+  gap: spacing.$spacing-03;
+  margin-bottom: spacing.$spacing-03;
+
+  .cds--text-input-wrapper {
+    flex: 1;
+  }
+}
+
+.ghost-wizard__generate-btn {
+  margin-top: spacing.$spacing-03;
+}
+
+.ghost-wizard__summary {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-04;
+  margin-bottom: spacing.$spacing-05;
+}
+
+.ghost-wizard__summary-row {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  gap: spacing.$spacing-04;
+
+  dt {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: theme.$text-secondary;
+  }
+
+  dd {
+    font-size: 0.875rem;
+    color: theme.$text-primary;
+    margin: 0;
+
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      word-break: break-all;
+    }
+  }
+
+  @include bp.breakpoint-down(sm) {
+    grid-template-columns: 1fr;
+    gap: spacing.$spacing-02;
+  }
+}
+
+.ghost-wizard__path-box {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-03;
+  padding: spacing.$spacing-04;
+  background-color: theme.$layer-02;
+  border-radius: 4px;
+  margin-bottom: spacing.$spacing-05;
+  max-width: 40rem;
+  width: 100%;
+}
+
+.ghost-wizard__path-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: theme.$text-secondary;
+  margin: 0;
+}
+
+.ghost-wizard__path-copy-row {
+  display: flex;
+  align-items: center;
+  gap: spacing.$spacing-03;
+}
+
+.ghost-wizard__path-value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.875rem;
+  color: theme.$text-primary;
+  word-break: break-all;
+  flex: 1;
+}
+
+.ghost-wizard__path-info {
+  max-width: 100%;
+  width: 100%;
+  margin-bottom: spacing.$spacing-06;
+}

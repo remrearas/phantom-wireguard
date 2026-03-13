@@ -27,6 +27,7 @@ import WireGuardPage from '@pages/vpn/wireguard/pages/index/WireGuardPage';
 import FirewallPage from '@pages/vpn/firewall/pages/index/FirewallPage';
 import DnsPage from '@pages/vpn/dns/pages/index/DnsPage';
 import NetworkPage from '@pages/vpn/network/pages/index/NetworkPage';
+import GhostPage from '@pages/vpn/ghost/pages/index/GhostPage';
 
 // ── documentation (lazy — Mermaid + shiki bundle ayrı chunk'ta) ──
 const DocumentationPage = lazy(() => import('@pages/documentation/pages/index/DocumentationPage'));
@@ -88,6 +89,7 @@ const router = createBrowserRouter([
       { path: '/vpn/firewall', element: <FirewallPage /> },
       { path: '/vpn/dns', element: <DnsPage /> },
       { path: '/vpn/network', element: <NetworkPage /> },
+      { path: '/vpn/ghost', element: <GhostPage /> },
 
       // documentation
       {
