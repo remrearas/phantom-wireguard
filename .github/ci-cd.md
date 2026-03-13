@@ -21,17 +21,12 @@ vendor-pack-vX.Y.Z-linux-{amd64,arm64}.zip
 │   ├── __init__.py, _ffi.py, client.py, types.py
 │   ├── wireguard_go_bridge.so
 │   └── wireguard_go_bridge.so.sha256
-├── firewall_bridge/
-│   ├── VERSION
-│   ├── __init__.py, _ffi.py, client.py, models.py, types.py
-│   ├── libfirewall_bridge_linux.so
-│   ├── libfirewall_bridge_linux.so.sha256
-│   └── firewall_bridge_linux.h
-└── wstunnel_bridge/
+└── firewall_bridge/
     ├── VERSION
-    ├── __init__.py, _ffi.py, client.py, db.py, server.py, state.py, types.py
-    ├── libwstunnel_bridge_linux.so
-    └── libwstunnel_bridge_linux.so.sha256
+    ├── __init__.py, _ffi.py, client.py, models.py, types.py
+    ├── libfirewall_bridge_linux.so
+    ├── libfirewall_bridge_linux.so.sha256
+    └── firewall_bridge_linux.h
 ```
 
 ## Notes

@@ -46,12 +46,6 @@ BRIDGES = {
         "package": "firewall_bridge",
         "extras": ["firewall_bridge_linux.h"],
     },
-    "wstunnel-bridge": {
-        "so": "libwstunnel_bridge_linux.so",
-        "sha256": "libwstunnel_bridge_linux.so.sha256",
-        "package": "wstunnel_bridge",
-        "extras": [],
-    },
 }
 
 
