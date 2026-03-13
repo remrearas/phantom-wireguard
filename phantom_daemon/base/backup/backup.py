@@ -77,9 +77,17 @@ def create_backup_tar(
         wallet_conn.backup(wallet_dst)
         wallet_dst.close()
 
-        # Backup exit.db
+        # Backup exit.db — reset multihop state to defaults so restore
+        # never leaves the daemon with an enabled-but-unconfigured exit tunnel.
         exit_dst = sqlite3.connect(str(tmp_dir / "exit.db"))
         exit_conn.backup(exit_dst)
+        exit_dst.execute(
+            "UPDATE config SET value = '0' WHERE key = 'multihop_enabled'"
+        )
+        exit_dst.execute(
+            "UPDATE config SET value = '' WHERE key = 'active_exit'"
+        )
+        exit_dst.commit()
         exit_dst.close()
 
         # Build manifest from backed-up copies

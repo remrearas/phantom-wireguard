@@ -286,14 +286,14 @@ class TestRoundtrip:
             dns = w2.get_dns("v4")
             assert dns == {"primary": "8.8.8.8", "secondary": "8.8.4.4"}
 
-            # Verify exit store data
+            # Verify exit store data — exits preserved but multihop reset to disabled
             assert es2.get_exit("exit-01") is not None
-            assert es2.is_enabled() is True
-            assert es2.get_active() == "exit-01"
+            assert es2.is_enabled() is False
+            assert es2.get_active() == ""
 
-            # Verify manifest
+            # Verify manifest — reflects reset state
             assert manifest["wallet"]["clients"] == 1
             assert manifest["exit_store"]["exits"] == 1
-            assert manifest["exit_store"]["enabled"] is True
+            assert manifest["exit_store"]["enabled"] is False
 
         shutil.rmtree(tar_path.parent, ignore_errors=True)
