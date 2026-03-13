@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import ssl
 import uuid
 from pathlib import Path
 
@@ -93,6 +94,14 @@ async def enable_ghost(body: EnableRequest, request: Request):
     key_path = tls_dir / "key.pem"
     cert_path.write_text(tls_cert_pem)
     key_path.write_text(tls_key_pem)
+
+    try:
+        _ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        _ctx.load_cert_chain(str(cert_path), str(key_path))
+    except ssl.SSLError as exc:
+        cert_path.unlink(missing_ok=True)
+        key_path.unlink(missing_ok=True)
+        raise DaemonHTTPException(400, "TLS_KEYPAIR_MISMATCH", f"Certificate and private key do not match: {exc}")
 
     ws = open_wstunnel(state_dir=env.state_dir)
 
