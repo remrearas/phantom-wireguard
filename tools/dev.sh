@@ -138,17 +138,17 @@ print(json.dumps(app.openapi(), indent=2))
     green "Written to openapi.json"
 }
 
-cmd_test_multighost_e2e() {
+cmd_test_multihop_e2e() {
     if [ ! -d "lib/compose_bridge" ] || [ -z "$(ls lib/compose_bridge/*.so lib/compose_bridge/*.dylib 2>/dev/null)" ]; then
         red "compose-bridge not found. Run: ./tools/dev.sh fetch-compose-bridge"
         exit 1
     fi
-    bold "Running multighost E2E tests..."
+    bold "Running multihop E2E tests..."
     local lib_file
     lib_file="$(find lib/compose_bridge -maxdepth 1 \( -name '*.dylib' -o -name '*.so' \) -print -quit)"
     COMPOSE_BRIDGE_LIB_PATH="$(pwd)/${lib_file}" \
     PYTHONPATH="$(pwd)/lib:${PYTHONPATH:-}" \
-    python3 e2e_tests/multighost/runner.py "$@"
+    python3 e2e_tests/multihop/runner.py "$@"
 }
 
 cmd_test_chaos_e2e() {
@@ -381,7 +381,7 @@ Usage: ./tools/dev.sh <command>
   test        Run pytest (ASGI, excluding slow)
   test-full   Run pytest (ASGI, all tests incl. slow)
   test-uds    Run pytest (UDS)
-  test-multighost-e2e Run multighost E2E tests (5-container)
+  test-multihop-e2e Run multihop E2E tests (5-container)
   test-chaos-e2e Run chaos E2E tests (5-container, restart recovery)
   test-scenario-e2e Run scenario E2E tests (5-container, auth-service user journey)
   shell       Open shell in daemon
@@ -413,7 +413,7 @@ case "${1:-help}" in
     test)          shift; cmd_test "$@" ;;
     test-full)     shift; cmd_test_full "$@" ;;
     test-uds)      shift; cmd_test_uds "$@" ;;
-    test-multighost-e2e) shift; cmd_test_multighost_e2e "$@" ;;
+    test-multihop-e2e) shift; cmd_test_multihop_e2e "$@" ;;
     test-chaos-e2e) shift; cmd_test_chaos_e2e "$@" ;;
     test-scenario-e2e) shift; cmd_test_scenario_e2e "$@" ;;
     shell)    cmd_shell ;;

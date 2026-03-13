@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────────
-# Multighost E2E test topology
+# Multihop E2E test topology
 # ──────────────────────────────────────────────────────────────────
 # Services:
 #   daemon       — phantom-daemon (wg_main + wg_exit)
@@ -58,7 +58,7 @@ services:
   master:
     build:
       context: ../..
-      dockerfile: e2e_tests/multighost/master.Dockerfile
+      dockerfile: e2e_tests/multihop/master.Dockerfile
     depends_on: [daemon, gateway, exit-server, client]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -71,7 +71,7 @@ services:
   exit-server:
     build:
       context: ../..
-      dockerfile: e2e_tests/multighost/exit-server.Dockerfile
+      dockerfile: e2e_tests/multihop/exit-server.Dockerfile
     privileged: true
     cap_add: [NET_ADMIN]
     networks: [e2e]
@@ -79,7 +79,7 @@ services:
   client:
     build:
       context: ../..
-      dockerfile: e2e_tests/multighost/client.Dockerfile
+      dockerfile: e2e_tests/multihop/client.Dockerfile
     privileged: true
     cap_add: [NET_ADMIN]
     devices:

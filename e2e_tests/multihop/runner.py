@@ -11,14 +11,14 @@ Copyright (c) 2025 Riza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard is a registered trademark of Jason A. Donenfeld.
 
-Multighost E2E test runner -- host-side orchestration via compose-bridge.
+Multihop E2E test runner -- host-side orchestration via compose-bridge.
 
 Starts the full topology (daemon, gateway, master, exit-server, client),
 runs pytest inside the master container, then tears down.
 
 Usage:
-    ./tools/dev.sh test-multighost-e2e
-    ./tools/dev.sh test-multighost-e2e --no-cleanup
+    ./tools/dev.sh test-multihop-e2e
+    ./tools/dev.sh test-multihop-e2e --no-cleanup
 """
 
 from __future__ import annotations
@@ -41,14 +41,14 @@ logging.basicConfig(
     level=logging.INFO, format=LOG_FMT,
     handlers=[logging.StreamHandler(sys.stdout)],
 )
-log = logging.getLogger("e2e.multighost")
+log = logging.getLogger("e2e.multihop")
 
 COMPOSE_PATH = str(RUNNER_DIR / "docker-compose.yml")
 BOOTSTRAP_SCRIPT = RUNNER_DIR / "helpers" / "bootstrap.sh"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Multighost E2E test runner")
+    parser = argparse.ArgumentParser(description="Multihop E2E test runner")
     parser.add_argument(
         "--no-cleanup", action="store_true",
         help="Keep containers after tests (for debugging)",
@@ -87,7 +87,7 @@ def main() -> None:
         step("Running tests in master")
         pytest_cmd = [
             "python", "-m", "pytest",
-            "e2e_tests/multighost/tests/",
+            "e2e_tests/multihop/tests/",
             "-v", "-s",
         ]
         if args.pytest_args:

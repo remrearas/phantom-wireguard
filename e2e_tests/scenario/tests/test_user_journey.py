@@ -25,9 +25,7 @@ Tests a complete user journey:
     8.  Create client config
     9.  Import exit-server + enable multihop
     10. Client E2E (WG raw)
-    11. Enable ghost mode
-    12. Client E2E (wstunnel)
-    13. Cleanup
+    11. Cleanup
     14. Client pagination
     15. Proxy audit log
 
@@ -152,7 +150,6 @@ class TestUserJourney:
 
     _NEW_PASSWORD: str = "Sc3n@r10-E2E-N3wP@ss!"
     _totp_secret: str = ""
-    _ghost_secret: str = ""
 
     # ================================================================
     #  PHASE 1 — LOGIN (BOOTSTRAP PASSWORD)
@@ -529,219 +526,18 @@ class TestUserJourney:
         print(f"{_THIN}")
 
     # ================================================================
-    #  PHASE 11 — GHOST MODE ENABLE
+    #  PHASE 11 — CLEANUP
     # ================================================================
 
-    def test_enable_ghost(self, api, container_exec, daemon_ip):
-        """Enable ghost mode via proxy — self-signed TLS."""
+    def test_disable_multihop(self, api, container_exec):
+        """Disable multihop and tear down client."""
         t0 = time.perf_counter()
 
         print(f"\n{_SEP}")
-        print("  PHASE 11 — ENABLE GHOST MODE")
-        print(f"{_SEP}")
-
-        # Tear down client WG from phase 10
-        container_exec("client", "wg-quick down wg0", check=False)
-
-        # Generate self-signed cert on daemon
-        cert_cmd = (
-            "openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 "
-            "-keyout /tmp/ghost.key -out /tmp/ghost.crt -days 1 -nodes "
-            '-subj "/CN=ghost-e2e" 2>&1'
-        )
-        rc, out = container_exec("daemon", cert_cmd)
-        _exec_log("openssl", rc, out)
-
-        _, cert_pem = container_exec("daemon", "cat /tmp/ghost.crt")
-        _, key_pem = container_exec("daemon", "cat /tmp/ghost.key")
-
-        cert_b64 = base64.b64encode(cert_pem.encode()).decode()
-        key_b64 = base64.b64encode(key_pem.encode()).decode()
-
-        print(f"\n  Cert CN       : ghost-e2e")
-        print(f"  Cert size     : {len(cert_pem)} bytes")
-
-        # Enable ghost via proxy
-        resp = api.post("/api/ghost/enable", body={
-            "domain": daemon_ip,
-            "tls_certificate": cert_b64,
-            "tls_private_key": key_b64,
-        })
-        assert resp.status_code == 201, f"ghost enable: {resp.status_code} {resp.text}"
-
-        data = resp.json()["data"]
-        assert data["status"] == "enabled"
-        assert data["protocol"] == "wss"
-        assert data["port"] == 443
-
-        TestUserJourney._ghost_secret = data["restrict_path_prefix"]
-
-        print(f"\n  Ghost status  : {data['status']}")
-        print(f"  Protocol      : {data['protocol']}")
-        print(f"  Port          : {data['port']}")
-        print(f"  Secret path   : {data['restrict_path_prefix'][:8]}...")
-
-        # Verify ghost + multihop-exit presets coexist
-        resp = api.get("/api/core/firewall/groups/list")
-        assert resp.status_code == 200
-        groups = resp.json()["data"]
-        group_names = [g["name"] for g in groups] if isinstance(groups, list) else list(groups.keys())
-        assert "ghost" in group_names, f"ghost preset missing: {group_names}"
-        assert "multihop-exit" in group_names, f"multihop-exit missing: {group_names}"
-        print(f"\n  FW groups     : {group_names}")
-
-        print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
-        print(f"{_THIN}")
-
-    # ================================================================
-    #  PHASE 12 — CLIENT E2E VIA WSTUNNEL
-    # ================================================================
-
-    def test_client_ghost_e2e(
-        self, api, container_exec, container_write_file, daemon_ip,
-    ):
-        """Client connects through wstunnel -> WG -> multihop chain (via proxy)."""
-        t0 = time.perf_counter()
-
-        print(f"\n{_SEP}")
-        print("  PHASE 12 — CLIENT E2E VIA WSTUNNEL")
-        print(f"{_SEP}")
-
-        secret = self._ghost_secret
-
-        # Export client config via proxy
-        resp = api.post(
-            "/api/core/clients/config",
-            body={"name": "e2e-scenario", "version": "v4"},
-        )
-        assert resp.status_code == 200
-        client_conf_raw = base64.b64decode(resp.json()["data"]).decode()
-
-        # Adapt: strip DNS, /32->/24, 0.0.0.0/0->10.0.0.0/8, Endpoint -> wstunnel local
-        adapted_lines = []
-        for line in client_conf_raw.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("DNS"):
-                continue
-            if stripped.startswith("Address") and "/32" in stripped:
-                line = line.replace("/32", "/24")
-            if stripped.startswith("AllowedIPs") and "0.0.0.0/0" in stripped:
-                line = line.replace("0.0.0.0/0", "10.0.0.0/8")
-            if stripped.startswith("Endpoint"):
-                line = "Endpoint = 127.0.0.1:51820"
-            adapted_lines.append(line)
-        client_conf = "\n".join(adapted_lines)
-
-        print(f"\n{_THIN}")
-        print("  Client wg-quick config (adapted for wstunnel)")
-        print(f"{_THIN}")
-        for line in client_conf.strip().splitlines():
-            print(f"    | {line}")
-
-        container_write_file("client", "/etc/wireguard/wg0.conf", client_conf)
-
-        # Start wstunnel client
-        wstunnel_cmd = (
-            f"wstunnel client "
-            f"--http-upgrade-path-prefix {secret} "
-            f"-L udp://127.0.0.1:51820:127.0.0.1:51820 "
-            f"wss://{daemon_ip}:443"
-        )
-
-        print(f"\n{_THIN}")
-        print("  Starting wstunnel client")
-        print(f"{_THIN}")
-        print(f"  cmd: {wstunnel_cmd}")
-
-        container_exec("client", f"nohup {wstunnel_cmd} > /tmp/wstunnel.log 2>&1 &")
-        time.sleep(3)
-
-        # Verify wstunnel running
-        rc, out = container_exec("client", "pidof wstunnel", check=False)
-        _exec_log("wstunnel pid", rc, out)
-        assert rc == 0, f"wstunnel client not running\n{out}"
-
-        rc, out = container_exec("client", "cat /tmp/wstunnel.log", check=False)
-        if out.strip():
-            print(f"\n  wstunnel log:")
-            for line in out.strip().splitlines()[:10]:
-                print(f"    | {line}")
-
-        # Bring up WireGuard (over wstunnel)
-        container_exec("client", "wg-quick up wg0")
-        time.sleep(5)
-
-        # Client WG show (via wstunnel)
-        print(f"\n{_THIN}")
-        print("  Client WireGuard state (via wstunnel)")
-        print(f"{_THIN}")
-        rc, out = container_exec("client", "wg show wg0", check=False)
-        _exec_log("wg show wg0", rc, out)
-
-        # Client -> daemon WG
-        print(f"\n{_THIN}")
-        print("  Connectivity: client -> daemon WG (via wstunnel)")
-        print(f"{_THIN}")
-        client_addr = ""
-        for line in client_conf.splitlines():
-            if line.strip().startswith("Address"):
-                client_addr = line.split("=", 1)[1].strip().split("/")[0].split(",")[0].strip()
-                break
-        subnet = client_addr.rsplit(".", 1)[0]
-        gateway_ip = f"{subnet}.1"
-
-        rc, out = container_exec("client", f"ping -c 3 -W 2 {gateway_ip}", check=False)
-        _exec_log(f"ping {gateway_ip}", rc, out)
-        assert rc == 0, f"client cannot reach daemon WG via wstunnel ({gateway_ip})\n{out}"
-
-        # Client -> exit-server (multighost)
-        print(f"\n{_THIN}")
-        print("  Connectivity: client -> exit-server (multighost)")
-        print(f"{_THIN}")
-        rc, out = container_exec("client", "ping -c 3 -W 2 10.0.2.1", check=False)
-        _exec_log("ping 10.0.2.1", rc, out)
-        assert rc == 0, f"client cannot reach exit-server via multighost (10.0.2.1)\n{out}"
-
-        print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
-        print(f"{_THIN}")
-
-    # ================================================================
-    #  PHASE 13 — CLEANUP
-    # ================================================================
-
-    def test_disable_ghost(self, api, container_exec):
-        """Disable ghost mode — multihop must stay active."""
-        t0 = time.perf_counter()
-
-        print(f"\n{_SEP}")
-        print("  PHASE 13a — DISABLE GHOST")
+        print("  PHASE 11a — DISABLE MULTIHOP")
         print(f"{_SEP}")
 
         container_exec("client", "wg-quick down wg0", check=False)
-        container_exec("client", "kill $(pidof wstunnel) 2>/dev/null || true", check=False)
-
-        resp = api.post("/api/ghost/disable")
-        assert resp.status_code == 200
-
-        resp = api.get("/api/ghost/status")
-        assert resp.json()["data"]["enabled"] is False
-
-        resp = api.get("/api/multihop/status")
-        mh = resp.json()["data"]
-        assert mh["enabled"] is True, "multihop should survive ghost disable"
-
-        print(f"\n  Ghost         : disabled")
-        print(f"  Multihop      : still enabled={mh['enabled']}")
-        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
-        print(f"{_THIN}")
-
-    def test_disable_multihop(self, api):
-        """Disable multihop."""
-        t0 = time.perf_counter()
-
-        print(f"\n{_SEP}")
-        print("  PHASE 13b — DISABLE MULTIHOP")
-        print(f"{_SEP}")
 
         resp = api.post("/api/multihop/disable")
         assert resp.status_code == 200
@@ -758,7 +554,7 @@ class TestUserJourney:
         t0 = time.perf_counter()
 
         print(f"\n{_SEP}")
-        print("  PHASE 13c — CLEANUP")
+        print("  PHASE 11b — CLEANUP")
         print(f"{_SEP}")
 
         api.post("/api/multihop/remove", body={"name": "test-exit"})
@@ -781,7 +577,7 @@ class TestUserJourney:
         print(f"{_THIN}")
 
     # ================================================================
-    #  PHASE 14 — CLIENT PAGINATION
+    #  PHASE 12 — CLIENT PAGINATION
     # ================================================================
 
     def test_client_pagination(self, api):
@@ -789,7 +585,7 @@ class TestUserJourney:
         t0 = time.perf_counter()
 
         print(f"\n{_SEP}")
-        print("  PHASE 14 — CLIENT PAGINATION (100 clients)")
+        print("  PHASE 12 — CLIENT PAGINATION (100 clients)")
         print(f"{_SEP}")
 
         # noinspection PyPep8Naming
@@ -858,7 +654,7 @@ class TestUserJourney:
         print(f"{_THIN}")
 
     # ================================================================
-    #  PHASE 15 — PROXY AUDIT LOG
+    #  PHASE 13 — PROXY AUDIT LOG
     # ================================================================
 
     def test_proxy_audit(self, api):
@@ -866,7 +662,7 @@ class TestUserJourney:
         t0 = time.perf_counter()
 
         print(f"\n{_SEP}")
-        print("  PHASE 15 — PROXY AUDIT LOG")
+        print("  PHASE 13 — PROXY AUDIT LOG")
         print(f"{_SEP}")
 
         # ── Fetch audit log filtered by proxy_request ─────────

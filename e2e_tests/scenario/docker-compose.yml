@@ -85,7 +85,7 @@ services:
   exit-server:
     build:
       context: ../..
-      dockerfile: e2e_tests/multighost/exit-server.Dockerfile
+      dockerfile: e2e_tests/multihop/exit-server.Dockerfile
     privileged: true
     cap_add: [NET_ADMIN]
     networks: [e2e]
@@ -93,7 +93,7 @@ services:
   client:
     build:
       context: ../..
-      dockerfile: e2e_tests/multighost/client.Dockerfile
+      dockerfile: e2e_tests/multihop/client.Dockerfile
     privileged: true
     cap_add: [NET_ADMIN]
     devices:

@@ -53,8 +53,8 @@ jobs:
         if: always()
         run: ./tools/dev.sh down
 
-  e2e-multighost:
-    name: E2E — Multighost
+  e2e-multihop:
+    name: E2E — Multihop
     runs-on: ubuntu-latest
     steps:
       - name: Harden runner
@@ -73,7 +73,7 @@ jobs:
         run: ./tools/dev.sh fetch-compose-bridge
 
       - name: Run E2E tests
-        run: ./tools/dev.sh test-multighost-e2e
+        run: ./tools/dev.sh test-multihop-e2e
 
   e2e-chaos:
     name: E2E — Chaos

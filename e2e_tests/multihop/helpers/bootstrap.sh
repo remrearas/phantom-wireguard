@@ -10,13 +10,13 @@
 # Licensed under AGPL-3.0 - see LICENSE file for details
 # WireGuard® is a registered trademark of Jason A. Donenfeld.
 # ──────────────────────────────────────────────────────────────────
-# Multighost E2E Bootstrap — generates WireGuard keypair
+# Multihop E2E Bootstrap — generates WireGuard keypair
 #
-# Produces a clean, isolated environment under e2e_tests/multighost/container-data/
+# Produces a clean, isolated environment under e2e_tests/multihop/container-data/
 # Independent from the main development secrets.
 #
 # Usage:
-#   e2e_tests/multighost/helpers/bootstrap.sh          (from repo root)
+#   e2e_tests/multihop/helpers/bootstrap.sh          (from repo root)
 # ──────────────────────────────────────────────────────────────────
 
 set -euo pipefail
