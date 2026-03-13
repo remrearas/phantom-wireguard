@@ -1,0 +1,100 @@
+"""
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+WireGuard® is a registered trademark of Jason A. Donenfeld.
+
+Backup endpoints: export (download) and import (upload + restore).
+"""
+
+from __future__ import annotations
+
+import shutil
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+from fastapi import APIRouter, Request, UploadFile
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from starlette.background import BackgroundTask
+
+from phantom_daemon.base.backup import create_backup_tar, restore_backup_tar
+from phantom_daemon.modules._envelope import ApiOk
+
+
+# ── Models ───────────────────────────────────────────────────────
+
+
+class RestoreResult(BaseModel):
+    timestamp: str
+    wallet_clients: int
+    wallet_subnet: str
+    exit_count: int
+    exit_enabled: bool
+
+
+# ── Router ───────────────────────────────────────────────────────
+
+router = APIRouter(tags=["backup"])
+
+
+def _cleanup(tar_path: Path) -> None:
+    """Remove the temporary backup directory after response is sent."""
+    parent = tar_path.parent
+    shutil.rmtree(parent, ignore_errors=True)
+
+
+@router.post("/export")
+async def export_backup(request: Request):
+    """Create and download a portable backup (wallet.db + exit.db + manifest)."""
+    wallet = request.app.state.wallet
+    exit_store = request.app.state.exit_store
+
+    tar_path = create_backup_tar(wallet._conn, exit_store._conn)
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
+    filename = f"phantom-backup-{timestamp}.tar"
+
+    return FileResponse(
+        path=str(tar_path),
+        media_type="application/x-tar",
+        filename=filename,
+        background=BackgroundTask(_cleanup, tar_path),
+    )
+
+
+@router.post("/import", response_model=ApiOk[RestoreResult])
+async def import_backup(file: UploadFile, request: Request):
+    """Upload and restore a previously exported backup."""
+    wallet = request.app.state.wallet
+    exit_store = request.app.state.exit_store
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".tar")
+    try:
+        content = await file.read()
+        tmp.write(content)
+        tmp.close()
+
+        manifest = restore_backup_tar(
+            Path(tmp.name), wallet._conn, exit_store._conn
+        )
+    finally:
+        Path(tmp.name).unlink(missing_ok=True)
+
+    wallet_info = manifest.get("wallet", {})
+    exit_info = manifest.get("exit_store", {})
+
+    return ApiOk(data=RestoreResult(
+        timestamp=manifest.get("timestamp", ""),
+        wallet_clients=wallet_info.get("clients", 0),
+        wallet_subnet=wallet_info.get("subnet", ""),
+        exit_count=exit_info.get("exits", 0),
+        exit_enabled=exit_info.get("enabled", False),
+    ))

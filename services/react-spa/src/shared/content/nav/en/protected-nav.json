@@ -41,6 +41,11 @@
           "label": "Network",
           "href": "/vpn/network",
           "roles": ["admin", "superadmin"]
+        },
+        {
+          "label": "Backup",
+          "href": "/vpn/backup",
+          "roles": ["admin", "superadmin"]
         }
       ]
     },

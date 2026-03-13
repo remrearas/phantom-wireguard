@@ -28,6 +28,7 @@ from fastapi.responses import JSONResponse
 
 from phantom_daemon import __version__
 from phantom_daemon.base import (
+    BackupError,
     ExitStoreError,
     StartupError,
     WalletError,
@@ -163,6 +164,13 @@ def _register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content={"ok": False, "error": exc.detail, "code": code},
+        )
+
+    @app.exception_handler(BackupError)
+    async def _backup_error(_request, exc):
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "error": str(exc), "code": "BACKUP_ERROR"},
         )
 
     @app.exception_handler(ExitStoreError)

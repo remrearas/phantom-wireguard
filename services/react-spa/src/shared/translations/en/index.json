@@ -253,6 +253,39 @@
     "saved": "DNS settings saved.",
     "refresh": "Refresh"
   },
+  "backup": {
+    "title": "Backup",
+    "export": "Export Backup",
+    "exportDescription": "Download a snapshot of the current database.",
+    "exporting": "Exporting...",
+    "exportFailed": "Failed to export backup.",
+    "import": "Import Backup",
+    "importDescription": "Upload and restore from a previously exported backup.",
+    "importing": "Importing...",
+    "importSuccess": "Backup restored successfully.",
+    "importFailed": "Failed to import backup.",
+    "selectFile": "Select File",
+    "clients": "Clients",
+    "subnet": "Subnet",
+    "exits": "Exits",
+    "validating": "Validating file...",
+    "previewTitle": "Backup Contents",
+    "field": "Field",
+    "value": "Value",
+    "timestamp": "Date",
+    "importWarning": "This will completely replace the current database. This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirmImport": "Restore",
+    "backToStart": "Done",
+    "retry": "Try Again",
+    "validation": {
+      "invalidFormat": "Invalid file format. Only .tar files are accepted.",
+      "tooLarge": "File too large. Maximum 256 MB.",
+      "missingFiles": "Missing components in backup file",
+      "invalidManifest": "Invalid backup manifest file.",
+      "unsupportedVersion": "Unsupported backup version."
+    }
+  },
   "network": {
     "title": "Network",
     "subnet": "Subnet",
@@ -404,7 +437,8 @@
     "MULTIHOP_ALREADY_ACTIVE": "Multihop is already active.",
     "MULTIHOP_DISABLED": "Multihop disabled.",
     "MULTIHOP_ALREADY_DISABLED": "Multihop is already disabled.",
-    "EXIT_REMOVED": "Exit removed successfully."
+    "EXIT_REMOVED": "Exit removed successfully.",
+    "BACKUP_ERROR": "Backup operation failed."
   },
   "client_side_api_codes": {
     "NETWORK_ERROR": "Cannot connect to server.",

@@ -46,6 +46,10 @@ class FirewallError(StartupError):
     """Failed to initialise or configure firewall bridge."""
 
 
+class BackupError(Exception):
+    """Backup export or import failure."""
+
+
 # ── API error code mechanism ─────────────────────────────────────
 
 

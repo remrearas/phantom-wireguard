@@ -1,0 +1,143 @@
+@use '@carbon/react/scss/spacing' as sp;
+@use '@carbon/react/scss/theme' as theme;
+@use '@carbon/react/scss/breakpoint' as bp;
+
+.backup__tile {
+  min-height: 160px;
+  margin-bottom: sp.$spacing-05;
+}
+
+.backup__tile-title {
+  font-weight: 600;
+  color: var(--cds-text-primary);
+  margin-bottom: sp.$spacing-03;
+}
+
+.backup__tile-description {
+  color: var(--cds-text-secondary);
+  margin-bottom: sp.$spacing-05;
+}
+
+.backup__notification {
+  margin-bottom: sp.$spacing-05;
+}
+
+.backup__file-input {
+  display: none;
+}
+
+// ── Preview step ────────────────────────────────────────────────
+
+.backup__tile--preview {
+  animation: backupFadeIn 0.3s ease-in-out;
+}
+
+.backup__preview-header {
+  display: flex;
+  align-items: center;
+  gap: sp.$spacing-03;
+  margin-bottom: sp.$spacing-05;
+}
+
+.backup__preview-file {
+  display: flex;
+  align-items: center;
+  gap: sp.$spacing-03;
+  padding: sp.$spacing-03 sp.$spacing-04;
+  background-color: var(--cds-layer-02);
+  border-radius: 4px;
+  margin-bottom: sp.$spacing-05;
+}
+
+.backup__preview-filename {
+  font-family: var(--cds-code-01-font-family, 'IBM Plex Mono', monospace);
+  font-size: 0.875rem;
+  color: var(--cds-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.backup__preview-list {
+  margin-bottom: sp.$spacing-05;
+}
+
+.backup__tag-inline {
+  margin-left: sp.$spacing-03;
+}
+
+.backup__preview-warning {
+  margin-bottom: sp.$spacing-05;
+}
+
+// ── Wizard navigation ──────────────────────────────────────────
+
+.backup__wizard-nav {
+  display: flex;
+  gap: sp.$spacing-04;
+  justify-content: space-between;
+  padding-top: sp.$spacing-04;
+
+  @include bp.breakpoint-down(sm) {
+    flex-direction: column;
+    gap: sp.$spacing-03;
+  }
+}
+
+// ── Done step ──────────────────────────────────────────────────
+
+.backup__tile--done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 240px;
+  animation: backupFadeIn 0.3s ease-in-out;
+}
+
+.backup__done-icon {
+  color: theme.$support-success;
+  margin-bottom: sp.$spacing-05;
+}
+
+.backup__done-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--cds-text-primary);
+  margin-bottom: sp.$spacing-03;
+}
+
+.backup__done-detail {
+  color: var(--cds-text-secondary);
+  margin-bottom: sp.$spacing-06;
+}
+
+// ── Failed step ────────────────────────────────────────────────
+
+.backup__tile--failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 200px;
+  animation: backupFadeIn 0.3s ease-in-out;
+}
+
+.backup__failed-icon {
+  color: theme.$support-error;
+  margin-bottom: sp.$spacing-05;
+}
+
+// ── Animation ──────────────────────────────────────────────────
+
+@keyframes backupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
