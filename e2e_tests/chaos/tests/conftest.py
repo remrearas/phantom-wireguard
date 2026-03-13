@@ -16,7 +16,10 @@ Runs INSIDE the master container. Provides:
 - Docker client for exec into service containers
 - Gateway URL for daemon API access
 - Container interaction helpers
-- restart_daemon: kill + restart daemon and wait for ready
+- restart_daemon: graceful restart (SIGTERM) and wait for ready
+- kill_daemon: SIGKILL (ungraceful) + restart and wait for ready
+- sigkill_daemon: raw SIGKILL only (no restart, no wait)
+- start_daemon: start stopped daemon + gateway, wait for ready
 - wait_for_api: poll gateway until daemon API responds
 """
 
@@ -51,9 +54,19 @@ def project_name() -> str:
     return os.environ["COMPOSE_PROJECT_NAME"]
 
 
-def _find_container(client: docker.DockerClient, project: str, service: str):
-    """Find a running container by compose project + service label."""
+def _find_container(
+    client: docker.DockerClient,
+    project: str,
+    service: str,
+    include_stopped: bool = False,
+):
+    """Find a container by compose project + service label.
+
+    By default only running containers are returned. Set include_stopped=True
+    to also find exited containers (needed after SIGKILL).
+    """
     containers = client.containers.list(
+        all=include_stopped,
         filters={
             "label": [
                 f"com.docker.compose.project={project}",
@@ -160,6 +173,95 @@ def restart_daemon(docker_client, project_name, gateway_url):
         raise TimeoutError(f"Daemon not ready after {timeout}s restart")
 
     return _restart
+
+
+@pytest.fixture(scope="session")
+def kill_daemon(docker_client, project_name, gateway_url):
+    """Factory fixture: SIGKILL daemon and wait for API ready.
+
+    Unlike restart_daemon (SIGTERM → graceful shutdown), this sends
+    SIGKILL which terminates the process immediately:
+    - Lifespan shutdown handlers do NOT run
+    - UDS socket is NOT cleaned up
+    - SQLite WAL/journal may be mid-write
+
+    Returns the time (seconds) it took for the daemon to recover.
+    """
+
+    def _kill(timeout: int = 60) -> float:
+        daemon = _find_container(docker_client, project_name, "daemon")
+        gateway = _find_container(docker_client, project_name, "gateway")
+        t0 = time.monotonic()
+
+        daemon.kill(signal="SIGKILL")
+        time.sleep(0.5)
+        daemon.start()
+
+        # Gateway (socat) holds stale UDS handle — must restart too
+        gateway.restart(timeout=5)
+
+        # Poll gateway until daemon API responds
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                resp = requests.get(
+                    f"{gateway_url}/api/core/firewall/groups/list",
+                    timeout=2,
+                )
+                if resp.status_code == 200:
+                    return time.monotonic() - t0
+            except (requests.ConnectionError, requests.Timeout):
+                pass
+            time.sleep(1)
+        raise TimeoutError(f"Daemon not ready after {timeout}s SIGKILL recovery")
+
+    return _kill
+
+
+@pytest.fixture(scope="session")
+def sigkill_daemon(docker_client, project_name):
+    """Factory fixture: send SIGKILL to daemon without restarting.
+
+    Use with start_daemon for fine-grained control (e.g. mid-flight kill).
+    """
+
+    def _kill() -> None:
+        daemon = _find_container(docker_client, project_name, "daemon")
+        daemon.kill(signal="SIGKILL")
+
+    return _kill
+
+
+@pytest.fixture(scope="session")
+def start_daemon(docker_client, project_name, gateway_url):
+    """Factory fixture: start a stopped daemon + gateway, wait for API ready.
+
+    Returns the time (seconds) it took for the daemon to become ready.
+    """
+
+    def _start(timeout: int = 90) -> float:
+        daemon = _find_container(docker_client, project_name, "daemon", include_stopped=True)
+        gateway = _find_container(docker_client, project_name, "gateway", include_stopped=True)
+        t0 = time.monotonic()
+
+        daemon.start()
+        gateway.restart(timeout=5)
+
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                resp = requests.get(
+                    f"{gateway_url}/api/core/firewall/groups/list",
+                    timeout=2,
+                )
+                if resp.status_code == 200:
+                    return time.monotonic() - t0
+            except (requests.ConnectionError, requests.Timeout):
+                pass
+            time.sleep(1)
+        raise TimeoutError(f"Daemon not ready after {timeout}s start")
+
+    return _start
 
 
 @pytest.fixture(scope="session")
