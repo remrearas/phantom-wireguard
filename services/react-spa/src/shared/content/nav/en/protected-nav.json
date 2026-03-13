@@ -41,11 +41,6 @@
           "label": "Network",
           "href": "/vpn/network",
           "roles": ["admin", "superadmin"]
-        },
-        {
-          "label": "Ghost",
-          "href": "/vpn/ghost",
-          "roles": ["admin", "superadmin"]
         }
       ]
     },

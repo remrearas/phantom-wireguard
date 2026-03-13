@@ -41,11 +41,6 @@
           "label": "Ağ",
           "href": "/vpn/network",
           "roles": ["admin", "superadmin"]
-        },
-        {
-          "label": "Hayalet Modu",
-          "href": "/vpn/ghost",
-          "roles": ["admin", "superadmin"]
         }
       ]
     },
