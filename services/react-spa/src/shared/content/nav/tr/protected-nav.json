@@ -46,6 +46,11 @@
           "label": "Yedekleme",
           "href": "/vpn/backup",
           "roles": ["admin", "superadmin"]
+        },
+        {
+          "label": "Multihop",
+          "href": "/vpn/multihop",
+          "roles": ["admin", "superadmin"]
         }
       ]
     },

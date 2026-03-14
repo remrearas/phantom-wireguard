@@ -43,7 +43,9 @@
   },
   "header": {
     "appName": "Phantom-WG",
-    "logout": "Çıkış"
+    "logout": "Çıkış",
+    "darkMode": "Karanlık Mod",
+    "lightMode": "Aydınlık Mod"
   },
   "nav": {
     "dashboard": "Gösterge Paneli",
@@ -286,6 +288,41 @@
       "unsupportedVersion": "Desteklenmeyen yedek sürümü."
     }
   },
+  "multihop": {
+    "title": "Multihop",
+    "status": "Durum",
+    "active": "Aktif",
+    "disabled": "Devre Dışı",
+    "activeExit": "Aktif Exit",
+    "address": "Adres",
+    "noExits": "Henüz exit yapılandırması yok.",
+    "importExit": "Exit İçe Aktar",
+    "name": "Ad",
+    "namePlaceholder": "orn: de-exit-01",
+    "nameHelperText": "Harf, rakam, tire ve alt çizgi (1-64 karakter)",
+    "nameInvalid": "Geçersiz isim. Sadece harf, rakam, tire ve alt çizgi.",
+    "endpoint": "Endpoint",
+    "allowedIps": "İzin Verilen IP'ler",
+    "keepalive": "Keepalive",
+    "connection": "Bağlantı",
+    "config": "WireGuard Yapılandırması",
+    "configPlaceholder": "[Interface]\nPrivateKey = cGhhbnRvbS13Zy1kZXYta2V5LXByaXZhdGUtMDAwMDA=\nAddress = 10.0.2.2/24\n\n[Peer]\nPublicKey = cGhhbnRvbS13Zy1kZXYta2V5LXB1YmxpYy0wMDAwMA==\nEndpoint = 203.0.113.1:51820\nAllowedIPs = 0.0.0.0/0, ::/0\nPersistentKeepalive = 25",
+    "import": "İçe Aktar",
+    "cancel": "İptal",
+    "remove": "Kaldır",
+    "removeConfirm": "Bu exit yapılandırmasını kaldırmak istediğinizden emin misiniz?",
+    "importing": "İçe aktarılıyor...",
+    "enabling": "Etkinleştiriliyor...",
+    "disabling": "Devre dışı bırakılıyor...",
+    "refresh": "Yenile",
+    "handshake": "Handshake",
+    "online": "Çevrimiçi",
+    "offline": "Çevrimdışı",
+    "never": "Hiçbir Zaman",
+    "notConnected": "Bağlı Değil",
+    "rx": "Alınan",
+    "tx": "Gönderilen"
+  },
   "network": {
     "title": "Ağ",
     "subnet": "Alt Ağ",
@@ -492,20 +529,6 @@
         "title": "Terazi Sistemi",
         "description": "IPv4/IPv6 adreslerini deterministik olarak eşleyen dengeleme mekanizması. Çift-yığın havuzun nasıl oluşturulduğunu, dengelendiğini ve doğrulandığını öğrenin."
       }
-    },
-    "formulaInfo": {
-      "pairingLabel": "Eşleme kuralı bilgisi",
-      "pairingTitle": "Eşleme Kuralı",
-      "forAll": "her biri için (evrensel niceleyici)",
-      "range": "kullanılabilir slot'ların index aralığı",
-      "indexTwo": "ilk kullanılabilir slot (0 = ağ adresi, 1 = sunucu/gateway atlanır)",
-      "indexNMinus2": "son kullanılabilir slot (n−1 = broadcast atlanır)",
-      "bijection": "i index'indeki IPv4 adresi, aynı i index'indeki IPv6 adresiyle eşlenir",
-      "symmetryLabel": "Simetri sonucu bilgisi",
-      "symmetryTitle": "Simetri Sonucu",
-      "cardinality": "sayısı (kardinalite)",
-      "identical": "özdeş olarak eşittir",
-      "symmetrySummary": "Atanmış IPv4 adreslerinin sayısı her zaman atanmış IPv6 adreslerinin sayısına eşittir. Birini atamak her zaman diğerini de atar."
     },
     "poolSimulator": {
       "assign": "İstemci Ekle",

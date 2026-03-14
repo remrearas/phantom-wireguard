@@ -43,7 +43,9 @@
   },
   "header": {
     "appName": "Phantom-WG",
-    "logout": "Logout"
+    "logout": "Logout",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -286,6 +288,41 @@
       "unsupportedVersion": "Unsupported backup version."
     }
   },
+  "multihop": {
+    "title": "Multihop",
+    "status": "Status",
+    "active": "Active",
+    "disabled": "Disabled",
+    "activeExit": "Active Exit",
+    "address": "Address",
+    "noExits": "No exit configurations yet.",
+    "importExit": "Import Exit",
+    "name": "Name",
+    "namePlaceholder": "e.g. de-exit-01",
+    "nameHelperText": "Letters, digits, hyphens and underscores (1-64 chars)",
+    "nameInvalid": "Invalid name. Only letters, digits, hyphens and underscores.",
+    "endpoint": "Endpoint",
+    "allowedIps": "Allowed IPs",
+    "keepalive": "Keepalive",
+    "connection": "Connection",
+    "config": "WireGuard Configuration",
+    "configPlaceholder": "[Interface]\nPrivateKey = ...\nAddress = ...\n\n[Peer]\nPublicKey = ...\nEndpoint = ...",
+    "import": "Import",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "removeConfirm": "Are you sure you want to remove this exit configuration?",
+    "importing": "Importing...",
+    "enabling": "Enabling...",
+    "disabling": "Disabling...",
+    "refresh": "Refresh",
+    "handshake": "Handshake",
+    "online": "Online",
+    "offline": "Offline",
+    "never": "Never",
+    "notConnected": "Not Connected",
+    "rx": "Received",
+    "tx": "Transmitted"
+  },
   "network": {
     "title": "Network",
     "subnet": "Subnet",
@@ -492,20 +529,6 @@
         "title": "Balance System (Terazi)",
         "description": "Deterministic IPv4/IPv6 address pairing mechanism. Learn how the dual-stack pool is built, balanced, and validated."
       }
-    },
-    "formulaInfo": {
-      "pairingLabel": "Pairing rule info",
-      "pairingTitle": "Pairing Rule",
-      "forAll": "for every (universal quantifier)",
-      "range": "index range of usable slots",
-      "indexTwo": "first usable slot (0 = network, 1 = server/gateway are skipped)",
-      "indexNMinus2": "last usable slot (n−1 = broadcast is skipped)",
-      "bijection": "IPv4 at index i is paired with IPv6 at the same index i",
-      "symmetryLabel": "Symmetry result info",
-      "symmetryTitle": "Symmetry Result",
-      "cardinality": "count of (cardinality)",
-      "identical": "is identically equal to",
-      "symmetrySummary": "The number of assigned IPv4 addresses is always equal to the number of assigned IPv6 addresses. Assigning one always assigns the other."
     },
     "poolSimulator": {
       "assign": "Add Client",
