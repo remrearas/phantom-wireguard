@@ -71,6 +71,16 @@ services:
     secrets: [tls_cert, tls_key]
     networks: [e2e]
 
+  exit-server:
+    build:
+      context: ../..
+      dockerfile: e2e_tests/multihop/exit-server.Dockerfile
+    privileged: true
+    cap_add: [NET_ADMIN]
+    networks:
+      e2e:
+        ipv4_address: 172.31.0.50
+
   wg-client:
     build:
       context: .
@@ -86,7 +96,7 @@ services:
     build:
       context: .
       dockerfile: playwright.Dockerfile
-    depends_on: [nginx, wg-client]
+    depends_on: [nginx, wg-client, exit-server]
     volumes:
       - ./results:/app/results
       - ./report:/app/report

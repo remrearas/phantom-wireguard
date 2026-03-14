@@ -38,6 +38,8 @@ E2E_DIR = RUNNER_DIR.parent
 REPO_ROOT = E2E_DIR.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+import base64
+
 from e2e_tests.environment import E2ETestEnvironment, step, LOG_FMT
 
 logging.basicConfig(
@@ -128,6 +130,12 @@ def main() -> None:
         # Wait for backend services
         env.wait_for_log("daemon", "Application startup complete", timeout=60)
         env.wait_for_log("auth-service", "Application startup complete", timeout=60)
+        env.wait_for_log("exit-server", "EXIT_READY", timeout=30)
+
+        # Read exit-server client config (resolve __EXIT_SERVER_IP__ placeholder)
+        step("Reading exit-server config")
+        result = env.service_exec("exit-server", ["cat", "/config/client.conf"])
+        exit_conf = result.stdout.replace("__EXIT_SERVER_IP__", "172.31.0.50")
 
         # Wait for playwright container
         env.wait_for_ready("playwright", timeout=30)
@@ -149,6 +157,7 @@ def main() -> None:
             "-e", f"ADMIN_PASSWORD={admin_password}",
             "-e", f"COMPOSE_PROJECT_NAME={env.project_name}",
             "-e", f"WG_CLIENT_COUNT={wg_count}",
+            "-e", f"EXIT_CONF_B64={base64.b64encode(exit_conf.encode()).decode()}",
             "-T", "playwright",
             *pw_cmd,
         ]
