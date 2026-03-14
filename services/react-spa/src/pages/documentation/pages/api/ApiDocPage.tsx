@@ -1,38 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import SwaggerUI from 'swagger-ui-react';
-import 'swagger-ui-react/swagger-ui.css';
-import './styles/ApiDocPage.scss';
+import React from 'react';
+import { useLocale } from '@shared/hooks';
+import MDXPageRenderer from '@shared/components/content/MDXPageRenderer';
+import ContentTr from './index.mdx';
+import ContentEn from './index.en.mdx';
+
+const CONTENT_MAP: Record<string, React.ComponentType> = {
+  tr: ContentTr,
+  en: ContentEn,
+};
 
 const ApiDocPage: React.FC = () => {
-  const [spec, setSpec] = useState<object | null>(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    fetch('/api/core/hello/openapi', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
-      .then((data) => setSpec(data))
-      .catch(() => {});
-  }, []);
-
-  if (!spec) return null;
-
-  return (
-    <div className="api-doc">
-      <SwaggerUI
-        spec={spec}
-        requestInterceptor={(req) => {
-          const token = localStorage.getItem('token');
-          if (token) req.headers.Authorization = `Bearer ${token}`;
-          return req;
-        }}
-        defaultModelsExpandDepth={-1}
-        docExpansion="list"
-        tryItOutEnabled
-      />
-    </div>
-  );
+  const { locale } = useLocale();
+  const Content = CONTENT_MAP[locale] || CONTENT_MAP.tr;
+  return <MDXPageRenderer content={Content} className="api-doc-page" />;
 };
 
 export default ApiDocPage;

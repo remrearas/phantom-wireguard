@@ -556,5 +556,27 @@
       "cinemaRestore": "Orijinal durumunuz geri yükleniyor",
       "cinemaDone": "Bitti — durumunuz geri yüklendi"
     }
+  },
+  "apiDoc": {
+    "loading": "API spesifikasyonu yükleniyor...",
+    "error": "API spesifikasyonu yüklenemedi.",
+    "retry": "Tekrar Dene",
+    "version": "Sürüm",
+    "parameters": "Parametreler",
+    "name": "Ad",
+    "location": "Konum",
+    "type": "Tür",
+    "required": "Zorunlu",
+    "description": "Açıklama",
+    "requestBody": "İstek Gövdesi",
+    "responses": "Yanıtlar",
+    "noParameters": "Parametre yok",
+    "noResponse": "Yanıt gövdesi yok",
+    "tryItOut": "Deneyin",
+    "send": "Gönder",
+    "sending": "Gönderiliyor...",
+    "selectFile": "Dosya Seç",
+    "endpoints": "uç nokta",
+    "milliseconds": "ms"
   }
 }

@@ -556,5 +556,27 @@
       "cinemaRestore": "Restoring your original state",
       "cinemaDone": "Done — your state has been restored"
     }
+  },
+  "apiDoc": {
+    "loading": "Loading API specification...",
+    "error": "Failed to load API specification.",
+    "retry": "Retry",
+    "version": "Version",
+    "parameters": "Parameters",
+    "name": "Name",
+    "location": "Location",
+    "type": "Type",
+    "required": "Required",
+    "description": "Description",
+    "requestBody": "Request Body",
+    "responses": "Responses",
+    "noParameters": "No parameters",
+    "noResponse": "No response body",
+    "tryItOut": "Try it out",
+    "send": "Send",
+    "sending": "Sending...",
+    "selectFile": "Select File",
+    "endpoints": "endpoints",
+    "milliseconds": "ms"
   }
 }
