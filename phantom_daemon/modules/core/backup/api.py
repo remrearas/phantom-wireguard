@@ -110,6 +110,13 @@ async def import_backup(file: UploadFile, request: Request):
     finally:
         Path(tmp.name).unlink(missing_ok=True)
 
+    # Re-sync WireGuard peers with restored wallet — IPC state must
+    # match the new database, just like daemon startup (fast_sync).
+    wg = request.app.state.wg
+    server_keys = request.app.state.server_keys
+    env = request.app.state.env
+    wg.fast_sync(wallet=wallet, server_keys=server_keys, env=env)
+
     wallet_info = manifest.get("wallet", {})
     exit_info = manifest.get("exit_store", {})
 

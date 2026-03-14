@@ -115,9 +115,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     yield
 
-    if wg_exit is not None:
-        wg_exit.down()
-        wg_exit.close()
+    # Use app.state — backup import may have torn down wg_exit mid-flight
+    # and set app.state.wg_exit = None while local var still holds old ref.
+    live_wg_exit = app.state.wg_exit
+    if live_wg_exit is not None:
+        live_wg_exit.down()
+        live_wg_exit.close()
     exit_store.close()
     fw.stop()
     fw.close()
