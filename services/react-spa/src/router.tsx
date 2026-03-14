@@ -32,6 +32,8 @@ import MultihopPage from '@pages/vpn/multihop/pages/index/MultihopPage';
 // ── documentation (lazy — Mermaid + shiki bundle ayrı chunk'ta) ──
 const DocumentationPage = lazy(() => import('@pages/documentation/pages/index/DocumentationPage'));
 const TeraziPage        = lazy(() => import('@pages/documentation/pages/terazi/TeraziPage'));
+const MultihopDocPage   = lazy(() => import('@pages/documentation/pages/multihop/MultihopDocPage'));
+const ApiDocPage        = lazy(() => import('@pages/documentation/pages/api/ApiDocPage'));
 
 // ── Route guards ──────────────────────────────────────────────────
 
@@ -106,6 +108,22 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<LoadingSpinner fullscreen />}>
             <TeraziPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/documentation/multihop',
+        element: (
+          <Suspense fallback={<LoadingSpinner fullscreen />}>
+            <MultihopDocPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/documentation/api',
+        element: (
+          <Suspense fallback={<LoadingSpinner fullscreen />}>
+            <ApiDocPage />
           </Suspense>
         ),
       },
