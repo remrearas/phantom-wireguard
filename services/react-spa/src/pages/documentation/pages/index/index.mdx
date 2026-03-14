@@ -1,9 +1,27 @@
 import DocumentationIndex from '@pages/documentation/shared/components/DocumentationIndex';
 
+export const topics = [
+  {
+    title: 'Terazi Sistemi',
+    description: 'IPv4/IPv6 adreslerini deterministik olarak eşleyen dengeleme mekanizması. Çift-yığın havuzun nasıl oluşturulduğunu, dengelendiğini ve doğrulandığını öğrenin.',
+    href: '/documentation/terazi',
+  },
+  {
+    title: 'Multihop',
+    description: 'Exit tünelleri üzerinden trafik yönlendirme. Daemon\'ın istemci trafiğini ikinci bir WireGuard arayüzü ve firewall kurallarıyla nasıl aktardığını öğrenin.',
+    href: '/documentation/multihop',
+  },
+  {
+    title: 'API Dokümantasyonu',
+    description: 'Phantom Daemon REST API uç noktaları. Etkileşimli playground ile API sorgularını doğrudan tarayıcıdan test edin.',
+    href: '/documentation/api',
+  },
+];
+
 # Dokümantasyon
 
 Phantom-WG sistem mimarisini, mekanizmalarını ve yapılandırma mantığını anlatan iç dokümantasyon.
 
 ---
 
-<DocumentationIndex />
+<DocumentationIndex topics={topics} />

@@ -1,9 +1,27 @@
 import DocumentationIndex from '@pages/documentation/shared/components/DocumentationIndex';
 
+export const topics = [
+  {
+    title: 'Balance System (Terazi)',
+    description: 'Deterministic IPv4/IPv6 address pairing mechanism. Learn how the dual-stack pool is built, balanced, and validated.',
+    href: '/documentation/terazi',
+  },
+  {
+    title: 'Multihop',
+    description: 'Traffic forwarding through exit tunnels. How the daemon routes client traffic via a second WireGuard interface and firewall rules.',
+    href: '/documentation/multihop',
+  },
+  {
+    title: 'API Documentation',
+    description: 'Phantom Daemon REST API endpoints. Test API queries directly from the browser with the interactive playground.',
+    href: '/documentation/api',
+  },
+];
+
 # Documentation
 
 Internal documentation covering Phantom-WG system architecture, mechanisms and configuration logic.
 
 ---
 
-<DocumentationIndex />
+<DocumentationIndex topics={topics} />

@@ -1,12 +1,11 @@
 @use '@carbon/react/scss/spacing' as spacing;
-@use '@carbon/react/scss/breakpoint' as bp;
 
 .docs__grid {
   margin-top: spacing.$spacing-05;
 }
 
 .docs__topic-tile {
-  min-height: 120px;
+  min-height: 7rem;
   display: flex;
   flex-direction: column;
   gap: spacing.$spacing-03;
