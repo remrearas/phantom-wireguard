@@ -15,6 +15,8 @@ import {
   OverflowMenu,
   OverflowMenuItem,
   InlineNotification,
+  Grid,
+  Column,
 } from '@carbon/react';
 import { Add } from '@carbon/icons-react';
 import { useUser, type UserInfo } from '@shared/contexts/UserContext';
@@ -92,7 +94,7 @@ const UserManagement: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────
 
   return (
-    <div className="um">
+    <Grid className="um" narrow>
       {/* ── Modals ── */}
       <CreateUserModal
         open={action?.type === 'create'}
@@ -127,17 +129,20 @@ const UserManagement: React.FC = () => {
 
       {/* ── Notification ── */}
       {notification && (
-        <InlineNotification
-          kind={notification.kind}
-          title={notification.text}
-          onCloseButtonClick={() => setNotification(null)}
-          lowContrast
-          className="um__notification"
-          data-testid="um-notification"
-        />
+        <Column lg={16} md={8} sm={4}>
+          <InlineNotification
+            kind={notification.kind}
+            title={notification.text}
+            onCloseButtonClick={() => setNotification(null)}
+            lowContrast
+            className="um__notification"
+            data-testid="um-notification"
+          />
+        </Column>
       )}
 
       {/* ── Users Table ── */}
+      <Column lg={16} md={8} sm={4}>
       <DataTable rows={rows} headers={headers}>
         {({
           rows: tableRows,
@@ -266,13 +271,14 @@ const UserManagement: React.FC = () => {
           </TableContainer>
         )}
       </DataTable>
+      </Column>
 
       {loading && (
-        <p style={{ color: 'var(--cds-text-secondary)', marginTop: '1rem' }}>
-          {t.loadingSpinner.loading}
-        </p>
+        <Column lg={16} md={8} sm={4}>
+          <p className="um__loading">{t.loadingSpinner.loading}</p>
+        </Column>
       )}
-    </div>
+    </Grid>
   );
 };
 

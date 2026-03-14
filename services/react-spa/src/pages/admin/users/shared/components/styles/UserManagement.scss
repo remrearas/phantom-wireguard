@@ -9,6 +9,11 @@
   max-width: 100%;
 }
 
+.um__loading {
+  color: var(--cds-text-secondary);
+  margin-top: spacing.$spacing-05;
+}
+
 // ── Modal ─────────────────────────────────────────────────────
 
 .um__modal {
