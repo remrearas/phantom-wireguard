@@ -11,7 +11,7 @@ import { useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import { apiClient } from '@shared/api/client';
 import EditDnsModal from './modals/EditDnsModal';
-import './styles/dns.scss';
+import './styles/DnsConfig.scss';
 
 // ── Types ─────────────────────────────────────────────────────────
 

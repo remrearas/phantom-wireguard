@@ -26,7 +26,7 @@ import CreateUserModal from './modals/CreateUserModal';
 import ChangePasswordModal from './modals/ChangePasswordModal';
 import DeleteUserModal from './modals/DeleteUserModal';
 import DisableTotpModal from './modals/DisableTotpModal';
-import './styles/user-management.scss';
+import './styles/UserManagement.scss';
 
 // ── Types ─────────────────────────────────────────────────────────
 

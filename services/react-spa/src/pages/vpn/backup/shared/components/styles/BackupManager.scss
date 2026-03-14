@@ -50,7 +50,7 @@
 }
 
 .backup__preview-filename {
-  font-family: var(--cds-code-01-font-family, 'IBM Plex Mono', monospace);
+  font-family: var(--cds-code-01-font-family, 'IBM Plex Mono', monospace), monospace;
   font-size: 0.875rem;
   color: var(--cds-text-primary);
   overflow: hidden;

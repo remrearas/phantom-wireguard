@@ -14,7 +14,7 @@ import { translate } from '@shared/translations';
 import { apiClient } from '@shared/api/client';
 import { generatePassword, getPolicyChecks } from '@shared/utils/passwordUtils';
 import '@pages/account/totp/shared/components/common.scss';
-import './styles/password-change.scss';
+import './styles/PasswordChange.scss';
 
 interface VerifyResponse {
   change_token: string;

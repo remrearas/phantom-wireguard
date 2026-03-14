@@ -31,7 +31,7 @@ import { formatDateTime } from '@shared/utils/dateUtils';
 import TableLoader from '@shared/components/data/TableLoader';
 import AuditDetailModal from './modals/AuditDetailModal';
 import { Navigate } from 'react-router-dom';
-import './styles/audit-log.scss';
+import './styles/AuditLog.scss';
 
 // ── Constants ─────────────────────────────────────────────────────
 

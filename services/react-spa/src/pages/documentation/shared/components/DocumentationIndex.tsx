@@ -3,7 +3,7 @@ import { Grid, Column, ClickableTile } from '@carbon/react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
-import './styles/documentation.scss';
+import './styles/DocumentationIndex.scss';
 
 interface DocTopic {
   key: string;

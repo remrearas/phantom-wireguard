@@ -24,7 +24,7 @@ import { apiClient } from '@shared/api/client';
 import TableLoader from '@shared/components/data/TableLoader';
 import GroupDetailModal from './modals/GroupDetailModal';
 import RawTableModal from './modals/RawTableModal';
-import './styles/firewall.scss';
+import './styles/FirewallViewer.scss';
 
 // ── Types ─────────────────────────────────────────────────────────
 

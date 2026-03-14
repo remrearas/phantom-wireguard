@@ -29,7 +29,7 @@ import CreateClientModal from './modals/CreateClientModal';
 import RevokeClientModal from './modals/RevokeClientModal';
 import ClientConfigModal from './modals/ClientConfigModal';
 import ClientKeysModal from './modals/ClientKeysModal';
-import './styles/clients.scss';
+import './styles/ClientManagement.scss';
 
 // ── Types ─────────────────────────────────────────────────────────
 

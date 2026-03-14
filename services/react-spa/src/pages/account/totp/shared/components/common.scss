@@ -96,7 +96,7 @@
 
 .totp-wizard__qr-wrapper {
   padding: spacing.$spacing-05;
-  background-color: #ffffff;
+  background-color: #ffffff; // QR scanners require white background — intentional
   border-radius: 8px;
 }
 

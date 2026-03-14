@@ -9,21 +9,20 @@
 
 .login-page__icon {
   display: block;
-  width: 120px;
+  width: 180px;
   height: auto;
   margin: 0 auto 2rem;
 
-  // stellar-silver
   .phantom-icon__shield {
-    fill: #e5e7eb;
+    fill: var(--cds-icon-secondary);
   }
 
   .phantom-icon__ghost {
-    fill: #1f2937;
+    fill: var(--cds-icon-primary);
   }
 
   .phantom-icon__eyes {
-    fill: #e5e7eb;
+    fill: var(--cds-icon-secondary);
   }
 }
 

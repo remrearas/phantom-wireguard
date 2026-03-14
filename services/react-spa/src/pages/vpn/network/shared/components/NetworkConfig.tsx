@@ -13,7 +13,7 @@ import { useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import { apiClient } from '@shared/api/client';
 import ChangeCidrModal from './modals/ChangeCidrModal';
-import './styles/network.scss';
+import './styles/NetworkConfig.scss';
 
 // ── Types ─────────────────────────────────────────────────────────
 
