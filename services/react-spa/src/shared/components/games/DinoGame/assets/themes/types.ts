@@ -29,4 +29,4 @@
  * Theme Type Definitions
  */
 
-export type ThemeName = 'error' | 'consultancy' | 'under-construction';
+export type ThemeName = 'error' | 'dpi' | 'under-construction';

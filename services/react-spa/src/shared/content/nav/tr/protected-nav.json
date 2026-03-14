@@ -4,14 +4,14 @@
       "label": "Panel",
       "href": "/",
       "roles": ["admin", "superadmin"]
+    },
+    {
+      "label": "Dokümantasyon",
+      "href": "/documentation",
+      "roles": ["admin", "superadmin"]
     }
   ],
   "sideNav": [
-    {
-      "label": "Panel",
-      "href": "/",
-      "roles": ["admin", "superadmin"]
-    },
     {
       "label": "Daemon",
       "roles": ["admin", "superadmin"],
@@ -28,8 +28,8 @@
           "roles": ["admin", "superadmin"]
         },
         {
-          "label": "Güvenlik Duvarı",
-          "href": "/vpn/firewall",
+          "label": "Ağ",
+          "href": "/vpn/network",
           "roles": ["admin", "superadmin"]
         },
         {
@@ -38,18 +38,18 @@
           "roles": ["admin", "superadmin"]
         },
         {
-          "label": "Ağ",
-          "href": "/vpn/network",
-          "roles": ["admin", "superadmin"]
-        },
-        {
-          "label": "Yedekleme",
-          "href": "/vpn/backup",
+          "label": "Güvenlik Duvarı",
+          "href": "/vpn/firewall",
           "roles": ["admin", "superadmin"]
         },
         {
           "label": "Multihop",
           "href": "/vpn/multihop",
+          "roles": ["admin", "superadmin"]
+        },
+        {
+          "label": "Yedekleme",
+          "href": "/vpn/backup",
           "roles": ["admin", "superadmin"]
         }
       ]
@@ -69,11 +69,6 @@
           "roles": ["admin", "superadmin"]
         }
       ]
-    },
-    {
-      "label": "Dokümantasyon",
-      "href": "/documentation",
-      "roles": ["admin", "superadmin"]
     },
     {
       "label": "Yönetici İşlemleri",

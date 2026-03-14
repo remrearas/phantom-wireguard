@@ -92,8 +92,18 @@
     }
   },
   "dashboard": {
-    "welcome": "Phantom-WG Dashboard",
-    "subtitle": "Hoş geldiniz."
+    "daemonStatus": "Daemon Durumu",
+    "clientPool": "İstemci Havuzu",
+    "wireguardPeers": "WireGuard Peers",
+    "network": "Ağ Yapılandırması",
+    "dns": "DNS Sunucuları",
+    "multihop": "Multihop",
+    "online": "Çevrimiçi",
+    "offline": "Çevrimdışı",
+    "active": "Aktif",
+    "inactive": "Pasif",
+    "total": "toplam",
+    "free": "boş"
   },
   "passwordChange": {
     "title": "Şifre Değiştir",

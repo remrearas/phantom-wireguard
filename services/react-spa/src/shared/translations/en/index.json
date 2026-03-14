@@ -92,8 +92,18 @@
     }
   },
   "dashboard": {
-    "welcome": "Phantom-WG Dashboard",
-    "subtitle": "Welcome."
+    "daemonStatus": "Daemon Status",
+    "clientPool": "Client Pool",
+    "wireguardPeers": "WireGuard Peers",
+    "network": "Network Config",
+    "dns": "DNS Servers",
+    "multihop": "Multihop",
+    "online": "Online",
+    "offline": "Offline",
+    "active": "Active",
+    "inactive": "Inactive",
+    "total": "total",
+    "free": "free"
   },
   "passwordChange": {
     "title": "Change Password",

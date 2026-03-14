@@ -34,14 +34,15 @@ import {
   BareMetalServer,
   WarningAlt,
   Cloud as CloudIcon,
-  Rocket,
-  CloudDataOps,
   Running,
-  Document,
-  Roadmap,
   TrafficCone,
   Construction,
   Building,
+  Firewall,
+  ViewFilled,
+  WarningHex,
+  Locked,
+  SecurityServices,
 } from '@carbon/icons-react';
 import type { CarbonIconType } from '@carbon/icons-react';
 import type { ThemeName } from './types';
@@ -60,10 +61,10 @@ const ERROR_ICONS: ThemeIcons = {
   clouds: [CloudIcon, CloudIcon, CloudIcon],
 };
 
-const CONSULTANCY_ICONS: ThemeIcons = {
+const DPI_ICONS: ThemeIcons = {
   dino: Running,
-  obstacles: [Document, WarningAlt, Roadmap],
-  clouds: [Rocket, CloudIcon, CloudDataOps],
+  obstacles: [Firewall, ViewFilled, WarningHex],
+  clouds: [Locked, SecurityServices, CloudIcon],
 };
 
 const UNDER_CONSTRUCTION_ICONS: ThemeIcons = {
@@ -74,8 +75,8 @@ const UNDER_CONSTRUCTION_ICONS: ThemeIcons = {
 
 export function getThemeIcons(theme: ThemeName): ThemeIcons {
   switch (theme) {
-    case 'consultancy':
-      return CONSULTANCY_ICONS;
+    case 'dpi':
+      return DPI_ICONS;
     case 'under-construction':
       return UNDER_CONSTRUCTION_ICONS;
     case 'error':

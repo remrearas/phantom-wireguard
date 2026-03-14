@@ -1,0 +1,94 @@
+@use '@carbon/styles/scss/spacing' as sp;
+@use '@carbon/styles/scss/type' as type;
+@use '@carbon/styles/scss/breakpoint' as bp;
+
+.dashboard-status {
+  margin-bottom: sp.$spacing-07;
+
+  &__tile {
+    display: flex;
+    align-items: flex-start;
+    gap: sp.$spacing-04;
+    height: 6rem;
+    margin-bottom: sp.$spacing-05;
+    padding: sp.$spacing-05;
+  }
+
+  &__tile-icon {
+    flex-shrink: 0;
+    color: var(--cds-icon-secondary);
+    margin-top: sp.$spacing-01;
+  }
+
+  &__tile-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__tile-label {
+    @include type.type-style('label-01');
+
+    color: var(--cds-text-secondary);
+    margin-bottom: sp.$spacing-02;
+  }
+
+  &__tile-value {
+    display: flex;
+    align-items: center;
+    gap: sp.$spacing-03;
+    flex-wrap: wrap;
+
+    &--stacked {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: sp.$spacing-01;
+    }
+  }
+
+  &__stat {
+    @include type.type-style('heading-compact-01');
+
+    color: var(--cds-text-primary);
+  }
+
+  &__stat-secondary {
+    @include type.type-style('label-01');
+
+    color: var(--cds-text-secondary);
+  }
+
+  &__stat-online {
+    @include type.type-style('label-01');
+
+    color: var(--cds-support-success);
+  }
+
+  &__version {
+    @include type.type-style('code-01');
+
+    color: var(--cds-text-secondary);
+  }
+
+  &__subnet,
+  &__dns {
+    @include type.type-style('code-01');
+
+    color: var(--cds-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  &__exit-name {
+    @include type.type-style('code-01');
+
+    color: var(--cds-text-secondary);
+  }
+
+  &__unavailable {
+    @include type.type-style('heading-compact-01');
+
+    color: var(--cds-text-disabled);
+  }
+}

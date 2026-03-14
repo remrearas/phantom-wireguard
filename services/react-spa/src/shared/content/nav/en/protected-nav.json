@@ -4,14 +4,14 @@
       "label": "Dashboard",
       "href": "/",
       "roles": ["admin", "superadmin"]
+    },
+    {
+      "label": "Documentation",
+      "href": "/documentation",
+      "roles": ["admin", "superadmin"]
     }
   ],
   "sideNav": [
-    {
-      "label": "Dashboard",
-      "href": "/",
-      "roles": ["admin", "superadmin"]
-    },
     {
       "label": "Daemon",
       "roles": ["admin", "superadmin"],
@@ -28,8 +28,8 @@
           "roles": ["admin", "superadmin"]
         },
         {
-          "label": "Firewall",
-          "href": "/vpn/firewall",
+          "label": "Network",
+          "href": "/vpn/network",
           "roles": ["admin", "superadmin"]
         },
         {
@@ -38,18 +38,18 @@
           "roles": ["admin", "superadmin"]
         },
         {
-          "label": "Network",
-          "href": "/vpn/network",
-          "roles": ["admin", "superadmin"]
-        },
-        {
-          "label": "Backup",
-          "href": "/vpn/backup",
+          "label": "Firewall",
+          "href": "/vpn/firewall",
           "roles": ["admin", "superadmin"]
         },
         {
           "label": "Multihop",
           "href": "/vpn/multihop",
+          "roles": ["admin", "superadmin"]
+        },
+        {
+          "label": "Backup",
+          "href": "/vpn/backup",
           "roles": ["admin", "superadmin"]
         }
       ]
@@ -69,11 +69,6 @@
           "roles": ["admin", "superadmin"]
         }
       ]
-    },
-    {
-      "label": "Documentation",
-      "href": "/documentation",
-      "roles": ["admin", "superadmin"]
     },
     {
       "label": "Admin Operations",
