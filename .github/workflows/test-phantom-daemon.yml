@@ -144,7 +144,7 @@ jobs:
           node-version: '24'
 
       - name: Install SPA dependencies
-        run: npm ci
+        run: npm install
         working-directory: services/react-spa
 
       - name: Run SPA E2E tests
