@@ -81,15 +81,15 @@ async def import_backup(file: UploadFile, request: Request):
     """
     wallet = request.app.state.wallet
     exit_store = request.app.state.exit_store
-    fw = request.app.state.fw
     wg_exit = request.app.state.wg_exit
 
     # Teardown multihop before restore — DB will be replaced with
     # multihop disabled, kernel state must be consistent.
     if wg_exit is not None:
         try:
+            fw = request.app.state.fw
             fw.remove_preset(MULTIHOP_PRESET_NAME)
-        except (RuntimeError, OSError):
+        except (RuntimeError, OSError, AttributeError):
             pass
         try:
             wg_exit.down()

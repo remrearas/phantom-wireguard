@@ -43,7 +43,7 @@ jobs:
         run: ./tools/dev.sh up
 
       - name: Run tests
-        run: ./tools/dev.sh test
+        run: ./tools/dev.sh test-full
 
       - name: Dev stack logs on failure
         if: failure()
