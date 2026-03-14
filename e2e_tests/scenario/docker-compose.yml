@@ -27,7 +27,7 @@ services:
       - sh
       - -c
       - |
-        mkdir -p /var/lib/phantom/db /var/lib/phantom/state/db /etc/iproute2
+        mkdir -p /var/lib/phantom/db /var/lib/phantom/state/db
         exec python -m phantom_daemon.main /var/run/phantom/daemon.sock
     cap_add: [NET_ADMIN, NET_RAW]
     sysctls:

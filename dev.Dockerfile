@@ -24,7 +24,8 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends \
     curl unzip \
     libnftables1 nftables iproute2 iptables iputils-ping procps \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /etc/iproute2
 
 # ── Download & unpack vendor pack ────────────────────────────────
 RUN set -e; \
