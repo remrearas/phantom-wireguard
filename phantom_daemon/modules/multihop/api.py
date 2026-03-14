@@ -59,10 +59,18 @@ class ExitListResponse(BaseModel):
     active: str
 
 
+class PeerStatus(BaseModel):
+    endpoint: str
+    latest_handshake: int
+    rx_bytes: int
+    tx_bytes: int
+
+
 class MultihopStatus(BaseModel):
     enabled: bool
     active: str
     exit: ExitSummary | None
+    peer: PeerStatus | None
 
 
 # ── Router ───────────────────────────────────────────────────────
@@ -151,25 +159,21 @@ async def list_exits(request: Request):
 async def enable_multihop(body: ExitNameRequest, request: Request):
     """Enable multihop with the given exit.
 
-    Three scenarios:
-    1. Fresh enable — create device, ipc_set, up, apply interface, firewall preset.
-    2. Switch — ipc_set on existing device, update address if changed.
-    3. Already active — no-op.
+    Requires multihop to be disabled. If already enabled, returns error
+    instructing the user to disable first — prevents partial-state from
+    in-place switch failures.
     """
     exit_store = request.app.state.exit_store
     env = request.app.state.env
     wallet = request.app.state.wallet
     fw = request.app.state.fw
-    wg_exit = request.app.state.wg_exit
+
+    if exit_store.is_enabled():
+        return ApiOk(data={"status": "already_active", "code": "MULTIHOP_ALREADY_ACTIVE"})
 
     exit_data = exit_store.get_exit(body.name)
     if exit_data is None:
         raise DaemonHTTPException(404, "EXIT_NOT_FOUND", f"Exit not found: {body.name}")
-
-    active = exit_store.get_active()
-
-    if exit_store.is_enabled() and active == body.name:
-        return ApiOk(data={"status": "already_active", "code": "MULTIHOP_ALREADY_ACTIVE"})
 
     config = build_exit_config(
         private_key_hex=exit_data["private_key_hex"],
@@ -180,11 +184,11 @@ async def enable_multihop(body: ExitNameRequest, request: Request):
         keepalive=exit_data["keepalive"],
     )
 
-    if wg_exit is None:
-        wg_exit = open_wireguard(
-            state_dir=env.state_dir, mtu=env.mtu,
-            ifname=WG_INTERFACE_NAME_EXIT,
-        )
+    wg_exit = open_wireguard(
+        state_dir=env.state_dir, mtu=env.mtu,
+        ifname=WG_INTERFACE_NAME_EXIT,
+    )
+    try:
         wg_exit._bridge.ipc_set(config)
         wg_exit.up()
         wg_exit.apply_exit_interface(exit_data["address"])
@@ -192,16 +196,21 @@ async def enable_multihop(body: ExitNameRequest, request: Request):
         ipv4_subnet = wallet.get_config("ipv4_subnet") or ""
         mh_spec = resolve_multihop_preset(ipv4_subnet=ipv4_subnet)
         fw.apply_preset(mh_spec)
+    except Exception:
+        # Rollback: always attempt cleanup regardless of which step failed.
+        # remove_preset is safe to call even if preset was never applied.
+        try:
+            fw.remove_preset(MULTIHOP_PRESET_NAME)
+        except (RuntimeError, OSError):
+            pass
+        try:
+            wg_exit.down()
+        except (RuntimeError, OSError):
+            pass
+        wg_exit.close()
+        raise
 
-        request.app.state.wg_exit = wg_exit
-    else:
-        wg_exit._bridge.ipc_set(config)
-
-        if active and active != body.name:
-            old_data = exit_store.get_exit(active)
-            if old_data and old_data["address"] != exit_data["address"]:
-                wg_exit.update_exit_address(exit_data["address"])
-
+    request.app.state.wg_exit = wg_exit
     exit_store.activate(body.name)
     return ApiOk(data={"status": "enabled", "code": "MULTIHOP_ENABLED"})
 
@@ -236,12 +245,15 @@ async def disable_multihop(request: Request):
 
 @router.get("/status", response_model=ApiOk[MultihopStatus])
 async def multihop_status(request: Request):
-    """Return current multihop state and active exit info."""
+    """Return current multihop state, active exit info, and live peer stats."""
     exit_store = request.app.state.exit_store
+    wg_exit = request.app.state.wg_exit
     enabled = exit_store.is_enabled()
     active = exit_store.get_active()
 
     exit_summary = None
+    peer_status = None
+
     if active:
         exit_data = exit_store.get_exit(active)
         if exit_data:
@@ -255,8 +267,23 @@ async def multihop_status(request: Request):
                 keepalive=exit_data["keepalive"],
             )
 
+    if wg_exit is not None:
+        try:
+            status = wg_exit.get_status()
+            if status.peers:
+                p = status.peers[0]
+                peer_status = PeerStatus(
+                    endpoint=p.endpoint,
+                    latest_handshake=p.latest_handshake,
+                    rx_bytes=p.rx_bytes,
+                    tx_bytes=p.tx_bytes,
+                )
+        except Exception:
+            pass
+
     return ApiOk(data=MultihopStatus(
         enabled=enabled,
         active=active,
         exit=exit_summary,
+        peer=peer_status,
     ))

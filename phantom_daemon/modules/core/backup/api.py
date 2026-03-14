@@ -26,6 +26,7 @@ from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
 from phantom_daemon.base.backup import create_backup_tar, restore_backup_tar
+from phantom_daemon.base.services.firewall.service import MULTIHOP_PRESET_NAME
 from phantom_daemon.modules._envelope import ApiOk
 
 
@@ -72,9 +73,30 @@ async def export_backup(request: Request):
 
 @router.post("/import", response_model=ApiOk[RestoreResult])
 async def import_backup(file: UploadFile, request: Request):
-    """Upload and restore a previously exported backup."""
+    """Upload and restore a previously exported backup.
+
+    If multihop is active, tears down the exit tunnel and removes
+    firewall preset before restoring — backup always has multihop
+    disabled, so kernel state must match.
+    """
     wallet = request.app.state.wallet
     exit_store = request.app.state.exit_store
+    fw = request.app.state.fw
+    wg_exit = request.app.state.wg_exit
+
+    # Teardown multihop before restore — DB will be replaced with
+    # multihop disabled, kernel state must be consistent.
+    if wg_exit is not None:
+        try:
+            fw.remove_preset(MULTIHOP_PRESET_NAME)
+        except (RuntimeError, OSError):
+            pass
+        try:
+            wg_exit.down()
+        except (RuntimeError, OSError):
+            pass
+        wg_exit.close()
+        request.app.state.wg_exit = None
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".tar")
     try:
