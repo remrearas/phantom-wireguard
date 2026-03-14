@@ -5,7 +5,6 @@ import LoadingSpinner from '@shared/components/ui/LoadingSpinner';
 import ProtectedLayout from '@shared/components/layout/ProtectedLayout';
 import PublicLayout from '@shared/components/layout/PublicLayout';
 import ErrorPage from '@shared/pages/error/ErrorPage';
-import ServerErrorPage from '@shared/pages/error/ServerErrorPage';
 
 // ── public ────────────────────────────────────────────────────────
 import LoginPage from '@pages/login/LoginPage';
@@ -28,6 +27,7 @@ import FirewallPage from '@pages/vpn/firewall/pages/index/FirewallPage';
 import DnsPage from '@pages/vpn/dns/pages/index/DnsPage';
 import NetworkPage from '@pages/vpn/network/pages/index/NetworkPage';
 import BackupPage from '@pages/vpn/backup/pages/index/BackupPage';
+import MultihopPage from '@pages/vpn/multihop/pages/index/MultihopPage';
 
 // ── documentation (lazy — Mermaid + shiki bundle ayrı chunk'ta) ──
 const DocumentationPage = lazy(() => import('@pages/documentation/pages/index/DocumentationPage'));
@@ -90,6 +90,7 @@ const router = createBrowserRouter([
       { path: '/vpn/dns', element: <DnsPage /> },
       { path: '/vpn/network', element: <NetworkPage /> },
       { path: '/vpn/backup', element: <BackupPage /> },
+      { path: '/vpn/multihop', element: <MultihopPage /> },
 
       // documentation
       {
@@ -112,7 +113,6 @@ const router = createBrowserRouter([
   },
 
   // Error pages
-  { path: '/server-error', element: <ServerErrorPage /> },
   { path: '*', element: <ErrorPage /> },
 ]);
 

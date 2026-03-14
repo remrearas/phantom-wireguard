@@ -7,10 +7,11 @@ import {
   HeaderGlobalAction,
   SkipToContent,
 } from '@carbon/react';
-import { useLocale } from '@shared/hooks';
+import { useLocale, useTheme } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import FlagIcon from './FlagIcon';
-import { GatewayVpn } from '@carbon/icons-react';
+import { Asleep, Light, RotateClockwise } from '@carbon/icons-react';
+import './styles/ThemeSwitcher.scss';
 
 interface RenderProps {
   isSideNavExpanded: boolean;
@@ -19,6 +20,7 @@ interface RenderProps {
 
 const PublicHeader: React.FC = () => {
   const { locale, changeLocale } = useLocale();
+  const { theme, toggleTheme, isThemeTransitioning } = useTheme();
   const t = translate(locale);
 
   return (
@@ -27,10 +29,24 @@ const PublicHeader: React.FC = () => {
         <Header aria-label={t.header.appName}>
           <SkipToContent href="#main-content" />
           <HeaderName href="/login" prefix="">
-            <GatewayVpn size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
             Phantom-WG
           </HeaderName>
           <HeaderGlobalBar>
+            <HeaderGlobalAction
+              aria-label={theme === 'white' ? t.header.darkMode : t.header.lightMode}
+              onClick={toggleTheme}
+              className={`theme-switcher${isThemeTransitioning ? ' theme-transitioning' : ''}`}
+              tooltipAlignment="end"
+              data-testid="header-theme-toggle"
+            >
+              {isThemeTransitioning ? (
+                <RotateClockwise size={20} className="spinner-icon" />
+              ) : theme === 'white' ? (
+                <Asleep size={20} />
+              ) : (
+                <Light size={20} />
+              )}
+            </HeaderGlobalAction>
             <HeaderGlobalAction
               aria-label={t.language.switchTo}
               onClick={() => changeLocale(locale === 'tr' ? 'en' : 'tr')}

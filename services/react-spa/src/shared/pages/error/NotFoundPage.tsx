@@ -5,7 +5,7 @@ import { ArrowLeft, WarningAlt } from '@carbon/icons-react';
 import { useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import DinoGame from '@shared/components/games/DinoGame';
-import './styles/error.scss';
+import './styles/common.scss';
 
 const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();

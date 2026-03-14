@@ -18,14 +18,15 @@ import {
   SideNavMenuItem,
   SideNavLink,
 } from '@carbon/react';
-import { Close, GatewayVpn } from '@carbon/icons-react';
-import { useLocale } from '@shared/hooks';
+import { Asleep, Close, Light, RotateClockwise } from '@carbon/icons-react';
+import { useLocale, useTheme } from '@shared/hooks';
 import { useAuth } from '@shared/contexts/AuthContext';
 import { useUser } from '@shared/contexts/UserContext';
 import { translate } from '@shared/translations';
 import { filterByRole, type NavItem, type UserRole } from '@shared/types/nav';
 import type { ProtectedNavContent } from '@shared/types/nav';
 import FlagIcon from './FlagIcon';
+import './styles/ThemeSwitcher.scss';
 
 import navTr from '@shared/content/nav/tr/protected-nav.json';
 import navEn from '@shared/content/nav/en/protected-nav.json';
@@ -42,6 +43,7 @@ interface RenderProps {
 
 const ProtectedHeader: React.FC = () => {
   const { locale, changeLocale } = useLocale();
+  const { theme, toggleTheme, isThemeTransitioning } = useTheme();
   const { logout } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
@@ -89,7 +91,6 @@ const ProtectedHeader: React.FC = () => {
             />
 
             <HeaderName href="/" prefix="" onClick={(e: React.MouseEvent) => nav(e, '/')}>
-              <GatewayVpn size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
               Phantom-WG
             </HeaderName>
 
@@ -128,6 +129,21 @@ const ProtectedHeader: React.FC = () => {
             </HeaderNavigation>
 
             <HeaderGlobalBar>
+              <HeaderGlobalAction
+                aria-label={theme === 'white' ? t.header.darkMode : t.header.lightMode}
+                onClick={toggleTheme}
+                className={`theme-switcher${isThemeTransitioning ? ' theme-transitioning' : ''}`}
+                tooltipAlignment="end"
+                data-testid="header-theme-toggle"
+              >
+                {isThemeTransitioning ? (
+                  <RotateClockwise size={20} className="spinner-icon" />
+                ) : theme === 'white' ? (
+                  <Asleep size={20} />
+                ) : (
+                  <Light size={20} />
+                )}
+              </HeaderGlobalAction>
               <HeaderGlobalAction
                 aria-label={t.language.switchTo}
                 onClick={() => changeLocale(locale === 'tr' ? 'en' : 'tr')}
