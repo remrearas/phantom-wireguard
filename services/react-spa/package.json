@@ -29,12 +29,14 @@
     "remark-gfm": "4.0.1",
     "remark-mdx-frontmatter": "5.2.0",
     "shiki": "4.0.2",
+    "swagger-ui-react": "^5.32.0",
     "swr": "2.4.1"
   },
   "devDependencies": {
     "@types/node": "25.3.5",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/swagger-ui-react": "^5.18.0",
     "@vitejs/plugin-react": "4.7.0",
     "prettier": "3.8.1",
     "sass-embedded": "1.97.3",

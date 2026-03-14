@@ -1,0 +1,149 @@
+.api-doc .swagger-ui {
+  font-family: inherit;
+
+  // ── Hide default topbar ───────────────────────────────────
+  .topbar { display: none; }
+
+  // ── Backgrounds ───────────────────────────────────────────
+  .scheme-container,
+  .opblock-body,
+  .model-container,
+  .models {
+    background: var(--cds-background);
+  }
+
+  .opblock {
+    background: var(--cds-layer-01);
+    border-color: var(--cds-border-subtle);
+    box-shadow: none;
+  }
+
+  .opblock-tag-section { background: var(--cds-background); }
+  .opblock-tag { border-bottom-color: var(--cds-border-subtle); }
+
+  .highlight-code,
+  .microlight,
+  .model-box {
+    background: var(--cds-layer-02);
+    border-radius: 0;
+  }
+
+  .response .col_header {
+    color: var(--cds-text-primary);
+    border-bottom-color: var(--cds-border-subtle);
+  }
+
+  // ── Typography — primary text ─────────────────────────────
+  .info .title,
+  .info hgroup h2,
+  .opblock-tag,
+  .opblock-summary-path,
+  .opblock-summary-method,
+  .response-col_status,
+  .tab li,
+  .parameter__name,
+  .model-title,
+  .model .property,
+  label,
+  th {
+    color: var(--cds-text-primary);
+  }
+
+  // ── Typography — secondary text ───────────────────────────
+  .info p,
+  .info li,
+  .opblock-summary-description,
+  .opblock-description p,
+  .response-col_description,
+  .parameter__type,
+  .parameter__in,
+  .model-description,
+  td {
+    color: var(--cds-text-secondary);
+  }
+
+  // ── Links ─────────────────────────────────────────────────
+  a { color: var(--cds-link-primary); }
+
+  // ── Form inputs ───────────────────────────────────────────
+  select,
+  input[type=text],
+  input[type=search],
+  input[type=file],
+  textarea {
+    background: var(--cds-field-01);
+    color: var(--cds-text-primary);
+    border: 1px solid var(--cds-border-strong);
+    border-radius: 0;
+
+    &:focus {
+      border-color: var(--cds-focus);
+      outline: none;
+    }
+  }
+
+  // ── Buttons ───────────────────────────────────────────────
+  .btn {
+    border-radius: 0;
+    font-family: inherit;
+  }
+
+  .btn.execute {
+    background: var(--cds-button-primary);
+    color: var(--cds-text-on-color);
+    border-color: var(--cds-button-primary);
+  }
+
+  .btn.cancel {
+    background: var(--cds-button-secondary);
+    color: var(--cds-text-on-color);
+    border-color: var(--cds-button-secondary);
+  }
+
+  // ── Response body ─────────────────────────────────────────
+  .responses-inner {
+    background: var(--cds-background);
+  }
+
+  .microlight {
+    color: var(--cds-text-primary);
+  }
+
+  // ── Tables ────────────────────────────────────────────────
+  table {
+    border-color: var(--cds-border-subtle);
+  }
+
+  table thead tr {
+    background: var(--cds-layer-01);
+
+    td, th {
+      border-bottom-color: var(--cds-border-subtle);
+      color: var(--cds-text-primary);
+    }
+  }
+
+  table tbody tr {
+    background: var(--cds-background);
+
+    td {
+      border-bottom-color: var(--cds-border-subtle);
+    }
+  }
+
+  // ── Borders ───────────────────────────────────────────────
+  .opblock-section-header {
+    background: var(--cds-layer-01);
+    border-bottom-color: var(--cds-border-subtle);
+
+    h4, label {
+      color: var(--cds-text-primary);
+    }
+  }
+
+  // ── Loading ───────────────────────────────────────────────
+  .loading-container .loading::after {
+    border-color: var(--cds-border-subtle);
+    border-top-color: var(--cds-interactive);
+  }
+}
