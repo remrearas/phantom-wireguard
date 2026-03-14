@@ -13,7 +13,7 @@ import {
 import { Add, TrashCan, Renew } from '@carbon/icons-react';
 import { useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
-import './styles/pool-simulator.scss';
+import './styles/TeraziPoolSimulator.scss';
 
 // ── Tunables ──────────────────────────────────────────────────────
 
@@ -86,7 +86,7 @@ const CountdownOverlay: React.FC<{ count: number }> = ({ count }) => {
 
 // ── Component ─────────────────────────────────────────────────────
 
-const PoolSimulator: React.FC = () => {
+const TeraziPoolSimulator: React.FC = () => {
   const { locale } = useLocale();
   const t = translate(locale);
   const sim = t.documentation.poolSimulator as Record<string, string>;
@@ -323,4 +323,4 @@ const PoolSimulator: React.FC = () => {
   );
 };
 
-export default PoolSimulator;
+export default TeraziPoolSimulator;

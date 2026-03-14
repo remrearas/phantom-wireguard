@@ -27,8 +27,9 @@ import { Renew } from '@carbon/icons-react';
 import { useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import { apiClient } from '@shared/api/client';
+import { formatBytes, formatHandshake } from '@shared/utils/formatUtils';
 import TableLoader from '@shared/components/data/TableLoader';
-import './styles/wireguard.scss';
+import './styles/WireGuardStatus.scss';
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -67,26 +68,9 @@ const ONLINE_THRESHOLD_SECS = 180;
 const truncateKey = (key: string): string =>
   key.length > 20 ? `${key.slice(0, 8)}…${key.slice(-8)}` : key;
 
-const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-};
-
 const getStatus = (ts: number): PeerStatus => {
   if (ts === 0) return 'never';
   return Date.now() / 1000 - ts < ONLINE_THRESHOLD_SECS ? 'online' : 'offline';
-};
-
-const formatHandshake = (ts: number): string => {
-  if (ts === 0) return '—';
-  const secs = Math.floor(Date.now() / 1000 - ts);
-  if (secs < 60) return `${secs}s`;
-  if (secs < 3600) return `${Math.floor(secs / 60)}m`;
-  if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
-  return `${Math.floor(secs / 86400)}d`;
 };
 
 const peerKey = (peer: PeerInfo): string => peer.name ?? peer.public_key.slice(0, 8);

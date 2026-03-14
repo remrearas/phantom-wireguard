@@ -24,7 +24,8 @@ import {
 import { useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import FormError from '@shared/components/forms/FormError';
-import './styles/backup.scss';
+import { formatBytes } from '@shared/utils/formatUtils';
+import './styles/BackupManager.scss';
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -60,14 +61,6 @@ interface FileValidation {
 
 type ImportStep = 'idle' | 'validating' | 'preview' | 'importing' | 'done' | 'failed';
 
-// ── Helpers ───────────────────────────────────────────────────────
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 // ── Component ─────────────────────────────────────────────────────
 
 const BackupManager: React.FC = () => {
@@ -98,7 +91,11 @@ const BackupManager: React.FC = () => {
         headers: { Authorization: `Bearer ${token ?? ''}` },
       });
 
-      if (!resp.ok) throw new Error('Export failed');
+      if (!resp.ok) {
+        setExportError(t.backup.exportFailed);
+        setExporting(false);
+        return;
+      }
 
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
@@ -141,55 +138,69 @@ const BackupManager: React.FC = () => {
     setImportStep('validating');
     setImportError(null);
 
-    try {
-      // Extension check
-      if (!file.name.endsWith('.tar')) {
-        throw new Error(t.backup.validation.invalidFormat);
-      }
-
-      // Size check (max 256 MB)
-      if (file.size > 256 * 1024 * 1024) {
-        throw new Error(t.backup.validation.tooLarge);
-      }
-
-      // Read and parse tar in browser
-      const buffer = await file.arrayBuffer();
-      const members = parseTarMembers(buffer);
-      const required = ['wallet.db', 'exit.db', 'manifest.json'];
-      const missing = required.filter((f) => !members.includes(f));
-
-      if (missing.length > 0) {
-        throw new Error(
-          `${t.backup.validation.missingFiles}: ${missing.join(', ')}`
-        );
-      }
-
-      // Extract and parse manifest.json
-      const manifestBytes = extractTarFile(buffer, 'manifest.json');
-      if (!manifestBytes) {
-        throw new Error(t.backup.validation.invalidManifest);
-      }
-
-      const manifestText = new TextDecoder().decode(manifestBytes);
-      const manifest: ManifestInfo = JSON.parse(manifestText);
-
-      if (manifest.version !== '1.0') {
-        throw new Error(t.backup.validation.unsupportedVersion);
-      }
-
-      if (!manifest.wallet || !manifest.exit_store) {
-        throw new Error(t.backup.validation.invalidManifest);
-      }
-
-      // Validation passed — show preview
-      setValidation({ file, manifest, members });
-      setImportStep('preview');
-    } catch (err) {
-      setImportError(
-        err instanceof Error ? err.message : t.backup.importFailed
-      );
+    const fail = (msg: string) => {
+      setImportError(msg);
       setImportStep('failed');
+    };
+
+    // Extension check
+    if (!file.name.endsWith('.tar')) {
+      fail(t.backup.validation.invalidFormat);
+      return;
     }
+
+    // Size check (max 256 MB)
+    if (file.size > 256 * 1024 * 1024) {
+      fail(t.backup.validation.tooLarge);
+      return;
+    }
+
+    // Read and parse tar in browser
+    let buffer: ArrayBuffer;
+    try {
+      buffer = await file.arrayBuffer();
+    } catch {
+      fail(t.backup.importFailed);
+      return;
+    }
+
+    const members = parseTarMembers(buffer);
+    const required = ['wallet.db', 'exit.db', 'manifest.json'];
+    const missing = required.filter((f) => !members.includes(f));
+
+    if (missing.length > 0) {
+      fail(`${t.backup.validation.missingFiles}: ${missing.join(', ')}`);
+      return;
+    }
+
+    // Extract and parse manifest.json
+    const manifestBytes = extractTarFile(buffer, 'manifest.json');
+    if (!manifestBytes) {
+      fail(t.backup.validation.invalidManifest);
+      return;
+    }
+
+    let manifest: ManifestInfo;
+    try {
+      manifest = JSON.parse(new TextDecoder().decode(manifestBytes));
+    } catch {
+      fail(t.backup.validation.invalidManifest);
+      return;
+    }
+
+    if (manifest.version !== '1.0') {
+      fail(t.backup.validation.unsupportedVersion);
+      return;
+    }
+
+    if (!manifest.wallet || !manifest.exit_store) {
+      fail(t.backup.validation.invalidManifest);
+      return;
+    }
+
+    // Validation passed — show preview
+    setValidation({ file, manifest, members });
+    setImportStep('preview');
   };
 
   const handleConfirmImport = async () => {

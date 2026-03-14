@@ -17,7 +17,7 @@
 // ── Guide lines ──────────────────────────────────────────────────
 
 .balance-scale__guide {
-  stroke: var(--cds-text-on-color);
+  stroke: var(--cds-border-strong);
   stroke-width: 3;
   stroke-dasharray: 3 3;
   fill: none;
@@ -26,16 +26,16 @@
 // ── Arm ──────────────────────────────────────────────────────────
 
 .balance-scale__arm {
-  stroke: var(--cds-text-on-color);
+  stroke: var(--cds-border-strong);
   stroke-width: 2;
   stroke-dasharray: 3 3;
-  fill: var(--cds-text-on-color);
+  fill: var(--cds-border-strong);
 }
 
 // ── Strings ──────────────────────────────────────────────────────
 
 .balance-scale__string {
-  stroke: var(--cds-text-on-color);
+  stroke: var(--cds-border-strong);
   stroke-width: 2;
   stroke-dasharray: 2 2;
   fill: none;

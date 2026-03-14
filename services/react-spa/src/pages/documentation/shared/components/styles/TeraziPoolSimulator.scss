@@ -57,7 +57,7 @@
   font-family: 'IBM Plex Mono', monospace;
   font-size: clamp(1.5rem, 5vw, 2.5rem);
   font-weight: 700;
-  color: #ffffff;
+  color: var(--cds-text-inverse);
   line-height: 1;
 }
 

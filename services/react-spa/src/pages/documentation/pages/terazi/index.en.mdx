@@ -1,8 +1,31 @@
-import BalanceScale from '@pages/vpn/network/shared/components/BalanceScale';
-import Mermaid from '@pages/documentation/shared/components/Mermaid';
-import PoolSimulator from '@pages/documentation/shared/components/PoolSimulator';
-import FormulaInfo from '@pages/documentation/shared/components/FormulaInfo';
+import BalanceScale from '@shared/components/visualization/BalanceScale';
+import FormulaInfo from '@shared/components/visualization/FormulaInfo';
+import Mermaid from '@shared/components/visualization/Mermaid';
+import TeraziPoolSimulator from '@pages/documentation/shared/components/TeraziPoolSimulator';
 import { InlineNotification } from '@carbon/react';
+
+export const teraziFormulas = [
+  {
+    formula: '∀i ∈ [2, n−2] : v4_net[i] ↔ v6_net[i]',
+    title: 'Pairing Rule',
+    symbols: [
+      { symbol: '∀', description: 'for all (universal quantifier)' },
+      { symbol: 'i ∈ [2, n−2]', description: 'index range of usable slots' },
+      { symbol: '2', description: 'first usable slot (0 = network address, 1 = server/gateway skipped)' },
+      { symbol: 'n−2', description: 'last usable slot (n−1 = broadcast skipped)' },
+      { symbol: 'v4_net[i] ↔ v6_net[i]', description: 'IPv4 address at index i is paired with IPv6 address at the same index i' },
+    ],
+  },
+  {
+    formula: '|Assigned_IPv4| ≡ |Assigned_IPv6|',
+    title: 'Symmetry Result',
+    symbols: [
+      { symbol: '|...|', description: 'count (cardinality)' },
+      { symbol: '≡', description: 'identically equal' },
+    ],
+    summary: 'The number of assigned IPv4 addresses always equals the number of assigned IPv6 addresses. Assigning one always assigns the other.',
+  },
+];
 
 # Balance System (Terazi)
 
@@ -10,7 +33,7 @@ import { InlineNotification } from '@carbon/react';
 
 <BalanceScale />
 
-<FormulaInfo />
+<FormulaInfo formulas={teraziFormulas} />
 
 ---
 
@@ -90,7 +113,7 @@ Both protocols share the same host bit count. The IPv4 prefix directly determine
 Addresses are pre-populated in the database (`wallet.db` → `users` table). Each row is an IPv4/IPv6 pair.
 Empty slots wait as `<null>`. When a client is assigned, keys, name and timestamps are filled in.
 
-<PoolSimulator />
+<TeraziPoolSimulator />
 
 ---
 

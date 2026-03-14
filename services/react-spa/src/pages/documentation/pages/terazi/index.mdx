@@ -1,8 +1,31 @@
-import BalanceScale from '@pages/vpn/network/shared/components/BalanceScale';
-import Mermaid from '@pages/documentation/shared/components/Mermaid';
-import PoolSimulator from '@pages/documentation/shared/components/PoolSimulator';
-import FormulaInfo from '@pages/documentation/shared/components/FormulaInfo';
+import BalanceScale from '@shared/components/visualization/BalanceScale';
+import FormulaInfo from '@shared/components/visualization/FormulaInfo';
+import Mermaid from '@shared/components/visualization/Mermaid';
+import TeraziPoolSimulator from '@pages/documentation/shared/components/TeraziPoolSimulator';
 import { InlineNotification } from '@carbon/react';
+
+export const teraziFormulas = [
+  {
+    formula: '∀i ∈ [2, n−2] : v4_net[i] ↔ v6_net[i]',
+    title: 'Eşleme Kuralı',
+    symbols: [
+      { symbol: '∀', description: 'her biri için (evrensel niceleyici)' },
+      { symbol: 'i ∈ [2, n−2]', description: "kullanılabilir slot'ların index aralığı" },
+      { symbol: '2', description: 'ilk kullanılabilir slot (0 = ağ adresi, 1 = sunucu/gateway atlanır)' },
+      { symbol: 'n−2', description: 'son kullanılabilir slot (n−1 = broadcast atlanır)' },
+      { symbol: 'v4_net[i] ↔ v6_net[i]', description: "i index'indeki IPv4 adresi, aynı i index'indeki IPv6 adresiyle eşlenir" },
+    ],
+  },
+  {
+    formula: '|Assigned_IPv4| ≡ |Assigned_IPv6|',
+    title: 'Simetri Sonucu',
+    symbols: [
+      { symbol: '|...|', description: 'sayısı (kardinalite)' },
+      { symbol: '≡', description: 'özdeş olarak eşittir' },
+    ],
+    summary: 'Atanmış IPv4 adreslerinin sayısı her zaman atanmış IPv6 adreslerinin sayısına eşittir. Birini atamak her zaman diğerini de atar.',
+  },
+];
 
 # Terazi Sistemi
 
@@ -10,7 +33,7 @@ import { InlineNotification } from '@carbon/react';
 
 <BalanceScale />
 
-<FormulaInfo />
+<FormulaInfo formulas={teraziFormulas} />
 
 ---
 
@@ -90,7 +113,7 @@ Her iki protokol aynı host bit sayısını paylaşır. IPv4 prefix'i, IPv6 pref
 Adresler veritabanında önceden oluşturulur (`wallet.db` → `users` tablosu). Her satır bir IPv4/IPv6 çiftidir.
 Boş slot'lar `<null>` olarak bekler. İstemci atandığında anahtar, isim ve zaman damgası doldurulur.
 
-<PoolSimulator />
+<TeraziPoolSimulator />
 
 ---
 

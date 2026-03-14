@@ -4,9 +4,9 @@ import { SkeletonPlaceholder } from '@carbon/react';
 import './styles/CodeHighlight.scss';
 
 // ── Config ────────────────────────────────────────────────────────
-//
 
-const SHIKI_THEME = 'github-dark';
+const SHIKI_THEME_LIGHT = 'github-light';
+const SHIKI_THEME_DARK = 'github-dark';
 
 const SHIKI_LANGS = [
   'python',
@@ -37,11 +37,16 @@ let _highlighterPromise: Promise<Highlighter> | null = null;
 function getHighlighter(): Promise<Highlighter> {
   if (!_highlighterPromise) {
     _highlighterPromise = createHighlighter({
-      themes: [SHIKI_THEME],
+      themes: [SHIKI_THEME_LIGHT, SHIKI_THEME_DARK],
       langs: [...SHIKI_LANGS],
     });
   }
   return _highlighterPromise;
+}
+
+function getShikiTheme(): string {
+  const ct = document.documentElement.getAttribute('data-carbon-theme');
+  return ct === 'white' ? SHIKI_THEME_LIGHT : SHIKI_THEME_DARK;
 }
 
 // ── Types ─────────────────────────────────────────────────────────
@@ -67,24 +72,40 @@ const CodeSkeleton: React.FC<{ lineCount: number }> = ({ lineCount }) => {
 const CodeHighlightInner: React.FC<CodeHighlightProps> = ({ code, lang = 'text' }) => {
   const [html, setHtml] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
+  const highlight = () => {
     getHighlighter()
       .then((highlighter) => {
-        if (!active) return;
         const loaded = highlighter.getLoadedLanguages() as string[];
         const safeLang = loaded.includes(lang) ? lang : 'text';
-        const result = highlighter.codeToHtml(code, { lang: safeLang, theme: SHIKI_THEME });
+        const result = highlighter.codeToHtml(code, { lang: safeLang, theme: getShikiTheme() });
         setHtml(result);
       })
       .catch(() => {
-        if (active) setHtml(`<pre><code>${code}</code></pre>`);
+        setHtml(`<pre><code>${code}</code></pre>`);
       });
+  };
 
-    return () => {
-      active = false;
-    };
+  // Initial render + re-highlight on code/lang change
+  useEffect(() => {
+    highlight();
+  }, [code, lang]);
+
+  // Re-highlight on theme change
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && m.attributeName === 'data-carbon-theme') {
+          highlight();
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-carbon-theme'],
+    });
+
+    return () => observer.disconnect();
   }, [code, lang]);
 
   if (html === null) {

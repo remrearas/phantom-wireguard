@@ -1,5 +1,5 @@
 import React from 'react';
-import './styles/balance-scale.scss';
+import './styles/BalanceScale.scss';
 
 // ── Tunables ──────────────────────────────────────────────────────
 
