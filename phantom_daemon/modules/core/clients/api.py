@@ -30,15 +30,29 @@ from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
 class ClientNameRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+    """Request body identifying a client by name."""
+
+    name: str = Field(
+        min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$",
+        description="Unique client name (alphanumeric, hyphens, underscores).",
+    )
 
 
 class ConfigExportRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
-    version: Literal["v4", "v6", "hybrid"]
+    """Request body for exporting a client WireGuard configuration."""
+
+    name: str = Field(
+        min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$",
+        description="Client name to export config for.",
+    )
+    version: Literal["v4", "v6", "hybrid"] = Field(
+        description="IP version: v4 (IPv4-only), v6 (IPv6-only), or hybrid (dual-stack).",
+    )
 
 
 class ClientRecord(BaseModel):
+    """Full client record including private key material."""
+
     id: str
     name: str
     ipv4_address: str
@@ -51,6 +65,8 @@ class ClientRecord(BaseModel):
 
 
 class ClientSummary(BaseModel):
+    """Client summary without private key material (used in list responses)."""
+
     id: str
     name: str
     ipv4_address: str
@@ -61,6 +77,8 @@ class ClientSummary(BaseModel):
 
 
 class ClientListResponse(BaseModel):
+    """Paginated client list response."""
+
     clients: list[ClientSummary]
     total: int
     page: int
@@ -79,6 +97,11 @@ router = APIRouter(tags=["clients"])
     response_model=ApiOk[ClientRecord],
     status_code=201,
     responses={400: {"model": ApiErr}, 409: {"model": ApiErr}},
+    summary="Assign Client",
+    description="Create a new WireGuard client with the given name. Generates a "
+    "key pair, allocates IPv4/IPv6 addresses from the pool, and registers the "
+    "peer on the WireGuard interface. Returns 409 if the name already exists, "
+    "400 if the pool is full.",
 )
 async def assign_client(body: ClientNameRequest, request: Request):
     wallet = request.app.state.wallet
@@ -94,7 +117,13 @@ async def assign_client(body: ClientNameRequest, request: Request):
     return ApiOk(data=ClientRecord(**result))
 
 
-@router.get("/list", response_model=ApiOk[ClientListResponse])
+@router.get(
+    "/list",
+    response_model=ApiOk[ClientListResponse],
+    summary="List Clients",
+    description="Return a paginated list of all WireGuard clients. Supports "
+    "search by name and ascending/descending order by creation date.",
+)
 async def list_clients(
     request: Request,
     page: int = Query(1, ge=1),
@@ -121,6 +150,9 @@ async def list_clients(
     "/get",
     response_model=ApiOk[ClientRecord],
     responses={404: {"model": ApiErr}},
+    summary="Get Client",
+    description="Retrieve the full record for a single client including private "
+    "key material. Returns 404 if the client does not exist.",
 )
 async def get_client(body: ClientNameRequest, request: Request):
     wallet = request.app.state.wallet
@@ -134,6 +166,10 @@ async def get_client(body: ClientNameRequest, request: Request):
     "/config",
     response_model=ApiOk[str],
     responses={400: {"model": ApiErr}, 404: {"model": ApiErr}},
+    summary="Export Client Config",
+    description="Generate a WireGuard configuration file for the given client and "
+    "IP version. Returns the config as a base64-encoded string. Returns 404 if "
+    "the client does not exist, 400 if the required endpoint is not configured.",
 )
 async def export_config(body: ConfigExportRequest, request: Request):
     wallet = request.app.state.wallet
@@ -178,6 +214,10 @@ async def export_config(body: ConfigExportRequest, request: Request):
     "/revoke",
     response_model=ApiOk[dict],
     responses={400: {"model": ApiErr}},
+    summary="Revoke Client",
+    description="Remove a WireGuard client by name. Deletes the peer from the "
+    "interface and releases the allocated IP addresses back to the pool. "
+    "Returns 400 if the client does not exist.",
 )
 async def revoke_client(body: ClientNameRequest, request: Request):
     wallet = request.app.state.wallet

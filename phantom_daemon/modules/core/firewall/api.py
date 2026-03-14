@@ -28,14 +28,20 @@ from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
 class GroupNameRequest(BaseModel):
+    """Request body identifying a firewall group by name."""
+
     name: str
 
 
 class GroupFilterRequest(BaseModel):
+    """Optional group filter — omit to list all rules."""
+
     group: Optional[str] = None
 
 
 class GroupRecord(BaseModel):
+    """Firewall rule group (e.g. base, nat, multihop preset)."""
+
     id: int
     name: str
     group_type: str
@@ -47,6 +53,8 @@ class GroupRecord(BaseModel):
 
 
 class FirewallRuleRecord(BaseModel):
+    """A single nftables firewall rule within a group."""
+
     id: int
     group_id: int
     chain: str
@@ -67,6 +75,8 @@ class FirewallRuleRecord(BaseModel):
 
 
 class RoutingRuleRecord(BaseModel):
+    """An IP routing/policy rule managed by a firewall group."""
+
     id: int
     group_id: int
     rule_type: str
@@ -86,7 +96,13 @@ class RoutingRuleRecord(BaseModel):
 router = APIRouter(tags=["firewall"])
 
 
-@router.get("/groups/list", response_model=ApiOk[list[GroupRecord]])
+@router.get(
+    "/groups/list",
+    response_model=ApiOk[list[GroupRecord]],
+    summary="List Groups",
+    description="Return all firewall rule groups. Each group contains a set of "
+    "nftables rules and routing policies applied as a unit.",
+)
 async def list_groups(request: Request):
     fw = request.app.state.fw
     return ApiOk(data=[GroupRecord(**vars(g)) for g in fw.list_groups()])
@@ -96,6 +112,9 @@ async def list_groups(request: Request):
     "/groups/get",
     response_model=ApiOk[GroupRecord],
     responses={404: {"model": ApiErr}},
+    summary="Get Group",
+    description="Retrieve a single firewall group by name. Returns 404 if the "
+    "group does not exist.",
 )
 async def get_group(body: GroupNameRequest, request: Request):
     from firewall_bridge import GroupNotFoundError
@@ -108,19 +127,37 @@ async def get_group(body: GroupNameRequest, request: Request):
     return ApiOk(data=GroupRecord(**vars(g)))
 
 
-@router.post("/rules/list", response_model=ApiOk[list[FirewallRuleRecord]])
+@router.post(
+    "/rules/list",
+    response_model=ApiOk[list[FirewallRuleRecord]],
+    summary="List Firewall Rules",
+    description="Return nftables firewall rules. Optionally filter by group name "
+    "— omit the group field to list rules from all groups.",
+)
 async def list_firewall_rules(body: GroupFilterRequest, request: Request):
     fw = request.app.state.fw
     return ApiOk(data=[FirewallRuleRecord(**vars(r)) for r in fw.list_firewall_rules(body.group)])
 
 
-@router.post("/routing/list", response_model=ApiOk[list[RoutingRuleRecord]])
+@router.post(
+    "/routing/list",
+    response_model=ApiOk[list[RoutingRuleRecord]],
+    summary="List Routing Rules",
+    description="Return IP routing and policy rules. Optionally filter by group "
+    "name — omit the group field to list rules from all groups.",
+)
 async def list_routing_rules(body: GroupFilterRequest, request: Request):
     fw = request.app.state.fw
     return ApiOk(data=[RoutingRuleRecord(**vars(r)) for r in fw.list_routing_rules(body.group)])
 
 
-@router.get("/table", response_model=ApiOk[dict])
+@router.get(
+    "/table",
+    response_model=ApiOk[dict],
+    summary="Raw nftables Table",
+    description="Return the raw nftables ruleset as JSON (output of "
+    "'nft -j list ruleset'). Useful for debugging the live kernel state.",
+)
 async def list_table(request: Request):
     import json
 

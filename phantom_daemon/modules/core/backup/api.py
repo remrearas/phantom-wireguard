@@ -34,6 +34,8 @@ from phantom_daemon.modules._envelope import ApiOk
 
 
 class RestoreResult(BaseModel):
+    """Summary returned after a successful backup restore."""
+
     timestamp: str
     wallet_clients: int
     wallet_subnet: str
@@ -52,7 +54,13 @@ def _cleanup(tar_path: Path) -> None:
     shutil.rmtree(parent, ignore_errors=True)
 
 
-@router.post("/export")
+@router.post(
+    "/export",
+    summary="Export Backup",
+    description="Create and download a portable backup archive (.tar) containing "
+    "wallet.db, exit.db, and a JSON manifest. The response is a binary file "
+    "stream — save it directly to disk.",
+)
 async def export_backup(request: Request):
     """Create and download a portable backup (wallet.db + exit.db + manifest)."""
     wallet = request.app.state.wallet
@@ -71,14 +79,17 @@ async def export_backup(request: Request):
     )
 
 
-@router.post("/import", response_model=ApiOk[RestoreResult])
+@router.post(
+    "/import",
+    response_model=ApiOk[RestoreResult],
+    summary="Import Backup",
+    description="Upload a previously exported .tar backup and restore it. "
+    "Replaces wallet.db and exit.db, then re-syncs WireGuard peers with the "
+    "restored data. If multihop is active, it is torn down automatically before "
+    "restore to keep kernel state consistent.",
+)
 async def import_backup(file: UploadFile, request: Request):
-    """Upload and restore a previously exported backup.
-
-    If multihop is active, tears down the exit tunnel and removes
-    firewall preset before restoring — backup always has multihop
-    disabled, so kernel state must match.
-    """
+    """Upload and restore a previously exported backup."""
     wallet = request.app.state.wallet
     exit_store = request.app.state.exit_store
     wg_exit = request.app.state.wg_exit

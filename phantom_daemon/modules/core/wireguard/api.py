@@ -26,12 +26,16 @@ from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
 class InterfaceInfo(BaseModel):
+    """WireGuard interface metadata."""
+
     public_key: str
     listen_port: int
     fwmark: int
 
 
 class PeerInfo(BaseModel):
+    """Live status of a single WireGuard peer from the kernel interface."""
+
     public_key: str
     name: str | None
     endpoint: str
@@ -43,13 +47,20 @@ class PeerInfo(BaseModel):
 
 
 class WireGuardStatus(BaseModel):
+    """Full WireGuard interface status including all peers."""
+
     interface: InterfaceInfo
     peers: list[PeerInfo]
     total_peers: int
 
 
 class PeerQuery(BaseModel):
-    name: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+    """Request body to look up a peer by client name."""
+
+    name: str = Field(
+        min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$",
+        description="Client name to look up.",
+    )
 
 
 # ── Router ───────────────────────────────────────────────────────
@@ -57,7 +68,14 @@ class PeerQuery(BaseModel):
 router = APIRouter(tags=["wireguard"])
 
 
-@router.get("", response_model=ApiOk[WireGuardStatus])
+@router.get(
+    "",
+    response_model=ApiOk[WireGuardStatus],
+    summary="WireGuard Status",
+    description="Return the current WireGuard interface status including public "
+    "key, listen port, and all registered peers with their live traffic "
+    "statistics, handshake timestamps, and connection endpoints.",
+)
 async def get_status(request: Request):
     wg = request.app.state.wg
     wallet = request.app.state.wallet
@@ -98,6 +116,10 @@ async def get_status(request: Request):
     "/peer",
     response_model=ApiOk[PeerInfo],
     responses={404: {"model": ApiErr}},
+    summary="Lookup Peer",
+    description="Look up a single peer by client name and return its live "
+    "WireGuard status. Returns 404 if the client does not exist or the peer "
+    "is not registered on the interface.",
 )
 async def get_peer(body: PeerQuery, request: Request):
     wg = request.app.state.wg

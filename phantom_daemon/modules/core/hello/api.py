@@ -23,6 +23,8 @@ from phantom_daemon.modules._envelope import ApiOk
 
 
 class HelloResponse(BaseModel):
+    """Daemon health status."""
+
     message: str
     version: str
 
@@ -30,7 +32,13 @@ class HelloResponse(BaseModel):
 router = APIRouter(tags=["hello"])
 
 
-@router.get("", response_model=ApiOk[HelloResponse])
+@router.get(
+    "",
+    response_model=ApiOk[HelloResponse],
+    summary="Health Check",
+    description="Returns daemon status and version. Use this endpoint to verify "
+    "that the daemon process is running and reachable.",
+)
 async def hello():
     from phantom_daemon import __version__
 
@@ -42,4 +50,5 @@ async def hello():
 
 @router.get("/openapi", include_in_schema=False)
 async def openapi_schema(request: Request):
+    """Serve the generated OpenAPI 3.1 JSON schema (hidden from spec itself)."""
     return JSONResponse(content=request.app.openapi())

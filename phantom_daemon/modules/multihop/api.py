@@ -34,15 +34,30 @@ from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
 class ImportRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
-    config: str = Field(min_length=1)
+    """Request body for importing an exit server configuration."""
+
+    name: str = Field(
+        min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$",
+        description="Unique name for this exit server.",
+    )
+    config: str = Field(
+        min_length=1,
+        description="WireGuard .conf file contents (plain text, not base64).",
+    )
 
 
 class ExitNameRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+    """Request body identifying an exit server by name."""
+
+    name: str = Field(
+        min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$",
+        description="Exit server name.",
+    )
 
 
 class ExitSummary(BaseModel):
+    """Summary of an imported exit server configuration."""
+
     id: str
     name: str
     endpoint: str
@@ -53,6 +68,8 @@ class ExitSummary(BaseModel):
 
 
 class ExitListResponse(BaseModel):
+    """List of all imported exit servers with current multihop state."""
+
     exits: list[ExitSummary]
     total: int
     enabled: bool
@@ -60,6 +77,8 @@ class ExitListResponse(BaseModel):
 
 
 class PeerStatus(BaseModel):
+    """Live WireGuard peer statistics for the active exit tunnel."""
+
     endpoint: str
     latest_handshake: int
     rx_bytes: int
@@ -67,6 +86,8 @@ class PeerStatus(BaseModel):
 
 
 class MultihopStatus(BaseModel):
+    """Current multihop state including active exit and live peer stats."""
+
     enabled: bool
     active: str
     exit: ExitSummary | None
@@ -83,6 +104,10 @@ router = APIRouter(tags=["multihop"])
     response_model=ApiOk[ExitSummary],
     status_code=201,
     responses={400: {"model": ApiErr}},
+    summary="Import Exit",
+    description="Import a WireGuard .conf file as a new exit server configuration. "
+    "Parses the config to extract endpoint, keys, and allowed IPs. "
+    "Returns 400 if the config is invalid or the name already exists.",
 )
 async def import_exit(body: ImportRequest, request: Request):
     """Import a WireGuard .conf as an exit configuration."""
@@ -118,6 +143,9 @@ async def import_exit(body: ImportRequest, request: Request):
     "/remove",
     response_model=ApiOk[dict],
     responses={400: {"model": ApiErr}},
+    summary="Remove Exit",
+    description="Delete an exit server configuration by name. The exit must not "
+    "be currently active — disable multihop first if needed.",
 )
 async def remove_exit(body: ExitNameRequest, request: Request):
     """Remove an exit configuration. Must not be active."""
@@ -126,7 +154,13 @@ async def remove_exit(body: ExitNameRequest, request: Request):
     return ApiOk(data={"status": "removed", "code": "EXIT_REMOVED"})
 
 
-@router.get("/list", response_model=ApiOk[ExitListResponse])
+@router.get(
+    "/list",
+    response_model=ApiOk[ExitListResponse],
+    summary="List Exits",
+    description="Return all imported exit server configurations along with the "
+    "current multihop state (enabled/disabled and active exit name).",
+)
 async def list_exits(request: Request):
     """List all exit configurations and current state."""
     exit_store = request.app.state.exit_store
@@ -155,14 +189,14 @@ async def list_exits(request: Request):
     "/enable",
     response_model=ApiOk[dict],
     responses={400: {"model": ApiErr}, 404: {"model": ApiErr}},
+    summary="Enable Multihop",
+    description="Activate multihop routing through the named exit server. Creates "
+    "the exit WireGuard interface, applies firewall forwarding rules, and starts "
+    "the tunnel. Multihop must be disabled first — switching exits requires "
+    "disable then re-enable. Returns 404 if the exit does not exist.",
 )
 async def enable_multihop(body: ExitNameRequest, request: Request):
-    """Enable multihop with the given exit.
-
-    Requires multihop to be disabled. If already enabled, returns error
-    instructing the user to disable first — prevents partial-state from
-    in-place switch failures.
-    """
+    """Enable multihop with the given exit."""
     exit_store = request.app.state.exit_store
     env = request.app.state.env
     wallet = request.app.state.wallet
@@ -219,6 +253,10 @@ async def enable_multihop(body: ExitNameRequest, request: Request):
     "/disable",
     response_model=ApiOk[dict],
     responses={400: {"model": ApiErr}},
+    summary="Disable Multihop",
+    description="Deactivate multihop routing. Tears down the exit WireGuard "
+    "interface and removes the firewall forwarding rules. Client traffic "
+    "returns to the default direct route.",
 )
 async def disable_multihop(request: Request):
     """Disable multihop — tear down exit device and remove firewall preset."""
@@ -243,7 +281,14 @@ async def disable_multihop(request: Request):
     return ApiOk(data={"status": "disabled", "code": "MULTIHOP_DISABLED"})
 
 
-@router.get("/status", response_model=ApiOk[MultihopStatus])
+@router.get(
+    "/status",
+    response_model=ApiOk[MultihopStatus],
+    summary="Multihop Status",
+    description="Return current multihop state: enabled/disabled, active exit "
+    "server details, and live WireGuard peer statistics (handshake, RX/TX) "
+    "for the exit tunnel.",
+)
 async def multihop_status(request: Request):
     """Return current multihop state, active exit info, and live peer stats."""
     exit_store = request.app.state.exit_store
@@ -278,7 +323,7 @@ async def multihop_status(request: Request):
                     rx_bytes=p.rx_bytes,
                     tx_bytes=p.tx_bytes,
                 )
-        except Exception:
+        except (RuntimeError, OSError):
             pass
 
     return ApiOk(data=MultihopStatus(

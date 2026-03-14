@@ -27,16 +27,22 @@ from phantom_daemon.modules._envelope import ApiErr, ApiOk
 
 
 class DnsFamilyRequest(BaseModel):
+    """Request body selecting an IP address family."""
+
     family: Literal["v4", "v6"]
 
 
 class DnsRecord(BaseModel):
+    """DNS server pair for a single address family."""
+
     family: str
     primary: str
     secondary: str
 
 
 class ChangeDnsRequest(BaseModel):
+    """Request body for updating DNS servers."""
+
     family: Literal["v4", "v6"]
     primary: str
     secondary: str
@@ -47,7 +53,13 @@ class ChangeDnsRequest(BaseModel):
 router = APIRouter(tags=["dns"])
 
 
-@router.post("/get", response_model=ApiOk[DnsRecord])
+@router.post(
+    "/get",
+    response_model=ApiOk[DnsRecord],
+    summary="Get DNS",
+    description="Return the primary and secondary DNS servers for the given "
+    "address family (v4 or v6).",
+)
 async def get_dns(body: DnsFamilyRequest, request: Request):
     wallet = request.app.state.wallet
     dns = wallet.get_dns(body.family)
@@ -58,6 +70,10 @@ async def get_dns(body: DnsFamilyRequest, request: Request):
     "/change",
     response_model=ApiOk[DnsRecord],
     responses={400: {"model": ApiErr}},
+    summary="Change DNS",
+    description="Update the primary and secondary DNS servers for the given "
+    "address family. Returns the updated DNS record. Returns 400 if the "
+    "provided addresses are invalid.",
 )
 async def change_dns(body: ChangeDnsRequest, request: Request):
     wallet = request.app.state.wallet
