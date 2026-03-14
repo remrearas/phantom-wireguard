@@ -47,6 +47,14 @@
     "darkMode": "Dark Mode",
     "lightMode": "Light Mode"
   },
+  "footer": {
+    "copyright": {
+      "text": "© 2025 Rıza Emre ARAS - All Rights Reserved.",
+      "trademark": "WireGuard® is a registered trademark of Jason A. Donenfeld.",
+      "trademarkNotice": "This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Jason A. Donenfeld, ZX2C4 or Edge Security.",
+      "additionalText": "ARAS Workspace - <a href='https://github.com/ARAS-Workspace' target='_blank' rel='noopener noreferrer'>@ARAS-Workspace</a>"
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
     "clients": "Clients",
@@ -523,13 +531,6 @@
     }
   },
   "documentation": {
-    "title": "Documentation",
-    "topics": {
-      "terazi": {
-        "title": "Balance System (Terazi)",
-        "description": "Deterministic IPv4/IPv6 address pairing mechanism. Learn how the dual-stack pool is built, balanced, and validated."
-      }
-    },
     "poolSimulator": {
       "assign": "Add Client",
       "revoke": "Revoke Client",

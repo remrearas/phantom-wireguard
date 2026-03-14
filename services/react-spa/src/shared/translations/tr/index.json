@@ -47,6 +47,14 @@
     "darkMode": "Karanlık Mod",
     "lightMode": "Aydınlık Mod"
   },
+  "footer": {
+    "copyright": {
+      "text": "© 2025 Rıza Emre ARAS - Tüm hakları saklıdır.",
+      "trademark": "WireGuard® Jason A. Donenfeld'in tescilli ticari markasıdır.",
+      "trademarkNotice": "Bu proje; Jason A. Donenfeld, ZX2C4 veya Edge Security ile herhangi bir şekilde bağlantılı, ortaklı, yetkili veya onaylı değildir.",
+      "additionalText": "ARAS Workspace - <a href='https://github.com/ARAS-Workspace' target='_blank' rel='noopener noreferrer'>@ARAS-Workspace</a>"
+    }
+  },
   "nav": {
     "dashboard": "Gösterge Paneli",
     "clients": "İstemciler",
@@ -523,13 +531,6 @@
     }
   },
   "documentation": {
-    "title": "Dokümantasyon",
-    "topics": {
-      "terazi": {
-        "title": "Terazi Sistemi",
-        "description": "IPv4/IPv6 adreslerini deterministik olarak eşleyen dengeleme mekanizması. Çift-yığın havuzun nasıl oluşturulduğunu, dengelendiğini ve doğrulandığını öğrenin."
-      }
-    },
     "poolSimulator": {
       "assign": "İstemci Ekle",
       "revoke": "İstemci Kaldır",
