@@ -3,6 +3,7 @@
 .login-page__card {
   width: 100%;
   max-width: 24rem;
+  margin: 0 auto;
 }
 
 // ── Phantom icon ─────────────────────────────────────────────
@@ -12,18 +13,6 @@
   width: 180px;
   height: auto;
   margin: 0 auto 2rem;
-
-  .phantom-icon__shield {
-    fill: var(--cds-icon-secondary);
-  }
-
-  .phantom-icon__ghost {
-    fill: var(--cds-icon-primary);
-  }
-
-  .phantom-icon__eyes {
-    fill: var(--cds-icon-secondary);
-  }
 }
 
 // ── Heading ──────────────────────────────────────────────────

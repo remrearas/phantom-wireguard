@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
+import { Content } from '@carbon/react';
 import { Outlet, useLocation } from 'react-router-dom';
 import ProtectedHeader from '@shared/components/ui/ProtectedHeader';
+import Footer from '@shared/components/layout/Footer';
 import { useUser } from '@shared/contexts/UserContext';
 import './styles/ProtectedLayout.scss';
 
@@ -15,11 +17,10 @@ const ProtectedLayout: React.FC = () => {
   return (
     <>
       <ProtectedHeader />
-      <main id="main-content" className="app-content">
-        <div className="app-content__box">
-          <Outlet />
-        </div>
-      </main>
+      <Content id="main-content" className="protected-content">
+        <Outlet />
+      </Content>
+      <Footer />
     </>
   );
 };

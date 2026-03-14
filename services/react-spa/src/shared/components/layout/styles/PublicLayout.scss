@@ -1,11 +1,6 @@
-@use '@carbon/react/scss/spacing' as spacing;
-
 .public-content {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 3rem);
-  margin-top: 3rem;
-  padding: spacing.$spacing-07 spacing.$spacing-05;
-  background-color: var(--cds-background);
 }

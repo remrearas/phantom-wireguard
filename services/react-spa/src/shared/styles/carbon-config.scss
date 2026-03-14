@@ -25,3 +25,10 @@
 
 // Component styles (all Carbon React components)
 @use '@carbon/react';
+
+// App root — sticky footer via flexbox
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}

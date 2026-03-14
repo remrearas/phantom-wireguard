@@ -1,32 +1,12 @@
 @use '@carbon/react/scss/spacing' as spacing;
 @use '@carbon/react/scss/breakpoint' as bp;
 
-// Carbon shell header height = 3rem (48px)
 // Carbon SideNav width = 16rem (256px)
+.protected-content {
+  flex: 1;
 
-.app-content {
-  min-height: calc(100vh - 3rem);
-  margin-top: 3rem;
-  padding-top: spacing.$spacing-07;
-  padding-bottom: spacing.$spacing-09;
-  background-color: var(--cds-background);
-
-  // Persistent SideNav pushes content right on large screens
   @include bp.breakpoint-up(lg) {
     margin-left: 16rem;
-  }
-}
-
-.app-content__box {
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 0 spacing.$spacing-05;
-
-  @include bp.breakpoint-up(md) {
-    padding: 0 spacing.$spacing-07;
-  }
-
-  @include bp.breakpoint-up(lg) {
-    padding: 0 spacing.$spacing-09;
+    transition: margin-left 0.11s cubic-bezier(0.2, 0, 1, 0.9);
   }
 }

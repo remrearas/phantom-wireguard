@@ -1,27 +1,31 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { Theme } from '@carbon/react';
-import { LocaleProvider } from '@shared/hooks';
-import { ThemeProvider, useTheme } from '@shared/hooks';
+import { LocaleProvider, ThemeProvider, useTheme } from '@shared/hooks';
 import { UserProvider } from '@shared/contexts/UserContext';
 import { AuthProvider } from '@shared/contexts/AuthContext';
 import AppRouter from './router';
 
-const ThemeWrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
+const AppContent: React.FC = () => {
   const { theme } = useTheme();
-  return <Theme theme={theme}>{children}</Theme>;
+
+  return (
+    <Theme theme={theme}>
+      <div className="app">
+        <UserProvider>
+          <AuthProvider>
+            <AppRouter />
+          </AuthProvider>
+        </UserProvider>
+      </div>
+    </Theme>
+  );
 };
 
 const App: React.FC = () => {
   return (
     <LocaleProvider>
       <ThemeProvider>
-        <ThemeWrapper>
-          <UserProvider>
-            <AuthProvider>
-              <AppRouter />
-            </AuthProvider>
-          </UserProvider>
-        </ThemeWrapper>
+        <AppContent />
       </ThemeProvider>
     </LocaleProvider>
   );
