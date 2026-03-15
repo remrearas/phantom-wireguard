@@ -91,5 +91,5 @@ jobs:
           projectName: phantom-docs-retro
           directory: deployment/www
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.head_ref || github.ref_name }}
+          branch: main
           wranglerVersion: '3'
