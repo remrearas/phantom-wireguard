@@ -105,7 +105,7 @@ struct TunnelListView: View {
                     Label(loc.t("about_title"), systemImage: "info.circle")
                         .font(.footnote)
                 }
-                Link(destination: URL(string: "https://www.phantom.tc")!) {
+                Link(destination: URL(string: "https://retro.phantom.tc")!) {
                     Label(loc.t("website"), systemImage: "globe")
                         .font(.footnote)
                 }
@@ -123,7 +123,7 @@ struct TunnelListView: View {
             } label: {
                 Label(loc.t("about_title"), systemImage: "info.circle")
             }
-            Link(destination: URL(string: "https://www.phantom.tc")!) {
+            Link(destination: URL(string: "https://retro.phantom.tc")!) {
                 Label(loc.t("website"), systemImage: "globe")
             }
         }
