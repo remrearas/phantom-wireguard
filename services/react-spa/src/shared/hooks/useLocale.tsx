@@ -23,8 +23,11 @@ export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   });
 
+  document.documentElement.lang = locale;
+
   const changeLocale = useCallback((newLocale: Locale) => {
     setLocale(newLocale);
+    document.documentElement.lang = newLocale;
     try {
       const maxAge = 60 * 60 * 24 * 365;
       const secure = window.location.protocol === 'https:' ? '; Secure' : '';

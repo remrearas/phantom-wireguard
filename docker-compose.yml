@@ -6,7 +6,7 @@
 #   ./tools/prod.sh up          # start production stack
 #
 # Topology:
-#   Internet → :8443 (nginx, TLS) → auth-service:8443 → daemon (UDS)
+#   Internet → :443 (nginx, TLS) → auth-service → daemon (UDS)
 #   Internet → :51820/udp (WireGuard) → daemon
 #
 # All environment variables have defaults. Set WIREGUARD_ENDPOINT_V4
@@ -59,6 +59,7 @@ services:
       - daemon
     volumes:
       - phantom-sock:/var/run/phantom
+      - ./services/auth-service/auth_service:/app/auth_service:ro
       - ./container-data/auth-db:/var/lib/phantom/auth
     secrets:
       - auth_signing_key
@@ -66,17 +67,23 @@ services:
     environment:
       # ── General ──────────────────────────────────────────────
       - PYTHONUNBUFFERED=1
+      - AUTH_HOST=0.0.0.0                      # bind address
+      - AUTH_PORT=8443                         # listen port
+      - AUTH_LOG_LEVEL=info                    # debug | info | warning | error
       # ── Daemon Connection ────────────────────────────────────
-      - PHANTOM_DAEMON_SOCKET=/var/run/phantom/daemon.sock
-      # ── Auth Database ────────────────────────────────────────
+      - AUTH_PROXY_URL=unix:///var/run/phantom/daemon.sock
+      - AUTH_PROXY_TIMEOUT=30.0                # daemon request timeout (sec)
+      - AUTH_PROXY_MAX_BODY=67108864           # max proxy body size (bytes, 64 MB)
+      # ── Storage ──────────────────────────────────────────────
       - AUTH_DB_DIR=/var/lib/phantom/auth      # SQLite auth.db location
       - AUTH_SECRETS_DIR=/run/secrets           # signing/verify key directory
       # ── Token Lifetime ───────────────────────────────────────
-      - AUTH_TOKEN_LIFETIME=86400              # JWT expiry (seconds, default: 24h)
-      - AUTH_MFA_TOKEN_LIFETIME=300            # MFA pending token (seconds, default: 5m)
-      - AUTH_INACTIVITY_TIMEOUT=1800           # session timeout (seconds, default: 30m)
+      - AUTH_TOKEN_LIFETIME=86400              # JWT expiry (sec, 24h)
+      - AUTH_MFA_TOKEN_LIFETIME=120            # MFA pending token (sec, 2m)
+      - AUTH_TOTP_SETUP_LIFETIME=300           # TOTP setup window (sec, 5m)
+      - AUTH_INACTIVITY_TIMEOUT=1800           # session timeout (sec, 30m)
       # ── Rate Limiting (login endpoint) ───────────────────────
-      - AUTH_RATE_LIMIT_WINDOW=60              # sliding window (seconds)
+      - AUTH_RATE_LIMIT_WINDOW=60              # sliding window (sec)
       - AUTH_RATE_LIMIT_MAX=5                  # max attempts per window
 
   nginx:
@@ -87,6 +94,7 @@ services:
       - auth-service
     volumes:
       - ./services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./services/react-spa/dist:/usr/share/nginx/html:ro
     secrets:
       - tls_cert
       - tls_key
