@@ -1,0 +1,23 @@
+# ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+# ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+# ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+# ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+# ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+# ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+# Copyright (c) 2025 Rıza Emre ARAS
+# Licensed under AGPL-3.0 - see LICENSE file for details
+# Third-party licenses - see THIRD_PARTY_LICENSES file for details
+
+# Include production requirements
+-r requirements.txt
+
+# Test Requirements
+pytest==8.3.5
+pytest-cov==6.0.0
+pytest-timeout==2.3.1
+pytest-mock==3.14.0
+pytest-dependency==0.6.0
+pytest-xdist==3.5.0
+pytest-html==4.1.1
+coverage==7.6.1
+docker==7.1.0

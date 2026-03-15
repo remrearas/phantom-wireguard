@@ -1,0 +1,35 @@
+/*
+    ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+    ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+    ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+    ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+    ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+    Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+*/
+/* Font Awesome Integration */
+/*@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css');*/
+
+/* Ensure Font Awesome icons display properly */
+.feature-icon i,
+.phantom-alert i,
+.test-status-card i {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Additional icon styling for better integration */
+.fas, .far, .fab {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands', sans-serif !important;
+    font-weight: 900;
+    font-style: normal;
+}
+
+.far {
+    font-weight: 400;
+}
+
+.fab {
+    font-family: 'Font Awesome 6 Brands', sans-serif !important;
+    font-weight: 400;
+}

@@ -1,0 +1,95 @@
+██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+
+THIRD PARTY LICENSES
+================================================================================
+
+Phantom-WG
+Copyright (c) 2025 - Rıza Emre ARAS <r.emrearas@proton.me>
+Licensed under AGPL-3.0 - see LICENSE file for details
+
+This document lists third-party software dependencies and their licenses.
+
+================================================================================
+PYTHON DEPENDENCIES
+================================================================================
+
+Production dependencies (requirements.in):
+
+| Package         | Version | License       | SPDX Identifier |
+|-----------------|---------|---------------|-----------------|
+| tinydb          | 4.8.2   | MIT License   | MIT             |
+| qrcode          | 8.0     | BSD 3-Clause  | BSD-3-Clause    |
+| rich            | 13.9.4  | MIT License   | MIT             |
+
+Transitive dependencies (automatically installed):
+
+| Package         | Version | License       | SPDX Identifier | Required By     |
+|-----------------|---------|---------------|-----------------|-----------------|
+| markdown-it-py  | 4.0.0   | MIT License   | MIT             | rich            |
+| mdurl           | 0.1.2   | MIT License   | MIT             | markdown-it-py  |
+| pygments        | 2.19.2  | BSD 2-Clause  | BSD-2-Clause    | rich            |
+
+License URLs:
+- TinyDB:          https://github.com/msiemens/tinydb/blob/master/LICENSE
+- qrcode:          https://github.com/lincolnloop/python-qrcode/blob/main/LICENSE
+- Rich:            https://github.com/Textualize/rich/blob/master/LICENSE
+- markdown-it-py:  https://github.com/executablebooks/markdown-it-py/blob/master/LICENSE
+- mdurl:           https://github.com/executablebooks/mdurl/blob/master/LICENSE
+- Pygments:        https://github.com/pygments/pygments/blob/master/LICENSE
+
+================================================================================
+SYSTEM COMPONENTS
+================================================================================
+
+| Component       | License          | SPDX Identifier      | URL                                    |
+|-----------------|------------------|----------------------|----------------------------------------|
+| WireGuard       | GPL-2.0 / MIT    | GPL-2.0-only / MIT   | https://www.wireguard.com/             |
+| wstunnel        | BSD 3-Clause     | BSD-3-Clause         | https://github.com/erebe/wstunnel      |
+| Let's Encrypt   | Apache-2.0       | Apache-2.0           | https://letsencrypt.org/               |
+
+WireGuard Components:
+- Kernel module & tools (wg, wg-quick): GPL-2.0
+  https://git.zx2c4.com/wireguard-linux/tree/COPYING
+- wireguard-go (userspace): MIT
+  https://git.zx2c4.com/wireguard-go/tree/LICENSE
+
+Usage Note:
+Phantom-WG uses WireGuard through CLI tools (wg, wg-quick) only.
+This constitutes mere aggregation, not derivative work.
+
+================================================================================
+TRADEMARK NOTICES
+================================================================================
+
+WireGuard® is a registered trademark of Jason A. Donenfeld.
+https://www.wireguard.com/
+
+Let's Encrypt® is a trademark of the Internet Security Research Group (ISRG).
+https://letsencrypt.org/
+
+================================================================================
+LICENSE COMPATIBILITY
+================================================================================
+
+All listed licenses (MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0) are
+compatible with AGPL-3.0 and allow use in this project.
+
+GPL-2.0 components (WireGuard kernel/tools) are used via command-line
+interface only, which does not create licensing obligations.
+
+================================================================================
+DOCUMENT INFO
+================================================================================
+
+Maintained by:  Rıza Emre ARAS <r.emrearas@proton.me>
+Project:        Phantom-WG
+License:        AGPL-3.0-or-later
+Repository:     https://github.com/ARAS-Workspace/phantom-wg
+Last Updated:   2026-01-30
+
+================================================================================

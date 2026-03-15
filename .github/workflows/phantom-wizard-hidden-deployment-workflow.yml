@@ -1,0 +1,88 @@
+name: Phantom-WG Retro - Hidden Service Deployment
+
+on:
+  push:
+    paths:
+      - 'tools/phantom-deployment-wizard/wizard/**'
+      - 'tools/phantom-deployment-wizard/deployments/hidden-service/**'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  test-secure-deployment:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        working-directory: tools/phantom-deployment-wizard
+        run: |
+          pip install --require-hashes -r requirements-dev-linux.txt
+
+      - name: Run integration tests
+        working-directory: tools/phantom-deployment-wizard
+        run: |
+          pytest deployments/hidden-service/secure-deployment-user/tests/integration/ \
+            --docker \
+            -v \
+            --tb=short
+
+  deploy:
+    needs: test-secure-deployment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install paramiko python-gnupg
+
+      - name: Create deployment package
+        working-directory: tools/phantom-deployment-wizard/deployments/hidden-service
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.DEPLOYMENT_WIZARD_GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | python3 package.py
+
+      - name: Deploy to server
+        working-directory: tools/phantom-deployment-wizard/deployments/hidden-service
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOYMENT_WIZARD_SSH_KEY }}
+          SERVER_IP: ${{ secrets.DEPLOYMENT_WIZARD_IP }}
+          SSH_USER: deployment-user
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deployment_key
+          chmod 600 ~/.ssh/deployment_key
+
+          # Run deployment
+          python3 deploy.py \
+            --server-ip "$SERVER_IP" \
+            --ssh-user "$SSH_USER" \
+            --ssh-key ~/.ssh/deployment_key \
+            --package build/deployment_signed.zip
+
+          rm -f ~/.ssh/deployment_key

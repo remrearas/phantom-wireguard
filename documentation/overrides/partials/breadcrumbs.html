@@ -1,0 +1,103 @@
+{%- if page and not (page.meta and page.meta.hide_breadcrumbs) -%}
+{%- set breadcrumb_items = [] -%}
+{%- set schema_breadcrumb_list = "https://schema.org/BreadcrumbList" -%}
+{%- set schema_list_item = "https://schema.org/ListItem" -%}
+
+{%- if page.url == '.' or page.url == '' or page.url == 'index.html' or page.abs_url == '/' or page.abs_url == '/index.html' or page.url == './' or page.url.endswith('index.md') -%}
+{%- set is_homepage = true -%}
+{%- elif page.abs_url -%}
+{%- if page.abs_url.rstrip('/') == '' or page.abs_url.rstrip('/') == '/tr' or page.abs_url.endswith('/index.html') -%}
+{%- set is_homepage = true -%}
+{%- else -%}
+{%- set is_homepage = false -%}
+{%- endif -%}
+{%- else -%}
+{%- set is_homepage = false -%}
+{%- endif -%}
+
+{#- Recursive macro to find active path -#}
+{%- macro find_active_path(nav_items, current_path=[]) -%}
+{%- for nav_item in nav_items -%}
+{%- if nav_item.active -%}
+{#- Find first child URL if current item has no URL -#}
+{%- set item_url = nav_item.url -%}
+{%- if not item_url and nav_item.children -%}
+{%- set item_url = find_first_url(nav_item.children) -%}
+{%- endif -%}
+{%- set new_path = current_path + [{'title': nav_item.title, 'url': item_url}] -%}
+{%- if nav_item.children -%}
+{{- find_active_path(nav_item.children, new_path) -}}
+{%- else -%}
+{#- We found the active leaf, set the breadcrumb path -#}
+{%- for item in new_path[:-1] -%}
+{%- set _ = breadcrumb_items.append(item) -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- Helper macro to find first child URL -#}
+{%- macro find_first_url(nav_items) -%}
+{%- set ns = namespace(found_url='') -%}
+{%- for nav_item in nav_items if not ns.found_url -%}
+{%- if nav_item.url -%}
+{%- set ns.found_url = nav_item.url -%}
+{%- elif nav_item.children -%}
+{%- set child_url = find_first_url(nav_item.children) -%}
+{%- if child_url -%}
+{%- set ns.found_url = child_url -%}
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{{- ns.found_url -}}
+{%- endmacro -%}
+
+{%- if nav and not is_homepage -%}
+{{- find_active_path(nav) -}}
+{%- endif -%}
+
+{%- if not is_homepage -%}
+<!--suppress HtmlUnknownTarget -->
+<nav aria-label="Breadcrumb navigation" class="phantom-breadcrumbs">
+    <div class="phantom-breadcrumbs-wrapper">
+        <ol itemscope itemtype="{{ schema_breadcrumb_list }}">
+            <li itemprop="itemListElement" itemscope itemtype="{{ schema_list_item }}">
+                {%- if config.theme.language == 'tr' or page.abs_url.startswith('/tr/') -%}
+                <a href="{{ config.site_url or '/' }}" itemprop="item">
+                    <span itemprop="name">Ana Sayfa</span>
+                </a>
+                {%- else -%}
+                <a href="{{ config.site_url or '/' }}" itemprop="item">
+                    <span itemprop="name">Home</span>
+                </a>
+                {%- endif -%}
+                <meta content="1" itemprop="position"/>
+            </li>
+
+            {%- for item in breadcrumb_items -%}
+            <li itemprop="itemListElement" itemscope itemtype="{{ schema_list_item }}">
+                {%- if item.url -%}
+                <a href="{{ item.url | url }}" itemprop="item">
+                    <span itemprop="name">{{ item.title }}</span>
+                </a>
+                {%- else -%}
+                <span itemprop="item">
+                  <span itemprop="name">{{ item.title }}</span>
+                </span>
+                {%- endif -%}
+                <meta content="{{ loop.index + 1 }}" itemprop="position"/>
+            </li>
+            {%- endfor -%}
+
+            {%- if page.title -%}
+            <li class="active" itemprop="itemListElement" itemscope itemtype="{{ schema_list_item }}">
+                <span itemprop="name">{{ page.title }}</span>
+                <meta content="{{ breadcrumb_items|length + 2 }}" itemprop="position"/>
+            </li>
+            {%- endif -%}
+        </ol>
+    </div>
+</nav>
+{%- endif -%}
+{%- endif -%}

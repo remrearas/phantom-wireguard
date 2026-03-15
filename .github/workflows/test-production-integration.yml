@@ -1,0 +1,106 @@
+name: Phantom-WG Retro - Production Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      session_id:
+        description: 'Session ID for test reports'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      session_id:
+        description: 'Session ID for test reports'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      test_result:
+        description: 'Test execution result'
+        value: ${{ jobs.test.outputs.result }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.test_runner.outputs.result }}
+      session_id: ${{ steps.test_runner.outputs.session_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install Phantom-WG
+        run: |
+          chmod +x phantom-install.sh
+          sudo ./phantom-install.sh
+
+      - name: Verify Phantom-WG Installation
+        run: |
+          echo "Verifying Phantom-WG installation..."
+          if [ ! -d "/opt/phantom-wg" ]; then
+            echo "Error: Installation directory not found"
+            exit 1
+          fi
+          if [ ! -f "/opt/phantom-wg/.phantom-venv/bin/python" ]; then
+            echo "Error: Virtual environment not found"
+            exit 1
+          fi
+          echo "Installation verified successfully"
+
+      - name: Install Python Development Dependencies
+        run: |
+          sudo /opt/phantom-wg/.phantom-venv/bin/pip install -r requirements-dev.txt
+
+      - name: Run Tests with Coverage
+        id: test_runner
+        env:
+          INPUT_SESSION_ID: ${{ inputs.session_id }}
+        run: |
+          if [ -n "$INPUT_SESSION_ID" ]; then
+            SESSION_ID="$INPUT_SESSION_ID"
+          else
+            SESSION_ID="production_$(echo "$GITHUB_SHA" | cut -c1-8)_$(date +%Y%m%d_%H%M%S)"
+          fi
+
+          echo "SESSION_ID=$SESSION_ID" >> $GITHUB_ENV
+          echo "session_id=$SESSION_ID" >> $GITHUB_OUTPUT
+
+          sudo /opt/phantom-wg/.phantom-venv/bin/python /opt/phantom-wg/phantom/bin/tests/run_tests_coverage.py
+
+          TEST_EXIT_CODE=$?
+          echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_ENV
+
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            echo "result=success" >> $GITHUB_OUTPUT
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+          fi
+
+          exit $TEST_EXIT_CODE
+
+      - name: Collect test reports
+        if: success()
+        run: |
+          mkdir -p reports/production-integration
+          cp -r /opt/phantom-wg/phantom/bin/tests/reports/* reports/production-integration/ 2>/dev/null || true
+
+      - name: Upload test reports
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-integration-${{ env.SESSION_ID }}
+          path: reports/production-integration/
+          retention-days: 90
+
+      - name: Set exit code
+        if: always()
+        run: exit $TEST_EXIT_CODE

@@ -1,0 +1,146 @@
+#file: noinspection HttpUrlsUsage
+# ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+# ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+# ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+# ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+# ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+# ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+# Phantom Deployment Wizard - Hidden Service Production Docker Compose File (Amsterdam)
+# Copyright (c) 2025 Rıza Emre ARAS
+
+services:
+  tor-router:
+    build:
+      context: .
+      dockerfile: tor.Dockerfile
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+
+    # Override torrc for location based optimization + circuit rotation
+    command: |
+      sh -c "
+        # Append production optimizations to torrc
+        echo 'EntryNodes {NL},{DE},{SE}' >> /etc/tor/torrc
+        echo 'StrictNodes 0' >> /etc/tor/torrc
+        echo 'MaxCircuitDirtiness 600' >> /etc/tor/torrc
+        echo 'CircuitBuildTimeout 20' >> /etc/tor/torrc
+        echo 'LearnCircuitBuildTimeout 0' >> /etc/tor/torrc
+
+        # Start Tor with original startup script
+        exec /start-tor.sh
+      "
+
+    # Health check: Verify Tor connectivity
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf --socks5-hostname localhost:9050 --max-time 10 https://check.torproject.org/api/ip | grep -q '\"IsTor\":true' || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - phantom-network
+
+  # Streamlit application (uses tor-router's network for outbound traffic)
+  app:
+    build:
+      context: .
+      dockerfile: main.Dockerfile
+    network_mode: "service:tor-router"
+    command: ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    environment:
+      - TOR_MODE=1
+      - PROD_MODE=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./wizard:/app
+    restart: unless-stopped
+
+    # Wait for Tor to be healthy before starting
+    depends_on:
+      tor-router:
+        condition: service_healthy
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx reverse proxy (proxies to streamlit on tor-router's IP)
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    command: |
+      sh -c "echo 'events {
+        worker_connections 1024;
+      }
+      http {
+        upstream streamlit {
+          server tor-router:8501;
+        }
+        server {
+          listen 80;
+          server_name _;
+          proxy_read_timeout 86400;
+          proxy_send_timeout 86400;
+          location / {
+            proxy_pass http://streamlit;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade \$$http_upgrade;
+            proxy_set_header Connection \"upgrade\";
+            proxy_set_header Host \$$host;
+            proxy_set_header X-Real-IP \$$remote_addr;
+            proxy_set_header X-Forwarded-For \$$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$$scheme;
+            proxy_buffering off;
+          }
+        }
+      }' > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - phantom-network
+
+  # Hidden Service Tor (publishes Nginx to .onion)
+  onion:
+    build:
+      context: .
+      dockerfile: hidden_service.Dockerfile
+    restart: unless-stopped
+    volumes:
+      - tor-hidden-service:/var/lib/tor/hidden_service
+
+    # Health check: Verify hidden service is ready
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /var/lib/tor/hidden_service/hostname || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - phantom-network
+
+networks:
+  phantom-network:
+    driver: bridge
+
+volumes:
+  tor-hidden-service:
+    driver: local

@@ -1,0 +1,19 @@
+{
+  "name": "phantom-install",
+  "version": "1.0.0",
+  "description": "Phantom-WG Bootstrap Installer Worker",
+  "private": true,
+  "scripts": {
+    "dev": "dotenv -- wrangler dev",
+    "deploy": "dotenv -- wrangler deploy",
+    "tail": "dotenv -- wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250124.0",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.61.0"
+  },
+  "dependencies": {
+    "dotenv-cli": "^11.0.0"
+  }
+}

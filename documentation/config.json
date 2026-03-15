@@ -1,0 +1,31 @@
+{
+  "paths": {
+    "output_dir": "outputs/www",
+    "vendor_dir": "overrides/assets/vendor",
+    "vendor_builder_dir": "tools/vendor-builder"
+  },
+  "build": {
+    "clean_before_build": true,
+    "check_vendor_dependencies": true
+  },
+  "serve": {
+    "port": 8000,
+    "host": "localhost",
+    "check_vendor_dependencies": true
+  },
+  "docker": {
+    "image_name": "phantom-docs-kit",
+    "build_tag": "latest",
+    "container_prefix": "phantom-docs"
+  },
+  "logging": {
+    "enabled": false,
+    "console_level": "INFO",
+    "file_level": "DEBUG",
+    "log_directory": "logs",
+    "max_file_size": "10MB",
+    "backup_count": 5,
+    "timestamp_format": "%Y-%m-%d %H:%M:%S",
+    "log_filename_pattern": "phantom-{mode}-{date}-{time}.log"
+  }
+}

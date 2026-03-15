@@ -1,0 +1,36 @@
+{
+  "dependencies": [
+    {
+      "name": "Chart.js",
+      "package": "chart.js",
+      "from": "node_modules/chart.js/dist/chart.umd.js",
+      "to": "chart.umd.js",
+      "type": "js",
+      "minify": true
+    },
+    {
+      "name": "Asciinema Player JS",
+      "package": "asciinema-player",
+      "from": "node_modules/asciinema-player/dist/bundle/asciinema-player.min.js",
+      "to": "asciinema-player.min.js",
+      "type": "js",
+      "minify": false
+    },
+    {
+      "name": "Asciinema Player CSS",
+      "package": "asciinema-player",
+      "from": "node_modules/asciinema-player/dist/bundle/asciinema-player.css",
+      "to": "asciinema-player.css",
+      "type": "css",
+      "minify": true
+    },
+    {
+      "name": "LoadJS",
+      "package": "loadjs",
+      "from": "node_modules/loadjs/dist/loadjs.min.js",
+      "to": "loadjs.min.js",
+      "type": "js",
+      "minify": false
+    }
+  ]
+}

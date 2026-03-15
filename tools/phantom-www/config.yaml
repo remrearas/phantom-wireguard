@@ -1,0 +1,63 @@
+# Phantom WWW Build Configuration
+
+# Supported Languages (first language is default)
+languages: [en, tr]
+
+# Directory Paths
+paths:
+  src: "src"
+  dist: "dist"
+  assets: "src/assets"
+  content: "src/content"
+  templates: "src/templates"
+  builder: "builder"
+
+# Build Configuration
+build:
+  # Files to copy to dist root (not in assets/)
+  root_files:
+    - manifest.json
+    - robots.txt
+
+  # Directories to copy to dist root (not in assets/)
+  root_dirs:
+    - wheel
+
+  # Files to exclude from production build (dev only)
+  exclude_from_prod:
+    - js/auto-reload.js
+
+  # File extensions to watch for changes
+  watch_extensions:
+    - .md
+    - .j2
+    - .html
+    - .css
+    - .js
+    - .json
+    - .yaml
+
+  # Debounce time for file changes (seconds)
+  debounce_time: 0.5
+
+# Environment Settings
+environments:
+  dev:
+    minify_css: false
+    minify_js: false
+    optimize_images: false
+  prod:
+    minify_css: true
+    minify_js: true
+    optimize_images: false
+
+# Development Server
+server:
+  host: "localhost"
+  port: 8088
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(message)s"
+  date_format: "%Y-%m-%d %H:%M:%S"

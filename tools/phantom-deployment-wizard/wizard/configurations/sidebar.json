@@ -1,0 +1,84 @@
+{
+  "step_index": {
+    "token": 0,
+    "aup": 1,
+    "phantom_ssh": 2,
+    "phantom_provider": 3,
+    "phantom_region": 4,
+    "phantom_os": 5,
+    "phantom_flavor": 6,
+    "phantom_quote": 7,
+    "deployment_preview": 8,
+    "deployment_process": 9,
+    "complete": 10
+  },
+  "tree_structure": [
+    {
+      "type": "group",
+      "label": "Setup",
+      "children": [
+        {
+          "type": "step",
+          "label": "SporeStack Token",
+          "index": 0
+        },
+        {
+          "type": "step",
+          "label": "AUP",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": "Server Configuration",
+      "children": [
+        {
+          "type": "step",
+          "label": "Server Keys",
+          "index": 2
+        },
+        {
+          "type": "step",
+          "label": "Select Provider",
+          "index": 3
+        },
+        {
+          "type": "step",
+          "label": "Select Region",
+          "index": 4
+        },
+        {
+          "type": "step",
+          "label": "Select OS",
+          "index": 5
+        },
+        {
+          "type": "step",
+          "label": "Select Size",
+          "index": 6
+        },
+        {
+          "type": "step",
+          "label": "Server Quote",
+          "index": 7
+        }
+      ]
+    },
+    {
+      "type": "step",
+      "label": "Deployment Preview",
+      "index": 8
+    },
+    {
+      "type": "step",
+      "label": "Deployment Process",
+      "index": 9
+    },
+    {
+      "type": "step",
+      "label": "Complete Process",
+      "index": 10
+    }
+  ]
+}

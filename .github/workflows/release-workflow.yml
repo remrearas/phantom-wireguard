@@ -1,0 +1,185 @@
+name: Phantom-WG Retro - Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_id:
+        description: 'Version ID for the release (e.g., 1.0.4)'
+        required: true
+        type: string
+
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  test-development-integration:
+    uses: ./.github/workflows/test-development-integration.yml
+    permissions:
+      contents: read
+    with:
+      session_id: "${{ github.run_id }}"
+
+  test-production-integration:
+    uses: ./.github/workflows/test-production-integration.yml
+    permissions:
+      contents: read
+    with:
+      session_id: "${{ github.run_id }}"
+
+  create-release:
+    needs: [test-development-integration, test-production-integration]
+    runs-on: ubuntu-latest
+    if: success()
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set version from input
+        id: get_version
+        env:
+          VERSION_ID: ${{ inputs.version_id }}
+        run: |
+          echo "VERSION=core-v${VERSION_ID}" >> $GITHUB_OUTPUT
+          echo "ARCHIVE_NAME=phantom-wg-retro-core-v${VERSION_ID}" >> $GITHUB_OUTPUT
+
+      - name: Create release archive
+        env:
+          ARCHIVE_NAME: ${{ steps.get_version.outputs.ARCHIVE_NAME }}
+        run: |
+          set -e
+
+          echo "Creating archive: ${ARCHIVE_NAME}.zip"
+
+          for file in phantom requirements.txt phantom-install.sh; do
+            if [ ! -e "$file" ]; then
+              echo "ERROR: Required file/directory not found: $file"
+              exit 1
+            fi
+            echo "✓ Found: $file"
+          done
+
+          mkdir -p release_temp
+          cp -r phantom release_temp/
+          cp requirements.txt release_temp/
+          cp phantom-install.sh release_temp/
+
+          # Remove test directories and cache
+          rm -rf release_temp/phantom/reports 2>/dev/null || true
+          rm -rf release_temp/phantom/api/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/bin/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/models/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/core/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/dns/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/multihop/tests 2>/dev/null || true
+          rm -rf release_temp/phantom/modules/ghost/tests 2>/dev/null || true
+          rm -f release_temp/phantom/run_tests_coverage.py 2>/dev/null || true
+          find release_temp -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find release_temp -type f -name "*.pyc" -delete 2>/dev/null || true
+          find release_temp -type f -name "*.pyo" -delete 2>/dev/null || true
+
+          cd release_temp
+          zip -r "../${ARCHIVE_NAME}.zip" .
+          cd ..
+
+          rm -rf release_temp
+          echo "Archive created:"
+          ls -lh "${ARCHIVE_NAME}.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Phantom-WG Retro ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## Phantom-WG Retro ${{ steps.get_version.outputs.VERSION }}
+
+            🇬🇧
+
+            ### 📦 Package Contents
+
+            This release archive includes:
+            - `phantom/` - Phantom-WG Retro Core Package
+            - `requirements.txt` - Python dependencies
+            - `phantom-install.sh` - Installation script
+
+            ### 🔧 Installation
+
+            1. Download and extract the archive:
+            ```bash
+            unzip ${{ steps.get_version.outputs.ARCHIVE_NAME }}.zip
+            ```
+
+            2. Run the installation script:
+            ```bash
+            chmod +x phantom-install.sh
+            sudo ./phantom-install.sh
+            ```
+
+            3. Installation Complete:
+            ```
+            Commands:
+              phantom-wg  - Interactive UI
+              phantom-api - API Access
+
+            Quick Start:
+              1. Run: phantom-wg
+              2. Select 'Core Management'
+              3. Add your first client
+
+            API Command Example:
+              phantom-api core list_clients
+
+            Python Environment: /opt/phantom-wg/.phantom-venv
+            ```
+
+            ---
+
+            🇹🇷
+
+            ### 📦 Paket İçeriği
+
+            Bu sürüm arşivi şunları içerir:
+            - `phantom/` - Phantom-WG Retro Çekirdek Paketi
+            - `requirements.txt` - Python Bağımlılıkları
+            - `phantom-install.sh` - Kurulum Betiği
+
+            ### 🔧 Kurulum
+
+            1. Arşivi indirin ve çıkartın:
+            ```bash
+            unzip ${{ steps.get_version.outputs.ARCHIVE_NAME }}.zip
+            ```
+
+            2. Kurulum betiğini çalıştırın:
+            ```bash
+            chmod +x phantom-install.sh
+            sudo ./phantom-install.sh
+            ```
+
+            3. Kurulum Tamamlandı:
+            ```
+            Komutlar:
+              phantom-wg  - Etkileşimli UI
+              phantom-api - API Erişimi
+
+            Hızlı Başlangıç:
+              1. Çalıştır: phantom-wg
+              2. 'Core Management' seçin
+              3. İlk istemcinizi ekleyin
+
+            API Komut Örneği:
+              phantom-api core list_clients
+
+            Python Ortamı: /opt/phantom-wg/.phantom-venv
+            ```
+
+          files: |
+            ${{ steps.get_version.outputs.ARCHIVE_NAME }}.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: false

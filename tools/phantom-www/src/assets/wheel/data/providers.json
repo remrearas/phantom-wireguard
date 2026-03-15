@@ -1,0 +1,47 @@
+[
+  {
+    "name": "BitLaunch",
+    "crypto": "BTC, ETH, LTC",
+    "url": "https://bitlaunch.io"
+  },
+  {
+    "name": "Njalla",
+    "crypto": "BTC, XMR",
+    "url": "https://njal.la"
+  },
+  {
+    "name": "FlokiNET",
+    "crypto": "BTC, XMR, ETH",
+    "url": "https://flokinet.is"
+  },
+  {
+    "name": "BuyVM",
+    "crypto": "BTC, LTC",
+    "url": "https://buyvm.net"
+  },
+  {
+    "name": "Privex",
+    "crypto": "BTC, XMR",
+    "url": "https://privex.io"
+  },
+  {
+    "name": "RackNerd",
+    "crypto": "BTC, ETH, LTC",
+    "url": "https://racknerd.com"
+  },
+  {
+    "name": "1984",
+    "crypto": "BTC",
+    "url": "https://1984.is"
+  },
+  {
+    "name": "OrangeWeb",
+    "crypto": "BTC, XMR, ETH",
+    "url": "https://orangewebsite.com"
+  },
+  {
+    "name": "SporeStack",
+    "crypto": "BTC, XMR",
+    "url": "https://sporestack.com"
+  }
+]

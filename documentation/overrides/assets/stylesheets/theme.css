@@ -1,0 +1,1215 @@
+/*
+    ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+    ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+    ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+    ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+    ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+    Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+*/
+/* =================================================================
+   PHANTOM DOCUMENTATION KIT - THEME CSS
+   ================================================================= */
+/* =================================================================
+   TABLE OF CONTENTS
+   =================================================================
+   1. FONT DEFINITIONS
+      - Local Font Faces
+
+   2. CSS VARIABLES & THEME SETTINGS
+      - Root Variables
+      - Light Theme Colors
+      - Dark Theme Colors
+      - Material Theme Overrides
+
+   3. TYPOGRAPHY
+      - Base Typography
+      - Headings
+      - Responsive Typography
+
+   4. LAYOUT & STRUCTURE
+      - Header Styling
+      - Footer Styling
+      - Container Adjustments
+
+   5. CODE & TERMINAL COMPONENTS
+      - Code Blocks
+      - Terminal Styling
+      - Terminal Badges
+      - Inline Code
+      - Search Results Code
+
+   6. MEDIA PLAYER COMPONENTS
+      - Asciinema Player
+      - YouTube Player
+      - Player Loading Spinner
+      - Loading States
+
+   7. NAVIGATION COMPONENTS
+      - Breadcrumb Navigation
+      - Navigation Sidebar
+
+   8. LAYOUT GRIDS
+      - Grid Classes
+      - Grid Variations
+
+   9. RESPONSIVE DESIGN
+      - Mobile Optimizations
+      - Tablet Adjustments
+      - Touch Targets
+      - Table Responsiveness
+
+   10. ANIMATIONS & TRANSITIONS
+       - Keyframe Animations
+       - Hover Effects
+
+   11. UTILITY STYLES
+       - Print Styles
+       - Accessibility
+       - Scroll Indicators
+   ================================================================= */
+
+/* =================================================================
+   1. FONT DEFINITIONS
+   ================================================================= */
+
+/* Local font definitions for offline usage */
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/orbitron-400.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/orbitron-600.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('../fonts/orbitron-800.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Share Tech Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/share-tech-mono-400.ttf') format('truetype');
+}
+
+/* =================================================================
+   2. CSS VARIABLES & THEME SETTINGS
+   ================================================================= */
+
+/* CSS Variables for easy theme customization */
+:root {
+  /* Light theme colors */
+  --phantom-bg-primary: #f8f9fa;
+  --phantom-bg-secondary: #e9ecef;
+  --phantom-bg-tertiary: #dee2e6;
+  --phantom-text-primary: #212529;
+  --phantom-text-secondary: #495057;
+  --phantom-border: #ced4da;
+  --phantom-accent: #0f4c75;
+  --phantom-info: #17a2b8;
+  --phantom-error: #dc3545;
+  --phantom-header-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  --phantom-code-bg: #f6f8fa;
+
+  /* Font families */
+  --phantom-font-mono: 'Share Tech Mono', monospace;
+  --phantom-font-heading: 'Orbitron', 'Roboto', sans-serif;
+}
+
+/* Dark theme overrides */
+[data-md-color-scheme="slate"] {
+  --phantom-bg-primary: #0a0e1a;
+  --phantom-bg-secondary: #0f1823;
+  --phantom-bg-tertiary: #1a2332;
+  --phantom-text-primary: #e8eaed;
+  --phantom-text-secondary: #9aa0a6;
+  --phantom-border: #394b61;
+  --phantom-accent: #4a9eff;
+  --phantom-info: #17a2b8;
+  --phantom-error: #f85149;
+  --phantom-header-gradient: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+  --phantom-code-bg: #0d1117;
+}
+
+/* Override Material theme colors - Dark Mode */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: var(--phantom-bg-primary);
+  --md-default-bg-color--light: var(--phantom-bg-secondary);
+  --md-default-bg-color--lighter: var(--phantom-bg-tertiary);
+  --md-default-fg-color: var(--phantom-text-primary);
+  --md-default-fg-color--light: var(--phantom-text-secondary);
+  --md-primary-fg-color: var(--phantom-accent);
+  --md-accent-fg-color: var(--phantom-info);
+}
+
+/* Override Material theme colors - Light Mode */
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: var(--phantom-bg-primary);
+  --md-default-bg-color--light: var(--phantom-bg-secondary);
+  --md-default-bg-color--lighter: var(--phantom-bg-tertiary);
+  --md-default-fg-color: var(--phantom-text-primary);
+  --md-default-fg-color--light: var(--phantom-text-secondary);
+  --md-primary-fg-color: var(--phantom-accent);
+  --md-accent-fg-color: var(--phantom-info);
+}
+
+/* =================================================================
+   3. TYPOGRAPHY
+   ================================================================= */
+
+/* Base Typography */
+.md-typeset {
+  font-family: var(--phantom-font-mono), monospace;
+  line-height: 1.6;
+}
+
+/* Headings */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  font-family: var(--phantom-font-heading), sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* Typography Mobile Optimization */
+@media (max-width: 768px) {
+  .md-typeset h1 {
+    font-size: 1.40rem;
+    letter-spacing: 2px;
+  }
+
+  .md-typeset h2 {
+    font-size: 1.20rem;
+    letter-spacing: 2px;
+  }
+
+  .md-typeset h3 {
+    font-size: 1.0rem;
+    letter-spacing: 1px;
+  }
+
+  .md-typeset {
+    line-height: 1.7;
+  }
+
+  /* Adjust paragraph spacing */
+  .md-typeset p {
+    margin-bottom: 1rem;
+  }
+}
+
+/* =================================================================
+   4. LAYOUT & STRUCTURE
+   ================================================================= */
+
+/* Header styling with gradient */
+.md-header {
+  background: var(--phantom-header-gradient);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.md-header__title {
+  font-family: var(--phantom-font-heading), sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  animation: pulse 3s infinite;
+}
+
+/* Footer with gradient */
+.md-footer {
+  background: var(--phantom-header-gradient);
+}
+
+.md-footer-meta {
+  background: transparent;
+}
+
+/* Container padding adjustments */
+@media (max-width: 768px) {
+  .md-content__inner {
+    padding: 0 1rem;
+  }
+
+  /* Adjust container margins */
+  .md-typeset > :first-child {
+    margin-top: 0;
+  }
+}
+
+/* Navigation Sidebar Width */
+@media (max-width: 1219px) and (min-width: 960px) {
+  .md-sidebar--primary {
+    width: 12.1rem;
+  }
+}
+
+/* Header Title Truncation Fix */
+@media (max-width: 768px) {
+  .md-header__title {
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+  }
+}
+
+@media (max-width: 480px) {
+  .md-header__title {
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+  }
+}
+
+/* =================================================================
+   5. CODE & TERMINAL COMPONENTS
+   ================================================================= */
+
+/* Code blocks with terminal styling */
+.md-typeset pre {
+  background-color: var(--phantom-code-bg);
+  border: 1px solid var(--phantom-border);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  padding-top: 2.5rem;
+}
+
+.md-typeset pre code {
+  display: block;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: var(--phantom-font-mono), monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  background: transparent;
+}
+
+/* Terminal badge styling */
+.md-typeset pre:not([data-no-badge])::before {
+  content: attr(data-terminal-type);
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--phantom-accent);
+  color: white;
+  padding: 0.375rem 1rem;
+  font-family: var(--phantom-font-heading), sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-radius: 8px 0 8px 0;
+  z-index: 1;
+}
+
+/* Default terminal type */
+.md-typeset pre:not([data-no-badge]):not([data-terminal-type])::before {
+  content: "CODE";
+}
+
+/* Terminal output variant */
+.md-typeset pre[data-terminal-type="output"]::before {
+  content: "TERMINAL OUTPUT";
+  background-color: var(--phantom-info);
+}
+
+/* Inline code styling */
+.md-typeset code:not(pre code) {
+  font-family: var(--phantom-font-mono), monospace;
+  background-color: var(--phantom-bg-tertiary);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.875em;
+  border: 1px solid var(--phantom-border);
+}
+
+/* Search results code block badges */
+.md-search__result pre[data-terminal-type] {
+  position: relative;
+  padding-top: 2.5rem !important;
+}
+
+.md-search__result pre[data-terminal-type]::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0.375rem 1rem;
+  font-family: var(--phantom-font-heading), sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-radius: 8px 0 8px 0;
+  color: white;
+  z-index: 1;
+}
+
+/* Add horizontal scroll indicator for code blocks */
+.md-typeset pre[data-scrollable]::after {
+  content: '→';
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  color: var(--phantom-accent);
+  opacity: 0.3;
+  pointer-events: none;
+  display: none;
+}
+
+.md-typeset pre[data-scrollable]:hover::after {
+  display: block;
+}
+
+/* Responsive code block spacing */
+@media (max-width: 768px) {
+  /* Better balance for mobile code blocks */
+  .md-typeset pre {
+    margin: 1.5rem 0.5rem;
+    border-radius: 8px;
+  }
+
+  /* Ensure proper code padding for readability */
+  .md-typeset pre code {
+    padding: 1rem;
+    font-size: 0.8rem;
+  }
+
+  /* Adjust badge size and position */
+  .md-typeset pre:not([data-no-badge])::before {
+    font-size: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    letter-spacing: 1px;
+  }
+
+  /* Ensure inline code has proper spacing */
+  .md-typeset code:not(pre code) {
+    margin: 0 0.125rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Smaller margins on very small screens */
+  .md-typeset pre {
+    margin: 1.25rem 0.25rem;
+    border-radius: 6px;
+  }
+
+  /* Adjust badge position for small screens */
+  .md-typeset pre:not([data-no-badge])::before {
+    font-size: 0.45rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  /* Slightly smaller font for tiny screens */
+  .md-typeset pre code {
+    font-size: 0.75rem;
+  }
+}
+
+/* =================================================================
+   6. MEDIA PLAYER COMPONENTS
+   ================================================================= */
+
+/* =================================================================
+   6.1 ASCIINEMA PLAYER
+   ================================================================= */
+
+/* Asciinema Player Styles */
+.asciinema-player-container {
+  background-color: var(--phantom-bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 1rem 0;
+  border: 1px solid var(--phantom-border);
+  position: relative;
+  z-index: 1; /* Below navigation elements */
+}
+
+/* Dark mode specific colors */
+[data-md-color-scheme="slate"] .asciinema-player-container {
+  background-color: #0d1117;
+  border-color: var(--phantom-border);
+}
+
+.asciinema-player-header {
+  background-color: var(--phantom-bg-secondary);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--phantom-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Dark mode specific colors */
+[data-md-color-scheme="slate"] .asciinema-player-header {
+  background-color: #161b22;
+  border-bottom-color: #30363d;
+}
+
+.asciinema-player-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--md-default-fg-color);
+}
+
+.asciinema-player-info {
+  font-size: 0.8rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.asciinema-player-wrapper {
+  position: relative;
+  width: 100%;
+  background: var(--phantom-bg-primary);
+  padding: 1rem;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Override asciinema player styles */
+.asciinema-player-wrapper {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Dark mode specific colors */
+[data-md-color-scheme="slate"] .asciinema-player-wrapper {
+  background: #121314;
+}
+
+/* Asciinema player element */
+.asciinema-player {
+  width: 100% !important;
+  max-width: 100%;
+  margin: 0 auto;
+  font-size: 14px !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* Asciinema player controls - ensure they stay below navigation */
+.asciinema-player .asciinema-player-wrapper,
+.asciinema-player .start-prompt {
+  position: relative;
+  z-index: 10; /* Above player content but below navigation (100+) */
+}
+
+/* Control bar must remain absolutely positioned to avoid overlap */
+.asciinema-player .control-bar,
+.asciinema-player .ap-control-bar {
+  position: absolute !important;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30 !important; /* Original z-index for proper layering */
+}
+
+/* Add padding to terminal content to prevent overlap with control bar */
+.asciinema-player pre.ap-terminal,
+.asciinema-player .ap-terminal {
+  padding-bottom: 40px !important; /* 32px control bar + 8px spacing */
+}
+
+/* Ensure player wrapper accommodates control bar */
+.asciinema-player div.ap-player {
+  padding-bottom: 32px; /* Space for control bar */
+}
+
+/* Ensure fullscreen mode works properly */
+.asciinema-player.fullscreen {
+  z-index: 1001 !important; /* Above all navigation elements */
+}
+
+.asciinema-terminal {
+  box-sizing: border-box !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Roboto Mono', monospace !important;
+}
+
+/* Error state */
+.asciinema-error {
+  padding: 2rem;
+  text-align: center;
+  color: var(--md-default-fg-color--light);
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .asciinema-player-wrapper {
+    padding: 0.5rem;
+  }
+
+  .asciinema-player {
+    font-size: 12px !important;
+  }
+}
+
+/* =================================================================
+   6.2 YOUTUBE PLAYER
+   ================================================================= */
+
+/* YouTube Player Styles - matching Asciinema Player design */
+.youtube-player-container {
+  background-color: var(--phantom-bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 1rem 0;
+  border: 1px solid var(--phantom-border);
+  position: relative;
+  z-index: 1;
+}
+
+/* Dark mode specific colors */
+[data-md-color-scheme="slate"] .youtube-player-container {
+  background-color: #0d1117;
+  border-color: var(--phantom-border);
+}
+
+.youtube-player-header {
+  background-color: var(--phantom-bg-secondary);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--phantom-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Dark mode specific colors */
+[data-md-color-scheme="slate"] .youtube-player-header {
+  background-color: #161b22;
+  border-bottom-color: #30363d;
+}
+
+.youtube-player-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--md-default-fg-color);
+}
+
+.youtube-player-info {
+  font-size: 0.8rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.youtube-player-wrapper {
+  position: relative;
+  width: 100%;
+  background: var(--phantom-bg-primary);
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Dark mode specific colors */
+[data-md-color-scheme="slate"] .youtube-player-wrapper {
+  background: #121314;
+}
+
+/* YouTube player element */
+.youtube-player {
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+/* Responsive YouTube iframe container */
+.youtube-player-responsive {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  height: 0;
+  overflow: hidden;
+}
+
+.youtube-player-responsive iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Error state */
+.youtube-error {
+  padding: 2rem;
+  text-align: center;
+  color: var(--md-default-fg-color--light);
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .youtube-player-wrapper {
+    padding: 0.5rem;
+  }
+}
+
+/* =================================================================
+   6.3 PLAYER LOADING STATES
+   ================================================================= */
+
+/* Player Loading Spinner - Space-tech orbital design */
+.player-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  z-index: 2;
+}
+
+.player-spinner::before,
+.player-spinner::after,
+.player-spinner .spinner-inner {
+  content: '';
+  position: absolute;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  animation: orbit 1.5s linear infinite;
+}
+
+.player-spinner::before {
+  width: 100%;
+  height: 100%;
+  border-top-color: var(--phantom-accent);
+  animation-delay: 0s;
+}
+
+.player-spinner::after {
+  width: 75%;
+  height: 75%;
+  top: 12.5%;
+  left: 12.5%;
+  border-right-color: var(--phantom-info);
+  animation-delay: 0.2s;
+  animation-duration: 1.2s;
+}
+
+.player-spinner .spinner-inner {
+  width: 50%;
+  height: 50%;
+  top: 25%;
+  left: 25%;
+  border-bottom-color: var(--phantom-accent);
+  animation-delay: 0.4s;
+  animation-duration: 1s;
+}
+
+/* Loading state for players */
+.asciinema-player.loading,
+.youtube-player.loading {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--phantom-bg-secondary);
+}
+
+/* YouTube player specific loading height to maintain 16:9 ratio */
+.youtube-player.loading {
+  min-height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+}
+
+/* Dark mode loading background */
+[data-md-color-scheme="slate"] .asciinema-player.loading,
+[data-md-color-scheme="slate"] .youtube-player.loading {
+  background: #0d1117;
+}
+
+/* Hide player content while loading */
+.asciinema-player.loading > *:not(.player-spinner),
+.youtube-player.loading > *:not(.player-spinner) {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Smooth transition when loading completes */
+.asciinema-player,
+.youtube-player {
+  transition: background 0.3s ease;
+}
+
+.asciinema-player > *,
+.youtube-player > * {
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* =================================================================
+   7. NAVIGATION COMPONENTS
+   ================================================================= */
+
+/* =================================================================
+   7.1 BREADCRUMB NAVIGATION
+   ================================================================= */
+
+/* Breadcrumb container - Scrollable wrapper */
+.phantom-breadcrumbs {
+  margin: 0 0 1.5rem 0;
+  padding: 0;
+  font-family: var(--phantom-font-mono), monospace;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.phantom-breadcrumbs:hover {
+  opacity: 1;
+}
+
+/* Scrollable container */
+.phantom-breadcrumbs-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--phantom-border) transparent;
+  padding: 0.75rem 0;
+  margin: 0;
+}
+
+/* Custom scrollbar for webkit browsers */
+.phantom-breadcrumbs-wrapper::-webkit-scrollbar {
+  height: 4px;
+}
+
+.phantom-breadcrumbs-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.phantom-breadcrumbs-wrapper::-webkit-scrollbar-thumb {
+  background: var(--phantom-border);
+  border-radius: 2px;
+}
+
+.phantom-breadcrumbs-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--phantom-accent);
+}
+
+/* Breadcrumb list */
+.phantom-breadcrumbs ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  min-width: 100%;
+}
+
+/* Breadcrumb items */
+.phantom-breadcrumbs li {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* Separator between items */
+.phantom-breadcrumbs li:not(:last-child)::after {
+  content: '›';
+  margin: 0 0.75rem;
+  color: var(--phantom-text-secondary);
+  opacity: 0.4;
+  font-weight: 300;
+  transform: scaleX(1.2);
+}
+
+/* Breadcrumb links */
+.phantom-breadcrumbs a {
+  color: var(--phantom-text-secondary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  padding: 0.25rem 0;
+  border-radius: 0;
+  display: inline-block;
+  position: relative;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phantom-breadcrumbs a:hover {
+  color: var(--phantom-accent);
+  text-decoration: none;
+}
+
+/* Hover underline effect */
+.phantom-breadcrumbs a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--phantom-accent);
+  transition: width 0.2s ease;
+}
+
+.phantom-breadcrumbs a:hover::after {
+  width: 100%;
+}
+
+/* Active/current item */
+.phantom-breadcrumbs .active {
+  color: var(--phantom-text-primary);
+  font-weight: 600;
+  padding: 0.25rem 0;
+}
+
+.phantom-breadcrumbs .active span {
+  display: inline-block;
+  max-width: none;
+}
+
+/* Gradient fade for scroll indication */
+.phantom-breadcrumbs::before,
+.phantom-breadcrumbs::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.phantom-breadcrumbs::before {
+  left: 0;
+  background: linear-gradient(to right, var(--md-default-bg-color), transparent);
+}
+
+.phantom-breadcrumbs::after {
+  right: 0;
+  background: linear-gradient(to left, var(--md-default-bg-color), transparent);
+}
+
+/* Show gradients when scrollable */
+.phantom-breadcrumbs.has-scroll::before {
+  opacity: 0;
+}
+
+.phantom-breadcrumbs.has-scroll::after {
+  opacity: 1;
+}
+
+/* Show left gradient when scrolled right */
+.phantom-breadcrumbs.has-scroll.scrolled-right::before {
+  opacity: 1;
+}
+
+/* Hide right gradient when can't scroll left */
+.phantom-breadcrumbs.has-scroll:not(.can-scroll-left)::after {
+  opacity: 0;
+}
+
+/* Hide breadcrumbs when specified in page meta */
+.md-content[data-hide-breadcrumbs="true"] .phantom-breadcrumbs {
+  display: none;
+}
+
+/* Schema.org structured data - visually hidden but present for SEO */
+.phantom-breadcrumbs [itemprop="position"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Accessibility - focus states */
+.phantom-breadcrumbs a:focus {
+  outline: 2px solid var(--phantom-accent);
+  outline-offset: 2px;
+  background: var(--phantom-bg-tertiary);
+}
+
+/* Tablet responsive */
+@media (max-width: 768px) {
+  .phantom-breadcrumbs {
+    margin: 0 0 1.25rem 0;
+    font-size: 0.7rem;
+  }
+
+  .phantom-breadcrumbs-wrapper {
+    padding: 0.5rem 0;
+  }
+
+  .phantom-breadcrumbs li:not(:last-child)::after {
+    margin: 0 0.5rem;
+  }
+
+  .phantom-breadcrumbs a {
+    max-width: 200px;
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .phantom-breadcrumbs {
+    margin: 0 0 1rem 0;
+    font-size: 0.65rem;
+  }
+
+  .phantom-breadcrumbs-wrapper {
+    padding: 0.4rem 0;
+  }
+
+  .phantom-breadcrumbs li:not(:last-child)::after {
+    margin: 0 0.4rem;
+  }
+
+  .phantom-breadcrumbs a {
+    max-width: 120px;
+    padding: 0.2rem 0;
+  }
+
+  .phantom-breadcrumbs .active {
+    padding: 0.2rem 0;
+  }
+
+  /* Smaller gradient on mobile */
+  .phantom-breadcrumbs::before,
+  .phantom-breadcrumbs::after {
+    width: 20px;
+  }
+}
+
+/* =================================================================
+   8. LAYOUT GRIDS
+   ================================================================= */
+
+/* Base grid classes */
+.phantom-grid {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+}
+
+/* Column variations */
+.phantom-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.phantom-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.phantom-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Asymmetric layouts */
+.phantom-grid-2-1 {
+  grid-template-columns: 2fr 1fr;
+}
+
+.phantom-grid-1-3 {
+  grid-template-columns: 1fr 3fr;
+}
+
+/* Auto-responsive grid */
+.phantom-grid-auto {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+/* Gap variations */
+.phantom-grid-gap-sm {
+  gap: 10px;
+}
+
+.phantom-grid-gap-md {
+  gap: 20px;
+}
+
+.phantom-grid-gap-lg {
+  gap: 30px;
+}
+
+/* Grid items */
+.phantom-grid-item {
+  padding: 20px;
+  background: var(--phantom-bg-secondary);
+  border-radius: 4px;
+  text-align: center;
+}
+
+/* Nested grid support */
+.phantom-grid-nested {
+  margin-top: 10px;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  /* All grids become single column on mobile */
+  .phantom-grid-2,
+  .phantom-grid-3,
+  .phantom-grid-4,
+  .phantom-grid-2-1,
+  .phantom-grid-1-3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Reduce gap on mobile */
+  .phantom-grid {
+    gap: 15px;
+  }
+
+  .phantom-grid-gap-lg {
+    gap: 20px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet: 4 columns become 2 */
+  .phantom-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 3 columns stay as 3 on tablet */
+  .phantom-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* =================================================================
+   9. RESPONSIVE DESIGN
+   ================================================================= */
+
+/* Responsive Table Transformation */
+@media (max-width: 768px) {
+  /* Generic table responsiveness */
+  .md-typeset table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Card-style table for mobile */
+  .md-typeset table.responsive-table {
+    display: block;
+  }
+
+  .md-typeset table.responsive-table thead {
+    display: none;
+  }
+
+  .md-typeset table.responsive-table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    background: var(--phantom-bg-secondary);
+    border: 1px solid var(--phantom-border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .md-typeset table.responsive-table td {
+    display: block;
+    text-align: left;
+    padding: 0.5rem 0;
+    border: none;
+  }
+
+  .md-typeset table.responsive-table td:before {
+    content: attr(data-label);
+    font-weight: bold;
+    display: inline-block;
+    width: 120px;
+    margin-right: 0.5rem;
+  }
+}
+
+/* Improve touch targets */
+@media (pointer: coarse) {
+  .md-header__button,
+  .md-top {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* =================================================================
+   10. ANIMATIONS & TRANSITIONS
+   ================================================================= */
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* =================================================================
+   11. UTILITY STYLES
+   ================================================================= */
+
+/* Print styles */
+@media print {
+  .md-sidebar,
+  .md-header,
+  .md-footer,
+  .md-top {
+    display: none;
+  }
+
+  .md-content {
+    margin: 0;
+    padding: 0;
+  }
+
+  .phantom-breadcrumbs {
+    display: none;
+  }
+}

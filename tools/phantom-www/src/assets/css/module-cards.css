@@ -1,0 +1,322 @@
+/* =========================
+   Minimal Module Cards
+   ========================= */
+
+.modules-section {
+    grid-area: modules;
+    width: 100%;
+    max-width: var(--content-width);
+    margin: 0 auto;
+    padding: 0;
+    animation: slideUp var(--transition-slow) 0.15s both;
+}
+
+/* Module Cards Container */
+.module-cards {
+    display: grid;
+    /* Default: 4 columns for desktop */
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(10px, 2vw, 12px);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Individual Module Card */
+.module-card {
+    position: relative;
+    background: var(--bg-input);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    border-radius: 8px;
+    padding: clamp(12px, 3vw, 16px) clamp(6px, 2vw, 8px);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+    overflow: visible;
+    min-width: 0;
+    min-height: 140px; /* Fallback for older Safari */
+    aspect-ratio: 1 / 1.15;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.module-card:hover {
+    border-color: var(--green-primary);
+    background: rgba(74, 222, 128, 0.1);
+    box-shadow: 0 0 15px rgba(74, 222, 128, 0.3);
+}
+
+/* Module Icon */
+.module-icon {
+    width: clamp(28px, 6vw, 40px);
+    height: clamp(28px, 6vw, 40px);
+    margin-bottom: clamp(8px, 2vw, 16px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.module-icon .phantom-icon {
+    width: 100%;
+    height: 100%;
+    color: var(--green-primary);
+    fill: currentColor;
+    transition: all var(--transition-fast);
+}
+
+/* Module Label */
+.module-label {
+    font-family: var(--font-mono), monospace;
+    font-size: clamp(13px, 2.8vw, 18px);
+    font-weight: 700;
+    color: var(--green-primary);
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+    line-height: 1.2;
+}
+
+/* Module Mini Description */
+.module-mini-desc {
+    font-size: clamp(10px, 2vw, 13px);
+    font-weight: 400;
+    color: var(--text-secondary);
+    opacity: 0.85;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    word-break: break-word;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+    line-height: 1.3;
+}
+
+/* Hover Information Popup */
+.module-hover-info {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) scale(0.95);
+    margin-top: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--green-primary);
+    border-radius: 8px;
+    padding: 12px;
+    width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    pointer-events: none;
+}
+
+.module-card:hover .module-hover-info {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) scale(1);
+    pointer-events: auto;
+}
+
+/* Arrow pointer */
+.module-hover-info::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--green-primary);
+    border-left: 1px solid var(--green-primary);
+    transform: translateX(-50%) rotate(45deg);
+}
+
+/* Module Diagram Thumbnail */
+.module-diagram-thumb {
+    width: 100%;
+    height: 60px;
+    object-fit: contain;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 4px;
+}
+
+/* Module Details */
+.module-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+}
+
+.module-details strong {
+    font-family: var(--font-mono), monospace;
+    font-size: 12px;
+    color: var(--green-primary);
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.module-details span {
+    font-size: 11px;
+    color: var(--text-primary);
+    padding-left: 8px;
+    opacity: 0.9;
+}
+
+/* Active/Selected State */
+.module-card.active {
+    background: rgba(74, 222, 128, 0.15);
+    border-color: var(--green-primary);
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+}
+
+.module-card.active .module-icon {
+    color: var(--green-primary);
+    filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.6));
+}
+
+/* Position adjustments for edge cards */
+.module-card:nth-child(1) .module-hover-info {
+    left: 0;
+    transform: translateX(0) scale(0.95);
+}
+
+.module-card:nth-child(1):hover .module-hover-info {
+    transform: translateX(0) scale(1);
+}
+
+.module-card:nth-child(4) .module-hover-info {
+    left: auto;
+    right: 0;
+    transform: translateX(0) scale(0.95);
+}
+
+.module-card:nth-child(4):hover .module-hover-info {
+    transform: translateX(0) scale(1);
+}
+
+/* Touch Device Support */
+@media (hover: none) and (pointer: coarse) {
+    /* Disable hover effects on touch devices */
+    .module-card:hover {
+        background: var(--bg-input);
+        box-shadow: none;
+    }
+
+    /* Hide hover info on touch devices */
+    .module-hover-info {
+        display: none !important;
+    }
+}
+
+/* Loading animation for module cards */
+@keyframes moduleCardLoad {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.module-card {
+    animation: moduleCardLoad 0.4s ease-out backwards;
+}
+
+.module-card:nth-child(1) { animation-delay: 0.1s; }
+.module-card:nth-child(2) { animation-delay: 0.15s; }
+.module-card:nth-child(3) { animation-delay: 0.2s; }
+.module-card:nth-child(4) { animation-delay: 0.25s; }
+
+/* =========================
+   Responsive Grid System
+   ========================= */
+
+/* Tablet: 2 columns (480px - 767px) */
+@media (max-width: 767px) {
+    .module-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Adjust hover info position for 2-column layout */
+    .module-card:nth-child(odd) .module-hover-info {
+        left: 0;
+        transform: translateX(0) scale(0.95);
+    }
+
+    .module-card:nth-child(odd):hover .module-hover-info {
+        transform: translateX(0) scale(1);
+    }
+
+    .module-card:nth-child(even) .module-hover-info {
+        left: auto;
+        right: 0;
+        transform: translateX(0) scale(0.95);
+    }
+
+    .module-card:nth-child(even):hover .module-hover-info {
+        transform: translateX(0) scale(1);
+    }
+}
+
+/* Mobile: Keep 2 columns even on smallest screens */
+@media (max-width: 479px) {
+    .module-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: clamp(8px, 1.5vw, 10px);
+    }
+
+    /* Reduce card height on mobile */
+    .module-card {
+        aspect-ratio: 1 / 1.05;
+        padding: clamp(12px, 3vw, 16px) clamp(8px, 2vw, 10px);
+    }
+
+    /* Much larger icons for mobile - dominant visual element */
+    .module-icon {
+        width: clamp(36px, 9vw, 44px);
+        height: clamp(36px, 9vw, 44px);
+        margin-bottom: clamp(8px, 2vw, 12px);
+    }
+
+    /* Larger, bolder text for mobile readability */
+    .module-label {
+        font-size: clamp(15px, 3.5vw, 18px);
+        font-weight: 700;
+        margin-bottom: 4px;
+        letter-spacing: 0;
+    }
+
+    .module-mini-desc {
+        font-size: clamp(11px, 2.5vw, 13px);
+        opacity: 0.9;
+        font-weight: 400;
+    }
+
+    /* Adjust hover info for mobile 2-column */
+    .module-card:nth-child(odd) .module-hover-info {
+        left: 0;
+        transform: translateX(0) scale(0.95);
+    }
+
+    .module-card:nth-child(odd):hover .module-hover-info {
+        transform: translateX(0) scale(1);
+    }
+
+    .module-card:nth-child(even) .module-hover-info {
+        left: auto;
+        right: 0;
+        transform: translateX(0) scale(0.95);
+    }
+
+    .module-card:nth-child(even):hover .module-hover-info {
+        transform: translateX(0) scale(1);
+    }
+}

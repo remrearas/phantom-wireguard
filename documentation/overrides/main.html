@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include "partials/breadcrumbs.html" %}
+{{ super() }}
+{% endblock %}
+
+{% block extrahead %}
+{{ super() }}
+
+<!-- SEO Meta Tags -->
+{% if page %}
+<!--suppress ALL -->
+<meta content="{{ page.title }} - {{ config.site_name }}" name="title">
+<meta content="{{ page.meta.description | default(config.site_description, true) }}" name="description">
+{% if page.meta.keywords %}
+<meta content="{{ page.meta.keywords }}" name="keywords">
+{% endif %}
+{% if page.meta.author %}
+<meta content="{{ page.meta.author }}" name="author">
+{% endif %}
+
+<!-- Open Graph / Facebook -->
+<meta content="{{ page.meta['og:type'] | default('website', true) }}" property="og:type">
+<meta content="{{ page.canonical_url }}" property="og:url">
+<meta content="{{ page.meta['og:title'] | default(page.title ~ ' - ' ~ config.site_name, true) }}" property="og:title">
+<meta content="{{ page.meta['og:description'] | default(page.meta.description | default(config.site_description, true), true) }}" property="og:description">
+<meta content="{{ config.site_name }}" property="og:site_name">
+<meta content="{{ page.meta['og:image'] | default(config.site_url ~ 'assets/images/og-image.png', true) }}" property="og:image">
+<meta content="{{ page.meta['og:image:width'] | default('1200', true) }}" property="og:image:width">
+<meta content="{{ page.meta['og:image:height'] | default('630', true) }}" property="og:image:height">
+{% if page.meta['article:section'] %}
+<meta content="{{ page.meta['article:section'] }}" property="article:section">
+{% endif %}
+{% if page.meta['article:tag'] %}
+{% for tag in page.meta['article:tag'] %}
+<meta content="{{ tag }}" property="article:tag">
+{% endfor %}
+{% endif %}
+{% if page.meta.author %}
+<meta content="{{ page.meta.author }}" property="article:author">
+{% endif %}
+
+<!-- Twitter -->
+<meta content="{{ page.meta['twitter:card'] | default('summary_large_image', true) }}" name="twitter:card">
+<meta content="{{ page.canonical_url }}" name="twitter:url">
+<meta content="{{ page.meta['twitter:title'] | default(page.meta['og:title'] | default(page.title ~ ' - ' ~ config.site_name, true), true) }}" name="twitter:title">
+<meta content="{{ page.meta['twitter:description'] | default(page.meta['og:description'] | default(page.meta.description | default(config.site_description, true), true), true) }}" name="twitter:description">
+<meta content="{{ page.meta['twitter:image'] | default(page.meta['og:image'] | default(config.site_url ~ 'assets/images/og-image.png', true), true) }}" name="twitter:image">
+{% if page.meta['twitter:creator'] %}
+<meta content="{{ page.meta['twitter:creator'] }}" name="twitter:creator">
+{% endif %}
+
+<!-- Canonical URL -->
+<link href="{{ page.canonical_url }}" rel="canonical">
+
+<!-- Hreflang Configuration -->
+{%- set languages = [] -%}
+{%- for plugin_name, plugin_config in config.plugins.items() -%}
+{%- if 'i18n' in plugin_name|string -%}
+{%- for lang in plugin_config.config.languages -%}
+{%- set _ = languages.append({
+'code': lang.locale,
+'name': lang.name,
+'default': lang.default|default(false)
+}) -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endfor -%}
+
+<link data-current-url="{{ page.url }}"
+      data-languages='{{ languages|tojson }}'
+      data-site-url="{{ config.site_url }}"
+      href="#"
+      rel="hreflang-config">
+
+<script>
+    const configLink = document.querySelector('link[rel="hreflang-config"]');
+    window.hreflangConfig = {
+        siteUrl: configLink.dataset.siteUrl,
+        currentUrl: configLink.dataset.currentUrl,
+        languages: JSON.parse(configLink.dataset.languages)
+    };
+
+    // Trigger generation if function is available
+    if (window.generateHreflangLinks) {
+        window.generateHreflangLinks();
+    }
+</script>
+{% else %}
+<!-- Fallback for 404 and other pages without page object -->
+<meta content="{{ config.site_name }}" name="title">
+<meta content="{{ config.site_description }}" name="description">
+
+<!-- Open Graph / Facebook -->
+<meta content="website" property="og:type">
+<meta content="{{ config.site_url }}" property="og:url">
+<meta content="{{ config.site_name }}" property="og:title">
+<meta content="{{ config.site_description }}" property="og:description">
+<meta content="{{ config.site_name }}" property="og:site_name">
+<meta content="{{ config.site_url }}assets/images/og-image.png" property="og:image">
+<meta content="1200" property="og:image:width">
+<meta content="630" property="og:image:height">
+
+<!-- Twitter -->
+<meta content="summary_large_image" name="twitter:card">
+<meta content="{{ config.site_url }}" name="twitter:url">
+<meta content="{{ config.site_name }}" name="twitter:title">
+<meta content="{{ config.site_description }}" name="twitter:description">
+<meta content="{{ config.site_url }}assets/images/og-image.png" name="twitter:image">
+{% endif %}
+
+<!-- Phantom Documentation Kit Custom Theme -->
+<link href="{{ 'assets/stylesheets/theme.css' | url }}" rel="stylesheet">
+
+<!-- Font Awesome 6 -->
+<link href="{{ 'assets/vendor/fontawesome-all.min.css' | url }}" rel="stylesheet">
+
+<!-- Asciinema Player CSS (always loaded for styling) -->
+<link href="{{ 'assets/vendor/asciinema-player.min.css' | url }}" rel="stylesheet" type="text/css">
+
+<!-- LoadJS for lazy loading -->
+<script src="{{ 'assets/vendor/loadjs.min.js' | url }}"></script>
+
+<!-- Page-specific CSS support -->
+{% if page and page.meta and page.meta.extra_css %}
+{% for css in page.meta.extra_css %}
+<link href="{{ css | url }}" rel="stylesheet">
+{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+
+<!-- Breadcrumb scroll management -->
+<script src="{{ 'assets/javascripts/breadcrumb-scroll.js' | url }}"></script>
+
+<!-- Page-specific JavaScript support -->
+{% if page and page.meta and page.meta.extra_javascript %}
+{% for script in page.meta.extra_javascript %}
+<script src="{{ script | url }}"></script>
+{% endfor %}
+{% endif %}
+
+<script>
+    /* global loadjs */
+
+    // Define script URLs
+    const scripts = {
+        chart: "{{ 'assets/vendor/chart.umd.min.js' | url }}",
+        asciinema: "{{ 'assets/vendor/asciinema-player.min.js' | url }}"
+    };
+
+    // Initialize Phantom modules namespace
+    window.PhantomModules = window.PhantomModules || {};
+
+    // Load and initialize Chart.js when needed
+    function loadChartModule() {
+        if (!window.PhantomModules.chartLoaded) {
+            window.PhantomModules.chartLoaded = true;
+            loadjs(scripts.chart, 'chart');
+
+            loadjs.ready('chart', function () {
+                // Wait a bit for Chart.js to be fully initialized
+                setTimeout(function () {
+                    // Initialize charts after Chart.js is loaded
+                    if (window.PhantomModules.initChart) {
+                        window.PhantomModules.initChart();
+                    }
+                }, 100);
+            });
+        }
+    }
+
+    // Load and initialize Asciinema when needed
+    function loadAsciinemaModule() {
+        if (!window.PhantomModules.asciinemaLoaded) {
+            window.PhantomModules.asciinemaLoaded = true;
+            loadjs(scripts.asciinema, 'asciinema');
+
+            loadjs.ready('asciinema', function () {
+                // Initialize players after Asciinema is loaded
+                if (window.PhantomModules.initAsciinema) {
+                    window.PhantomModules.initAsciinema();
+                }
+            });
+        }
+    }
+
+    // Check and load modules on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function () {
+        // Check for chart containers
+        if (document.querySelector('.chart-container')) {
+            loadChartModule();
+        }
+
+        // Check for asciinema players
+        if (document.querySelector('.asciinema-player')) {
+            loadAsciinemaModule();
+        }
+    });
+</script>
+{% endblock %}

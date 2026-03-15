@@ -1,0 +1,12 @@
+[Unit]
+Description=Remove unauthorized files from deployment quarantine
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/bin/bash -c 'cd /securepath/incoming && for item in *; do [ -e "$item" ] || continue; [ "$item" = "deployment_signed.zip" ] && continue; [ -f "$item" ] && rm -f "$item"; [ -d "$item" ] && rm -rf "$item"; done'
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,261 @@
+/**
+ * Wizard Section Styles
+ * Compact deployment wizard section for Phantom WWW
+ */
+
+.wizard-section {
+    grid-area: wizard;
+    width: 100%;
+    max-width: var(--content-width);
+    margin: 0 auto;
+    padding: 10px 0;
+    overflow: hidden;
+    animation: slideUp var(--transition-slow) 0.3s both;
+}
+
+.wizard-container {
+    width: 100%;
+    background: var(--bg-overlay);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* Header with Icon */
+.wizard-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.wizard-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wizard-icon .phantom-icon {
+    width: 32px;
+    height: 32px;
+    fill: var(--green-primary);
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
+}
+
+.wizard-title {
+    font-family: 'Orbitron', monospace;
+    font-weight: 600;
+    font-size: 20px;
+    color: var(--green-primary);
+    margin: 0;
+    letter-spacing: 1px;
+    line-height: 1.2;
+}
+
+/* Features Strip */
+.wizard-features {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+}
+
+.wizard-features span {
+    color: var(--green-secondary);
+}
+
+.wizard-separator {
+    color: var(--green-primary);
+    opacity: 0.5;
+    font-weight: 400;
+}
+
+/* Buttons Container */
+.wizard-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+/* Wizard Button Styles */
+.wizard-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid var(--green-primary);
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-family: 'Orbitron', monospace;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--green-primary);
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+}
+
+.wizard-btn .phantom-icon {
+    width: 20px;
+    height: 20px;
+    fill: var(--green-primary);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+/* Primary Button (Web) */
+.wizard-btn-primary {
+    background: var(--green-primary);
+    color: var(--bg-primary);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.wizard-btn-primary .phantom-icon {
+    fill: var(--bg-primary);
+}
+
+.wizard-btn-primary:hover {
+    background: var(--green-secondary);
+    border-color: var(--green-secondary);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Secondary Button (Tor) */
+.wizard-btn-secondary {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.wizard-btn-secondary:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: var(--green-secondary);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Active/Click State */
+.wizard-btn:active {
+    transform: scale(0.95);
+}
+
+/* Glow Effect on Hover */
+.wizard-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.wizard-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Responsive - Tablet */
+@media (max-width: 768px) {
+    .wizard-section {
+        padding: 10px 0;
+    }
+
+    .wizard-container {
+        padding: 25px 20px;
+    }
+
+    .wizard-title {
+        font-size: 18px;
+    }
+
+    .wizard-features {
+        font-size: 12px;
+    }
+
+    .wizard-buttons {
+        gap: 15px;
+    }
+
+    .wizard-btn {
+        padding: 10px 20px;
+        font-size: 13px;
+    }
+
+    .wizard-btn .phantom-icon {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Responsive - Mobile */
+@media (max-width: 480px) {
+    .wizard-section {
+        padding: 10px 0;
+    }
+
+    .wizard-container {
+        padding: 20px 15px;
+    }
+
+    .wizard-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .wizard-icon .phantom-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .wizard-title {
+        font-size: 16px;
+        text-align: center;
+        line-height: 1.4;
+    }
+
+    .wizard-features {
+        flex-wrap: wrap;
+        font-size: 11px;
+        margin-bottom: 15px;
+    }
+
+    .wizard-buttons {
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .wizard-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+        font-size: 12px;
+    }
+
+    .wizard-btn .phantom-icon {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .wizard-container {
+        background: rgba(74, 222, 128, 0.02);
+    }
+}

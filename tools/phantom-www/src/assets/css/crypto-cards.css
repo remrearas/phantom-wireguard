@@ -1,0 +1,441 @@
+/* =========================
+   Crypto Donation Cards
+   ========================= */
+
+/* Donate Modal Specific Styles */
+.donate-detail {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+/* Donate Header */
+.donate-header {
+    text-align: center;
+    padding: 0 20px;
+}
+
+.donate-title {
+    font-family: var(--font-mono), monospace;
+    font-size: clamp(24px, 4vw, 32px);
+    font-weight: 700;
+    color: var(--green-primary);
+    margin-bottom: 16px;
+    letter-spacing: 2px;
+}
+
+.donate-subtitle {
+    font-size: clamp(14px, 2.5vw, 16px);
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    opacity: 0.9;
+}
+
+.donate-description {
+    font-size: clamp(13px, 2vw, 15px);
+    color: var(--text-secondary);
+    line-height: 1.6;
+    opacity: 0.85;
+}
+
+/* Donate Body */
+.donate-body {
+    width: 100%;
+}
+
+/* Crypto Cards Container */
+.crypto-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    width: 100%;
+    padding: 0 20px;
+}
+
+/* Individual Crypto Card */
+.crypto-card {
+    background: var(--bg-input);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    border-radius: 12px;
+    padding: 24px;
+    transition: all var(--transition-fast);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.crypto-card:hover {
+    border-color: var(--green-primary);
+    background: rgba(74, 222, 128, 0.05);
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.25);
+}
+
+/* Crypto Header */
+.crypto-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.crypto-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.crypto-icon .phantom-icon {
+    width: 100%;
+    height: 100%;
+    color: var(--green-primary);
+    fill: currentColor;
+    transition: all var(--transition-fast);
+}
+
+.crypto-card:hover .crypto-icon .phantom-icon {
+    filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.6));
+}
+
+.crypto-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.crypto-name {
+    font-family: var(--font-mono), monospace;
+    font-size: clamp(18px, 3vw, 22px);
+    font-weight: 700;
+    color: var(--green-primary);
+    letter-spacing: 1px;
+    margin: 0;
+}
+
+.crypto-network {
+    font-size: clamp(12px, 2vw, 14px);
+    color: var(--text-secondary);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+/* Crypto Address Container */
+.crypto-address-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-primary);
+    border: 1px solid rgba(74, 222, 128, 0.15);
+    border-radius: 8px;
+    padding: 12px 16px;
+    transition: all var(--transition-fast);
+    overflow: hidden;
+    min-width: 0;
+}
+
+.crypto-address-container:hover {
+    border-color: rgba(74, 222, 128, 0.3);
+}
+
+.crypto-address {
+    width: 100%;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(11px, 2vw, 13px);
+    color: var(--text-primary);
+    line-height: 1.5;
+    opacity: 0.9;
+    padding: 0;
+    margin: 0;
+
+    /* Scrollable address styling */
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(74, 222, 128, 0.3) transparent;
+}
+
+/* Custom scrollbar for WebKit browsers */
+.crypto-address::-webkit-scrollbar {
+    height: 4px;
+}
+
+.crypto-address::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 2px;
+}
+
+.crypto-address::-webkit-scrollbar-thumb {
+    background: rgba(74, 222, 128, 0.3);
+    border-radius: 2px;
+    transition: background 0.2s ease;
+}
+
+.crypto-address::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 222, 128, 0.5);
+}
+
+/* Crypto Copy Button */
+.crypto-copy-btn {
+    background: transparent;
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 6px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.crypto-copy-btn:hover {
+    background: rgba(74, 222, 128, 0.1);
+    border-color: var(--green-primary);
+    box-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
+}
+
+.crypto-copy-btn:active {
+    transform: scale(0.95);
+}
+
+.crypto-copy-btn .phantom-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--green-primary);
+    fill: currentColor;
+}
+
+/* Copy Success State */
+.crypto-copy-btn.copied {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: var(--green-primary);
+}
+
+.crypto-copy-btn.copied .phantom-icon {
+    color: var(--green-primary);
+    filter: drop-shadow(0 0 4px rgba(74, 222, 128, 0.6));
+}
+
+/* Crypto QR Container */
+.crypto-qr-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-primary);
+    border: 1px solid rgba(74, 222, 128, 0.15);
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 180px;
+}
+
+.crypto-qr-placeholder {
+    font-size: 14px;
+    color: var(--text-secondary);
+    opacity: 0.6;
+    text-align: center;
+}
+
+.crypto-qr-container img {
+    width: 100%;
+    max-width: 180px;
+    height: auto;
+    display: block;
+}
+
+/* Loading Animation */
+@keyframes cryptoCardLoad {
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.crypto-card {
+    animation: cryptoCardLoad 0.4s ease-out backwards;
+}
+
+.crypto-card:nth-child(1) { animation-delay: 0.1s; }
+.crypto-card:nth-child(2) { animation-delay: 0.15s; }
+
+/* =========================
+   Responsive Design
+   ========================= */
+
+/* Tablet & Mobile: Single Column */
+@media (max-width: 767px) {
+    .crypto-cards {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 0 16px;
+    }
+
+    .donate-header {
+        padding: 0 16px;
+    }
+
+    .crypto-card {
+        padding: 20px;
+    }
+
+    .crypto-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    /* Adjust crypto address max-width for tablets */
+    .crypto-address {
+        max-width: 300px;
+    }
+
+    .crypto-qr-container {
+        min-height: 150px;
+        padding: 16px;
+    }
+
+    .crypto-qr-container img {
+        max-width: 150px;
+    }
+}
+
+/* Mid-size Mobile Adjustments (480px - 767px) */
+@media (max-width: 767px) and (min-width: 480px) {
+    /* Optimize address container for mid-size screens */
+    .crypto-address-container {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px;
+        gap: 12px;
+    }
+
+    /* Better address width for mid-size screens */
+    .crypto-address {
+        max-width: 100%;
+        width: 100%;
+        font-size: 13px;
+        padding: 4px 0;
+    }
+
+    /* Full width copy button with text for mid-size screens */
+    .crypto-copy-btn {
+        width: 100%;
+        height: 44px;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    /* Add text to copy button for mid-size screens - Turkish */
+    [lang="tr"] .donate-detail .crypto-copy-btn::after {
+        content: "Adresi Kopyala";
+        font-size: 13px;
+        color: var(--green-primary);
+        font-family: inherit;
+    }
+
+    /* Add text to copy button for mid-size screens - English */
+    [lang="en"] .donate-detail .crypto-copy-btn::after {
+        content: "Copy Address";
+        font-size: 13px;
+        color: var(--green-primary);
+        font-family: inherit;
+    }
+}
+
+/* Small Mobile Adjustments */
+@media (max-width: 479px) {
+    .crypto-cards {
+        gap: 12px;
+        padding: 0 12px;
+    }
+
+    .donate-header {
+        padding: 0 12px;
+    }
+
+    .crypto-card {
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .crypto-header {
+        gap: 12px;
+    }
+
+    .crypto-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Mobile optimized address container */
+    .crypto-address-container {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    /* Full width address on mobile */
+    .crypto-address {
+        max-width: 100%;
+        width: 100%;
+        font-size: 12px;
+        padding: 4px 0;
+    }
+
+    /* Full width copy button on mobile */
+    .crypto-copy-btn {
+        width: 100%;
+        height: 40px;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    /* Add text to copy button on mobile - Turkish */
+    [lang="tr"] .donate-detail .crypto-copy-btn::after {
+        content: "Adresi Kopyala";
+        font-size: 12px;
+        color: var(--green-primary);
+        font-family: inherit;
+    }
+
+    /* Add text to copy button on mobile - English */
+    [lang="en"] .donate-detail .crypto-copy-btn::after {
+        content: "Copy Address";
+        font-size: 12px;
+        color: var(--green-primary);
+        font-family: inherit;
+    }
+
+    .crypto-copy-btn .phantom-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .crypto-qr-container {
+        min-height: 130px;
+        padding: 12px;
+    }
+
+    .crypto-qr-container img {
+        max-width: 130px;
+    }
+}
+
+/* Very Wide Screens: Limit Card Width */
+@media (min-width: 1440px) {
+    .crypto-cards {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+}

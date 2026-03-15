@@ -1,0 +1,33 @@
+name: Phantom-WG Retro - Integration
+
+on:
+  push:
+    branches:
+      - retro
+    paths-ignore:
+      - 'tools/**'
+      - 'recordings/**'
+      - 'documentation/**'
+      - 'assets/**'
+      - '.github/**'
+      - '.idea/**'
+      - '.gitignore'
+      - '**.md'
+      - 'LICENSE'
+      - 'THIRD_PARTY_LICENSES'
+  workflow_dispatch:
+
+jobs:
+  test-development-integration:
+    uses: ./.github/workflows/test-development-integration.yml
+    permissions:
+      contents: read
+    with:
+      session_id: "${{ github.run_id }}"
+
+  test-production-integration:
+    uses: ./.github/workflows/test-production-integration.yml
+    permissions:
+      contents: read
+    with:
+      session_id: "${{ github.run_id }}"

@@ -1,0 +1,32 @@
+# ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
+# ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
+# ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
+# ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
+# ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
+# ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+# Streamlit Configuration
+# Copyright (c) 2025 Rıza Emre ARAS
+
+[server]
+headless = true
+enableXsrfProtection = true
+port = 8501
+
+[browser]
+gatherUsageStats = false
+
+[client]
+showErrorDetails = false
+toolbarMode = "minimal"
+
+[theme]
+base = "dark"
+primaryColor = "#047857"
+backgroundColor = "#0F172A"
+secondaryBackgroundColor = "#1e293b"
+textColor = "#E5E7EB"
+font = "monospace"
+
+[runner]
+magicEnabled = false
+fastReruns = true

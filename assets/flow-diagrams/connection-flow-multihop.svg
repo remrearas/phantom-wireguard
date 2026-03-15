@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="30 78 920 144">
+  <defs>
+    <style>
+      :root {
+        --primary-color: #10B981; /* Ana renk - dilediğiniz rengi buraya yazın */
+        --secondary-color: #374151; /* İkincil renk */
+        --bg-color: #1F2937; /* Arka plan rengi */
+        --text-color: #9CA3AF; /* Metin rengi */
+      }
+
+      .line { stroke: var(--secondary-color); stroke-width: 2; fill: none; stroke-dasharray: 5,5; }
+      .node-bg { fill: var(--bg-color); }
+      .node-border { stroke: var(--secondary-color); stroke-width: 2; fill: none; }
+      .node-active { stroke: var(--primary-color); }
+      .text { fill: var(--text-color); font-family: monospace; font-size: 12px; font-weight: 600; }
+      .text-small { fill: var(--text-color); font-family: monospace; font-size: 10px; font-weight: 400; }
+      .icon { fill: var(--text-color); }
+      .icon-active { fill: var(--primary-color); }
+
+      /* Packet Animation */
+      @keyframes travel {
+        0% { offset-distance: 0%; opacity: 1; }
+        95% { opacity: 1; }
+        100% { offset-distance: 100%; opacity: 0; }
+      }
+
+      .packet {
+        offset-path: path('M 100 150 L 400 150 L 650 150 L 900 150');
+        animation: travel 4s ease-in-out infinite;
+        fill: var(--primary-color);
+      }
+    </style>
+  </defs>
+
+  <!-- Connection Lines -->
+  <line class="line" x1="100" y1="150" x2="400" y2="150"/>
+  <line class="line" x1="400" y1="150" x2="650" y2="150"/>
+  <line class="line" x1="650" y1="150" x2="900" y2="150"/>
+
+  <!-- Nodes -->
+
+  <!-- User Node -->
+  <g transform="translate(100, 150)">
+    <circle class="node-bg" r="30"/>
+    <circle class="node-border" r="30"/>
+    <path class="icon" d="M 0,-10 A 10,10 0 0,1 0,10 A 10,10 0 0,1 0,-10 M 0,-5 A 5,5 0 0,1 0,5 A 5,5 0 0,1 0,-5"/>
+    <text class="text" y="50" text-anchor="middle">You</text>
+    <text class="text-small" y="62" text-anchor="middle">(Client)</text>
+  </g>
+
+  <!-- Phantom Server -->
+  <g transform="translate(400, 150)">
+    <circle class="node-bg" r="35"/>
+    <circle class="node-active" r="35"/>
+    <!-- Ghost Icon Simplified -->
+    <path class="icon-active" d="M 0,-15 Q -12,-15 -12,-5 L -12,10 L -6,4 L 0,10 L 6,4 L 12,10 L 12,-5 Q 12,-15 0,-15"/>
+    <circle class="icon-active" cx="-5" cy="-2" r="2"/>
+    <circle class="icon-active" cx="5" cy="-2" r="2"/>
+    <text class="text" y="60" text-anchor="middle">Phantom</text>
+    <text class="text-small" y="72" text-anchor="middle">WireGuard Server</text>
+  </g>
+
+  <!-- Exit Node -->
+  <g transform="translate(650, 150)">
+    <circle class="node-bg" r="35"/>
+    <circle class="node-active" r="35"/>
+    <!-- Server Icon -->
+    <rect class="icon-active" x="-10" y="-12" width="20" height="6" rx="1"/>
+    <rect class="icon-active" x="-10" y="-4" width="20" height="6" rx="1"/>
+    <rect class="icon-active" x="-10" y="4" width="20" height="6" rx="1"/>
+    <text class="text" y="60" text-anchor="middle">Exit Node</text>
+  </g>
+
+  <!-- Target -->
+  <g transform="translate(900, 150)">
+    <circle class="node-bg" r="30"/>
+    <circle class="node-border" r="30"/>
+    <!-- Globe Icon -->
+    <circle class="icon" r="12" fill="none" stroke="var(--text-color)" stroke-width="2"/>
+    <ellipse class="icon" cx="0" cy="0" rx="4" ry="12" fill="none" stroke="var(--text-color)" stroke-width="1.5"/>
+    <line class="icon" x1="-12" y1="0" x2="12" y2="0" stroke="var(--text-color)" stroke-width="1.5"/>
+    <text class="text" y="50" text-anchor="middle">Internet</text>
+  </g>
+
+  <!-- Traveling Packet -->
+  <circle class="packet" r="6"/>
+</svg>

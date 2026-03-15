@@ -1,0 +1,25 @@
+{
+  "name": "phantom-vendor-builder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vendor dependency builder for Phantom Documentation Kit",
+  "author": "Rıza Emre ARAS",
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.5.1",
+    "asciinema-player": "^3.7.0",
+    "chart.js": "^4.4.1",
+    "loadjs": "^4.3.0"
+  },
+  "devDependencies": {
+    "cssnano": "^6.0.3",
+    "postcss": "^8.4.33",
+    "terser": "^5.27.0"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "clean": "rm -rf ../../overrides/assets/vendor/*"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

@@ -1,0 +1,24 @@
+[Unit]
+Description=Deployment Watcher
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/python3 /usr/local/bin/deployment-watcher.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=deployment-watcher
+
+# Environment
+Environment="PYTHONUNBUFFERED=1"
+
+# Security hardening
+PrivateTmp=no
+ProtectHome=no
+ProtectSystem=strict
+ReadWritePaths=/securepath /securepath/outputs /tmp /tmp/deployment /var/log /var/lock /opt
+
+[Install]
+WantedBy=multi-user.target

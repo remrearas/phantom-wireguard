@@ -1,0 +1,23 @@
+# Wizard Fragment Files Order
+
+## Step Order:
+01. token_step.py
+02. aup_step.py
+03. ssh_step.py
+04. provider_step.py
+05. region_step.py
+06. os_step.py
+07. flavor_step.py
+08. quote_step.py
+09. deployment_preview_step.py
+10. deployment_process_step.py
+11. complete_step.py
+
+## Library Files:
+lib/__init__.py
+lib/api.py
+lib/navigation.py
+lib/state_manager.py
+lib/ui.py
+lib/utils.py
+lib/wizard_controller.py

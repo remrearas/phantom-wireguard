@@ -1,0 +1,201 @@
+site_name: Phantom-WG Retro
+site_description: Phantom-WG Retro is a modular tool for setting up and managing WireGuard VPN infrastructure on your own server.
+site_author: Rıza Emre ARAS
+site_url: https://retro-docs.phantom.tc
+#use_directory_urls: false  # This creates .html files instead of directories
+
+theme:
+  name: material
+  custom_dir: overrides
+  palette:
+    - scheme: slate
+      primary: cyan
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+  features:
+    # - navigation.instant  # Removed - incompatible with i18n
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  font:
+    text: Roboto
+    code: Roboto Mono
+  icon:
+    logo: material/ghost
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      languages:
+        - locale: en
+          name: English
+          build: true
+          default: true
+        - locale: tr
+          name: Türkçe
+          build: true
+          nav_translations:
+            Home: Ana Sayfa
+            API Documentation: API Dokümantasyonu
+            Feature Showcase: Özellik Tanıtımı
+            Modules: Modüller
+            Core: Çekirdek (Core)
+            Add Client: İstemci Ekle
+            Remove Client: İstemci Kaldır
+            List Clients: İstemcileri Listele
+            Export Config: Yapılandırma Dışa Aktar
+            Server Status: Sunucu Durumu
+            Service Logs: Servis Logları
+            Latest Clients: Son İstemciler
+            Restart Service: Servisi Yeniden Başlat
+            Firewall Status: Güvenlik Duvarı Durumu
+            Tweak Settings: İnce Ayarlar
+            Change Subnet: Subnet Değiştir
+            DNS: DNS
+            Ghost: Ghost
+            Multihop: Multihop
+            Complete Workflow: Tam İş Akışı
+            Overview: Genel Bakış
+            Change DNS Servers: DNS Sunucularını Değiştir
+            Test DNS Servers: DNS Sunucularını Test Et
+            DNS Status: DNS Durumu
+            Get DNS Servers: DNS Sunucularını Al
+            Enable: Etkinleştir
+            Disable: Devre Dışı Bırak
+            Status: Durum
+            Casper Tool: Casper Aracı
+            Import VPN Config: VPN Yapılandırması İçe Aktar
+            Enable Multihop: Multihop Etkinleştir
+            Disable Multihop: Multihop Devre Dışı Bırak
+            List Exits: Çıkış Noktalarını Listele
+            Remove VPN Config: VPN Yapılandırmasını Kaldır
+            Test VPN: VPN Bağlantısını Test Et
+            Reset State: Durumu Sıfırla
+            Session Log: Oturum Günlüğü
+            Factory Reset: Fabrika Sıfırlama
+            Common Operations: Yaygın İşlemler
+            Advanced Usage: Gelişmiş Kullanım
+
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+      use_pygments: true
+      linenums: false
+      linenums_style: inline
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - toc:
+      permalink: true
+  - codehilite:
+      guess_lang: false
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tilde
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Feature Showcase:
+      - Modules:
+          - Core:
+              - Add Client: feature-showcase/modules/core/add-client.md
+              - Remove Client: feature-showcase/modules/core/remove-client.md
+              - List Clients: feature-showcase/modules/core/list-clients.md
+              - Export Config: feature-showcase/modules/core/export-client.md
+              - Server Status: feature-showcase/modules/core/server-status.md
+              - Service Logs: feature-showcase/modules/core/service-logs.md
+              - Latest Clients: feature-showcase/modules/core/recent-clients.md
+              - Restart Service: feature-showcase/modules/core/restart-service.md
+              - Firewall Status: feature-showcase/modules/core/firewall-status.md
+              - Tweak Settings: feature-showcase/modules/core/tweak-settings.md
+              - Change Subnet: feature-showcase/modules/core/change-subnet.md
+          - DNS:
+              - Complete Workflow: feature-showcase/modules/dns/compact.md
+          - Ghost:
+              - Complete Workflow: feature-showcase/modules/ghost/compact.md
+          - Multihop:
+              - Complete Workflow: feature-showcase/modules/multihop/compact.md
+  - API Documentation:
+      - Overview: api/index.md
+      - Modules:
+          - Core:
+              - Add Client: api/modules/core/add-client.md
+              - Remove Client: api/modules/core/remove-client.md
+              - List Clients: api/modules/core/list-clients.md
+              - Export Config: api/modules/core/export-client.md
+              - Server Status: api/modules/core/server-status.md
+              - Service Logs: api/modules/core/service-logs.md
+              - Latest Clients: api/modules/core/recent-clients.md
+              - Restart Service: api/modules/core/restart-service.md
+              - Firewall Status: api/modules/core/firewall-status.md
+              - Tweak Settings: api/modules/core/tweak-settings.md
+              - Change Subnet: api/modules/core/change-subnet.md
+          - DNS:
+              - Change DNS Servers: api/modules/dns/change-dns-servers.md
+              - Test DNS Servers: api/modules/dns/test-dns-servers.md
+              - DNS Status: api/modules/dns/dns-status.md
+              - Get DNS Servers: api/modules/dns/get-dns-servers.md
+          - Ghost:
+              - Enable: api/modules/ghost/enable.md
+              - Disable: api/modules/ghost/disable.md
+              - Status: api/modules/ghost/status.md
+              - Casper Tool: api/modules/ghost/casper.md
+          - Multihop:
+              - Import VPN Config: api/modules/multihop/import-vpn-config.md
+              - Enable Multihop: api/modules/multihop/enable-multihop.md
+              - Disable Multihop: api/modules/multihop/disable-multihop.md
+              - List Exits: api/modules/multihop/list-exits.md
+              - Remove VPN Config: api/modules/multihop/remove-vpn-config.md
+              - Status: api/modules/multihop/status.md
+              - Test VPN: api/modules/multihop/test-vpn.md
+              - Reset State: api/modules/multihop/reset-state.md
+              - Session Log: api/modules/multihop/get-session-log.md
+      - Factory Reset: api/factory-reset.md
+      - Common Operations: api/common-operations.md
+      - Advanced Usage: api/advanced-usage.md
+
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/remrearas
+    - icon: fontawesome/solid/envelope
+      link: mailto:r.emrearas@proton.me
+  generator: true
+
+extra_css:
+  - assets/stylesheets/theme.css
+  - assets/stylesheets/custom-components.css
+
+extra_javascript:
+  - assets/javascripts/code-badges.js
+  - assets/javascripts/breadcrumb-scroll.js
+  - assets/javascripts/hreflang-generator.js
+
+copyright: Copyright &copy; 2025 Rıza Emre ARAS <r.emrearas@proton.me>

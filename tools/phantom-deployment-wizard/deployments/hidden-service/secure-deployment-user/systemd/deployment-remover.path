@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch for unauthorized files in deployment quarantine
+Documentation=man:systemd.path(5)
+
+[Path]
+PathChanged=/securepath/incoming
+Unit=deployment-remover.service
+
+[Install]
+WantedBy=multi-user.target

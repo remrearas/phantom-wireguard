@@ -1,0 +1,114 @@
+name: Phantom-WG Retro - Development Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      session_id:
+        description: 'Session ID for test reports'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      session_id:
+        description: 'Session ID for test reports'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      test_result:
+        description: 'Test execution result'
+        value: ${{ jobs.test.outputs.result }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.test_runner.outputs.result }}
+      session_id: ${{ steps.test_runner.outputs.session_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
+        with:
+          python-version: '3.9'
+
+      - name: Verify Docker
+        run: |
+          docker version
+          docker info
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            dnsutils \
+            bind9-dnsutils
+          which dig || echo "dig command not found"
+          which nslookup || echo "nslookup command not found"
+
+      - name: Install Python Development Dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Setup Test Virtual Environment
+        run: |
+          sudo python -m venv /opt/phantom-test-venv
+          sudo /opt/phantom-test-venv/bin/python -m pip install --upgrade pip
+          sudo /opt/phantom-test-venv/bin/pip install -r requirements-dev.txt
+
+      - name: Run Integration Tests
+        id: test_runner
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+          INPUT_SESSION_ID: ${{ inputs.session_id }}
+        run: |
+          if [ -n "$INPUT_SESSION_ID" ]; then
+            SESSION_ID="$INPUT_SESSION_ID"
+          else
+            SESSION_ID="integration_$(echo "$GITHUB_SHA" | cut -c1-8)_$(date +%Y%m%d_%H%M%S)"
+          fi
+
+          echo "SESSION_ID=$SESSION_ID" >> $GITHUB_ENV
+          echo "session_id=$SESSION_ID" >> $GITHUB_OUTPUT
+
+          sudo -E /opt/phantom-test-venv/bin/python phantom/run_tests_coverage.py --session-id "$SESSION_ID"
+
+          TEST_EXIT_CODE=$?
+          echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_ENV
+
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            echo "result=success" >> $GITHUB_OUTPUT
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+          fi
+
+          exit $TEST_EXIT_CODE
+
+      - name: Collect test reports
+        if: always()
+        run: |
+          mkdir -p reports/development-integration
+          cp -r "phantom/reports/coverage/${SESSION_ID}/"* reports/development-integration/ 2>/dev/null || true
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: development-integration-${{ env.SESSION_ID }}
+          path: reports/development-integration/
+          retention-days: 90
+
+      - name: Set exit code
+        if: always()
+        run: exit $TEST_EXIT_CODE

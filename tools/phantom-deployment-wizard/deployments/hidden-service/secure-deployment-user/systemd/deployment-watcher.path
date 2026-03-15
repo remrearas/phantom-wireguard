@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch for deployment packages
+Documentation=man:systemd.path(5)
+
+[Path]
+PathChanged=/securepath/incoming/deployment_signed.zip
+Unit=deployment-watcher.service
+
+[Install]
+WantedBy=multi-user.target

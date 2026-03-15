@@ -1,0 +1,427 @@
+/* =========================
+   Phantom Print Styles
+   ========================= */
+
+@media print {
+    /* =========================
+       Page Setup
+       ========================= */
+    @page {
+        size: A4;
+        margin: 1.5cm;
+    }
+
+    /* =========================
+       Global Print Settings
+       ========================= */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    body {
+        overflow: visible !important;
+        position: static !important;
+        width: 100% !important;
+        /* Poster efekti için arka plan */
+        background: var(--bg-primary) !important;
+        color: var(--text-primary) !important;
+    }
+
+    /* Container ve Grid Hizalaması */
+    .container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .phantom-grid {
+        display: block !important;
+        grid-template-areas: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .grid-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto 20px auto !important;
+        padding: 0 !important;
+    }
+
+    /* =========================
+       Ana Sayfa Print (Modal kapalı)
+       ========================= */
+
+    /* Modal kapalıyken ana sayfa elemanları görünsün */
+    body:not(.lightbox-open) .container {
+        display: block !important;
+    }
+
+    body:not(.lightbox-open) .phantom-grid {
+        display: block !important;
+    }
+
+    /* Gizlenecek Elemanlar - Her durumda */
+    #pageLoader,
+    #copyBtn,
+    .nav-section,
+    footer.footer,
+    .slider-controls,
+    .lightbox-close,
+    .crypto-copy-btn,
+    .copy-code,
+    .wizard-section,
+    .language-switcher {
+        display: none !important;
+    }
+
+    /* Modal kapalıyken tüm modal'ları gizle */
+    body:not(.lightbox-open) .phantom-lightbox,
+    body:not(.lightbox-open) #donateModal {
+        display: none !important;
+    }
+
+    /* Logo Section - A4 Tam Ortalı */
+    .logo-section {
+        width: 100% !important;
+        text-align: center !important;
+        margin: 0 auto 30px auto !important;
+        page-break-after: avoid;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+
+    .logo-container {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+
+    .phantom-logo {
+        max-width: 400px !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 auto !important;
+    }
+
+    /* Install Section */
+    .install-section {
+        margin-bottom: 20px;
+        page-break-inside: avoid;
+    }
+
+    .install-label {
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .install-container {
+        border-radius: 6px;
+        padding: 12px;
+    }
+
+    .install-command {
+        font-size: 11px;
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    /* Module Cards */
+    .modules-section {
+        margin-bottom: 20px;
+    }
+
+    .module-cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+
+    .module-card {
+        border-radius: 6px;
+        padding: 12px 8px;
+        text-align: center;
+        page-break-inside: avoid;
+    }
+
+    .module-icon {
+        width: 32px;
+        height: 32px;
+        margin: 0 auto 8px;
+    }
+
+    .module-label {
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .module-mini-desc {
+        font-size: 9px;
+    }
+
+    /* Feature Slider - Sadece aktif slide */
+    .features-section {
+        margin-bottom: 20px;
+    }
+
+    .feature-slider {
+        width: 100%;
+    }
+
+    .slider-container {
+        transform: none !important;
+    }
+
+    .feature-slide {
+        display: none !important;
+    }
+
+    .feature-slide:first-child {
+        display: flex !important;
+        border-radius: 6px;
+        padding: 15px;
+        page-break-inside: avoid;
+    }
+
+    .feature-icon {
+        width: 40px;
+        height: 40px;
+        margin-right: 15px;
+    }
+
+    .feature-title {
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .feature-description {
+        font-size: 11px;
+        line-height: 1.6;
+    }
+
+    /* =========================
+       Modal Print (Modal açık)
+       ========================= */
+
+    /* Modal açıkken (body'de lightbox-open sınıfı varken) ana içeriği gizle */
+    body.lightbox-open .container,
+    body.lightbox-open footer,
+    body.lightbox-open .phantom-grid,
+    body.lightbox-open .nav-section,
+    body.lightbox-open .wizard-section {
+        display: none !important;
+    }
+
+    /* Modal açıkken donate modal'ı da gizle (eğer açık değilse) */
+    body.lightbox-open #donateModal:not(.active) {
+        display: none !important;
+    }
+
+    /* Modal açıkken sadece aktif modal görünsün */
+    body.lightbox-open .phantom-lightbox:not(.active) {
+        display: none !important;
+    }
+
+    /* Lightbox Full Width - Sadece modal içeriği */
+    body.lightbox-open .phantom-lightbox.active {
+        position: static !important;
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        background: transparent !important;
+    }
+
+    body.lightbox-open .phantom-lightbox.active .lightbox-overlay {
+        display: none !important;
+    }
+
+    body.lightbox-open .phantom-lightbox.active .lightbox-content {
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: none !important;
+        border: 1px solid var(--green-primary) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 10px 30px rgba(74, 222, 128, 0.2) !important;
+        /* Orijinal arka plan renklerini koru - poster efekti */
+        background: var(--bg-primary) !important;
+    }
+
+    body.lightbox-open .phantom-lightbox.active .lightbox-inner {
+        padding: 20px !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    /* Modal açıkken close button'u gizle */
+    body.lightbox-open .lightbox-close {
+        display: none !important;
+    }
+
+    /* Module Header */
+    .module-header {
+        text-align: center;
+        margin-bottom: 15px; /* 30px'den 15px'e düşürüldü */
+        padding-bottom: 8px; /* 15px'den 8px'e düşürüldü */
+        /* page-break-after kaldırıldı - gereksiz sayfa atlamasını önlemek için */
+        page-break-inside: avoid; /* Başlık bölünmesin */
+    }
+
+    .module-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0 0 6px 0; /* 8px'den 6px'e düşürüldü */
+        letter-spacing: 1px;
+        color: var(--green-primary); /* Poster efekti için yeşil başlık */
+    }
+
+    .module-subtitle {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--text-secondary); /* Alt başlık için ikincil renk */
+    }
+
+    /* Module Body */
+    .module-body h2 {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 15px 0 8px 0; /* Üst margin azaltıldı */
+        padding-bottom: 4px; /* Alt padding azaltıldı */
+        /* page-break-after: avoid kaldırıldı - sadece page-break-inside tutuldu */
+        page-break-inside: avoid; /* Başlık bölünmesin */
+        color: var(--green-primary); /* Poster efekti için renkli başlık */
+        border-bottom: 1px solid rgba(74, 222, 128, 0.2); /* Hafif bir alt çizgi */
+    }
+
+    .module-body h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 12px 0 6px 0; /* Margin'ler azaltıldı */
+        /* page-break-after: avoid kaldırıldı */
+        page-break-inside: avoid; /* Başlık bölünmesin */
+        color: var(--text-primary);
+    }
+
+    .module-body p {
+        font-size: 11px;
+        line-height: 1.6;
+        margin: 0 0 12px 0;
+        text-align: left;
+    }
+
+    .module-body strong {
+        font-weight: 700;
+    }
+
+    .module-body em {
+        font-style: italic;
+    }
+
+    /* Lists */
+    .module-body ul,
+    .module-body ol {
+        margin: 12px 0;
+        padding-left: 20px;
+    }
+
+    .module-body ul li,
+    .module-body ol li {
+        font-size: 11px;
+        line-height: 1.6;
+        margin: 6px 0;
+    }
+
+    /* Code Blocks */
+    .module-body pre {
+        border-radius: 4px;
+        padding: 12px;
+        page-break-inside: avoid;
+        margin: 15px 0;
+    }
+
+    .module-body pre code {
+        font-size: 10px;
+        line-height: 1.4;
+    }
+
+    .module-body code {
+        font-size: 10px;
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+
+    /* Links */
+    .module-body a {
+        text-decoration: underline;
+    }
+
+    .module-body a::after {
+        content: " (" attr(href) ")";
+        font-size: 9px;
+    }
+
+    /* Horizontal Rules */
+    .module-body hr {
+        margin: 20px 0;
+    }
+
+    /* Hero Images */
+    .module-hero-image {
+        page-break-inside: avoid;
+        margin-bottom: 20px;
+    }
+
+    .module-hero-image img {
+        max-width: 100%;
+    }
+
+    /* Description Container */
+    .module-description-container {
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 15px;
+        page-break-inside: avoid;
+    }
+
+    .module-description-container p {
+        font-size: 11px;
+    }
+
+    /* Tables */
+    .module-body table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 15px 0;
+        page-break-inside: avoid;
+    }
+
+    .module-body table thead th {
+        padding: 8px;
+        font-size: 10px;
+    }
+
+    .module-body table tbody td {
+        padding: 8px;
+        font-size: 10px;
+    }
+
+    /* Blockquotes */
+    .module-body blockquote {
+        padding-left: 15px;
+        margin: 15px 0;
+        page-break-inside: avoid;
+    }
+
+    .module-body blockquote p {
+        font-size: 10px;
+    }
+}

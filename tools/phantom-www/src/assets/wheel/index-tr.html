@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>Phantom-WG — Spin & Deploy</title>
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Phantom-WG — Spin & Deploy">
+    <meta name="description" content="Phantom-WG sunucu ve çıkış düğümü yapılandırmanız için gizlilik odaklı VPS sağlayıcılarını rastgele seçin. Kripto dostu hosting çarkı.">
+    <meta name="keywords" content="VPN, WireGuard, Spin & Deploy, kripto VPS, gizlilik hosting, Phantom-WG">
+    <meta name="author" content="Rıza Emre ARAS">
+    <meta name="robots" content="index, follow">
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://retro.phantom.tc/wheel/index-tr.html">
+    <meta property="og:title" content="Phantom-WG — Spin & Deploy">
+    <meta property="og:description" content="Phantom-WG sunucu ve çıkış düğümü yapılandırmanız için gizlilik odaklı VPS sağlayıcılarını rastgele seçin.">
+    <meta property="og:image" content="https://retro.phantom.tc/assets/images/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="tr_TR">
+    <meta property="og:site_name" content="Phantom-WG">
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://retro.phantom.tc/wheel/index-tr.html">
+    <meta name="twitter:title" content="Phantom-WG — Spin & Deploy">
+    <meta name="twitter:description" content="Phantom-WG sunucu ve çıkış düğümü yapılandırmanız için gizlilik odaklı VPS sağlayıcılarını rastgele seçin.">
+    <meta name="twitter:image" content="https://retro.phantom.tc/assets/images/og-image.png">
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://retro.phantom.tc/wheel/index-tr.html">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <!-- Theme -->
+    <meta name="theme-color" content="#10B981">
+    <!-- Wheel Styles -->
+    <link rel="stylesheet" href="assets/css/wheel.css">
+  </head>
+  <body>
+    <a href="#app" class="skip-link" data-i18n="skipLink">Çarka atla</a>
+    <main class="container" id="app">
+      <div class="title-area">
+        <h1 class="phantom-logo">PHANTOM <span>-WG</span></h1>
+        <div class="subtitle">Spin & Deploy</div>
+      </div>
+      <!-- Language Switcher -->
+      <div class="lang-switcher">
+        <a href="index-tr.html" class="lang-btn active">
+          <span class="lang-flag">
+            <svg viewBox="0 0 1200 800"><use href="assets/icons/sprite.svg#flag-tr"></use></svg>
+          </span> TR </a>
+        <a href="index.html" class="lang-btn">
+          <span class="lang-flag">
+            <svg viewBox="0 0 7410 3900"><use href="assets/icons/sprite.svg#flag-us"></use></svg>
+          </span> EN </a>
+      </div>
+      <div class="step-indicator" id="stepIndicator">
+        <span class="step-label" id="stepLabel1" data-i18n="stepLabel1">Server</span>
+        <div class="step-dot" id="stepDot1"></div>
+        <div class="step-line" id="stepLine1"></div>
+        <div class="step-dot" id="stepDot2"></div>
+        <span class="step-label" id="stepLabel2" data-i18n="stepLabel2">Exit</span>
+      </div>
+      <div class="current-step-title" id="currentStepTitle"></div>
+      <div class="start-screen" id="startScreen">
+        <button class="phantom-btn" onclick="startFlow()" data-i18n="start">BAŞLAT</button>
+        <a href="../" class="back-home"><span>&larr;</span> <span data-i18n="backHome">ANA SAYFAYA DÖN</span></a>
+        <a href="#" target="_blank" class="privacy-notice" data-i18n="privacyNotice" data-i18n-href="privacyHref">Gizlilik Bildirimi</a>
+      </div>
+      <div class="wheel-wrapper" id="wheelWrapper">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="840" height="840"></canvas>
+        <div class="center-hub">
+          <svg viewBox="0 0 24 24"><use href="assets/icons/sprite.svg#icon-checkmark"></use></svg>
+        </div>
+        <div class="tick-flash" id="tickFlash"></div>
+      </div>
+      <div class="spin-area" id="spinArea">
+        <button class="phantom-btn" id="spinBtn" onclick="spinWheel()" data-i18n="spin">ÇEVİR</button>
+        <div class="step-result">
+          <div class="step-result-name" id="stepResultName"></div>
+          <div class="step-result-meta" id="stepResultMeta"></div>
+        </div>
+      </div>
+      <div class="final-panel" id="finalPanel">
+        <div class="final-title" data-i18n="finalTitle">Yapılandırma Hazır</div>
+        <div class="final-cards">
+          <div class="final-card" id="finalCardServer">
+            <div class="final-card-role" data-i18n="serverRole">Server</div>
+            <div class="final-card-name" id="finalServerName">&mdash;</div>
+            <div class="final-card-crypto" id="finalServerCrypto"></div>
+            <div class="final-card-url" id="finalServerUrl"></div>
+          </div>
+          <div class="route-arrow" id="routeArrow">&rarr;</div>
+          <div class="final-card" id="finalCardExit">
+            <div class="final-card-role" data-i18n="exitNode">Çıkış Düğümü</div>
+            <div class="final-card-name" id="finalExitName">&mdash;</div>
+            <div class="final-card-crypto" id="finalExitCrypto"></div>
+            <div class="final-card-url" id="finalExitUrl"></div>
+          </div>
+        </div>
+        <button class="phantom-btn" onclick="resetFlow()" data-i18n="reset">SIFIRLA</button>
+      </div>
+    </main>
+    <script src="assets/js/console-branding.js"></script>
+    <script src="assets/js/i18n.js"></script>
+    <script src="assets/js/wheel.js"></script>
+  </body>
+</html>
