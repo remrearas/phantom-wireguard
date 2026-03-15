@@ -1,6 +1,6 @@
-# Phantom-WG
+# Phantom-WG Retro
 
-[![Release Workflow](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml/badge.svg)](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml)
+[![Release Workflow](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml/badge.svg?branch=retro)](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml)
 
 > [🇬🇧 English](README.md) | 🇹🇷 **Türkçe** | [🇸🇦 العربية](README_AR.md)
 
@@ -162,10 +162,10 @@ phantom-api multihop enable_multihop exit_name="vpn-exit"
 
 ## Dökümanlar
 
-| Döküman                                              | Açıklama                                |
-|------------------------------------------------------|-----------------------------------------|
+| Döküman                                                    | Açıklama                                |
+|------------------------------------------------------------|-----------------------------------------|
 | [API Dökümanı (TR)](https://retro-docs.phantom.tc/tr/api/) | Tüm API eylemlerinin detaylı açıklaması |
-| [Modül Mimarisi](phantom/modules/README_TR.md)       | Teknik mimari ve veri modelleri         |
+| [Modül Mimarisi](phantom/modules/README_TR.md)             | Teknik mimari ve veri modelleri         |
 
 ---
 

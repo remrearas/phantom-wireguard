@@ -4,9 +4,9 @@ Copyright (C) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Phantom-WG
+# Phantom-WG Retro
 
-[![Release Workflow](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml/badge.svg)](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml)
+[![Release Workflow](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml/badge.svg?branch=retro)](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml)
 
 > [🇬🇧 English](README.md) | [🇹🇷 Türkçe](README_TR.md) | 🇸🇦 **العربية**
 
@@ -167,10 +167,10 @@ phantom-api multihop enable_multihop exit_name="vpn-exit"
 
 ## الوثائق
 
-| الوثيقة                                          | الوصف                          |
-|--------------------------------------------------|--------------------------------|
+| الوثيقة                                                | الوصف                          |
+|--------------------------------------------------------|--------------------------------|
 | [API Documentation](https://retro-docs.phantom.tc/api) | مرجع تفصيلي لجميع إجراءات API  |
-| [Module Architecture](phantom/modules/README.md) | البنية التقنية ونماذج البيانات |
+| [Module Architecture](phantom/modules/README.md)       | البنية التقنية ونماذج البيانات |
 
 ---
 

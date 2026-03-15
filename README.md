@@ -1,6 +1,6 @@
-# Phantom-WG
+# Phantom-WG Retro
 
-[![Release Workflow](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml/badge.svg)](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml)
+[![Release Workflow](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml/badge.svg?branch=retro)](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml)
 
 > 🇬🇧 **English** | [🇹🇷 Türkçe](README_TR.md) | [🇸🇦 العربية](README_AR.md)
 
@@ -161,10 +161,10 @@ phantom-api multihop enable_multihop exit_name="vpn-exit"
 
 ## Documentation
 
-| Document                                         | Description                            |
-|--------------------------------------------------|----------------------------------------|
+| Document                                               | Description                            |
+|--------------------------------------------------------|----------------------------------------|
 | [API Documentation](https://retro-docs.phantom.tc/api) | Detailed reference for all API actions |
-| [Module Architecture](phantom/modules/README.md) | Technical architecture and data models |
+| [Module Architecture](phantom/modules/README.md)       | Technical architecture and data models |
 
 ---
 
