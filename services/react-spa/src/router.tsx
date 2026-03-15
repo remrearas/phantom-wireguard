@@ -34,6 +34,7 @@ const DocumentationPage = lazy(() => import('@pages/documentation/pages/index/Do
 const TeraziPage        = lazy(() => import('@pages/documentation/pages/terazi/TeraziPage'));
 const MultihopDocPage   = lazy(() => import('@pages/documentation/pages/multihop/MultihopDocPage'));
 const ApiDocPage        = lazy(() => import('@pages/documentation/pages/api/ApiDocPage'));
+const ArchitecturePage  = lazy(() => import('@pages/documentation/pages/architecture/ArchitecturePage'));
 
 // ── Route guards ──────────────────────────────────────────────────
 
@@ -100,6 +101,14 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<LoadingSpinner fullscreen />}>
             <DocumentationPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/documentation/architecture',
+        element: (
+          <Suspense fallback={<LoadingSpinner fullscreen />}>
+            <ArchitecturePage />
           </Suspense>
         ),
       },

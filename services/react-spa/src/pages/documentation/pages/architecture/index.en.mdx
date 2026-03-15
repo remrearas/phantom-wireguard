@@ -1,0 +1,207 @@
+import Mermaid from '@shared/components/visualization/Mermaid';
+import { InlineNotification } from '@carbon/react';
+
+# System Architecture
+
+***Phantom-WG*** is a WireGuard®-based VPN management platform. All components run within a Docker container architecture, and the core component ***Phantom Daemon*** communicates over Unix Domain Socket (UDS) — the daemon never exposes any TCP port directly to the internet.
+In the production topology, queries are forwarded to the daemon through a proxy layer. The actual workhorse, ***Phantom Daemon***, can be used in different scenarios — you can adapt and modify the architecture to fit your configuration, as long as you know how to communicate over UDS.
+
+---
+
+## Production Topology
+
+<Mermaid chart={`flowchart TD
+  B["Browser"] -->|"HTTPS :443"| N
+  subgraph Docker["Container Architecture"]
+    N["nginx\n(TLS)"]
+    N -->|"/auth/*"| A["auth-service\n(JWT)"]
+    N -->|"/*"| S["SPA\n(React)"]
+    A -->|"/api/* (Proxy) · UDS"| D["Phantom Daemon"]
+  end
+  subgraph WG["WireGuard :51820/udp"]
+    C1["Client 1"]
+    C2["Client 2"]
+    CN["Client N"]
+  end
+  WG -->|"UDP :51820"| D
+`} />
+
+Two independent entry points:
+
+<Mermaid chart={`flowchart LR
+  A[":443 HTTPS"] --> N["nginx"] --> AS["auth-service"] --> D["Phantom Daemon"]
+  B[":51820 UDP"] --> D
+`} />
+
+---
+
+## Bridge Architecture
+
+The daemon performs system-level operations through native bridges. The Python layer manages the business logic, while the bridges communicate directly with the kernel.
+
+<Mermaid chart={`flowchart TD
+  D["Phantom Daemon\n(Python)"]
+  D -->|"FFI"| WGB["wireguard-go-bridge\n(Go)"]
+  D -->|"FFI"| FWB["firewall-bridge\n(Rust)"]
+  WGB -->|"tun.CreateTUN"| TUN["/dev/net/tun\nWireGuard interfaces"]
+  FWB -->|"nftables API"| NFT["nftables\nKernel rules"]
+`} />
+
+| Bridge                  | Language | Responsibility                                                            |
+|-------------------------|----------|---------------------------------------------------------------------------|
+| **wireguard-go-bridge** | Go       | WireGuard userspace, TUN interface creation, peer management, UAPI protocol |
+| **firewall-bridge**     | Rust     | nftables rule groups, routing policy, atomic rule application              |
+
+---
+
+## Docker Compose Layout
+
+```yaml
+# phantom-daemon  ·  Production Compose
+# Topology:
+#   Internet → :443 (nginx, TLS) → auth-service:8443 → daemon (UDS)
+#   Internet → :51820/udp (WireGuard) → daemon
+
+services:
+  daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: phantom-daemon
+    restart: unless-stopped
+    volumes:
+      - phantom-sock:/var/run/phantom
+      - ./container-data/db:/var/lib/phantom/db
+      - ./container-data/state/db:/var/lib/phantom/state/db
+    secrets:
+      - wg_private_key
+      - wg_public_key
+    environment:
+      - PHANTOM_DB_DIR=/var/lib/phantom/db          # client/peer database
+      - PHANTOM_STATE_DIR=/var/lib/phantom/state/db  # runtime state database
+      - WIREGUARD_LISTEN_PORT=51820     # UDP listen port
+      - WIREGUARD_MTU=1420              # interface MTU
+      - WIREGUARD_KEEPALIVE=25          # persistent keepalive (seconds)
+      - WIREGUARD_ENDPOINT_V4=          # public IPv4 (required for clients)
+      - WIREGUARD_ENDPOINT_V6=          # public IPv6 (optional)
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    sysctls:
+      - net.ipv4.ip_forward=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "51820:51820/udp"
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: phantom-auth
+    restart: unless-stopped
+    depends_on:
+      - daemon
+    volumes:
+      - phantom-sock:/var/run/phantom
+      - ./container-data/auth-db:/var/lib/phantom/auth
+    secrets:
+      - auth_signing_key
+      - auth_verify_key
+    environment:
+      - PHANTOM_DAEMON_SOCKET=/var/run/phantom/daemon.sock
+      - AUTH_DB_DIR=/var/lib/phantom/auth      # SQLite auth.db location
+      - AUTH_SECRETS_DIR=/run/secrets          # signing/verify key directory
+      - AUTH_TOKEN_LIFETIME=86400              # JWT expiry (seconds, default: 24h)
+      - AUTH_MFA_TOKEN_LIFETIME=300            # MFA pending token (seconds, default: 5m)
+      - AUTH_INACTIVITY_TIMEOUT=1800           # session timeout (seconds, default: 30m)
+      - AUTH_RATE_LIMIT_WINDOW=60              # sliding window (seconds)
+      - AUTH_RATE_LIMIT_MAX=5                  # max attempts per window
+
+  nginx:
+    image: nginx:1-alpine
+    container_name: phantom-nginx
+    restart: unless-stopped
+    depends_on:
+      - auth-service
+    volumes:
+      - ./services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    secrets:
+      - tls_cert
+      - tls_key
+    ports:
+      - "443:443"
+
+secrets:
+  wg_private_key:
+    file: ./container-data/secrets/production/wg_private_key
+  wg_public_key:
+    file: ./container-data/secrets/production/wg_public_key
+  auth_signing_key:
+    file: ./container-data/secrets/production/auth_signing_key
+  auth_verify_key:
+    file: ./container-data/secrets/production/auth_verify_key
+  tls_cert:
+    file: ./container-data/secrets/production/tls_cert
+  tls_key:
+    file: ./container-data/secrets/production/tls_key
+
+volumes:
+  phantom-sock:
+```
+
+---
+
+## Request Lifecycle
+
+How an API request flows through the system:
+
+<Mermaid chart={`sequenceDiagram
+  participant B as Browser (SPA)
+  participant N as nginx (:443)
+  participant A as auth-service
+  participant D as daemon (UDS)
+
+  B->>N: HTTPS GET /api/core/wireguard
+  N->>A: Proxy /api/*
+  A->>A: Validate JWT (Bearer token)
+  A->>A: Audit log (proxy_request)
+  A->>D: UDS forward (daemon.sock)
+  D->>D: Process (WireGuard IPC / nftables API)
+  D-->>A: JSON response
+  A-->>N: JSON response
+  N-->>B: HTTPS response
+`} />
+
+<InlineNotification
+  kind="info"
+  title="Security layers."
+  subtitle="Every request passes through 3 layers: Nginx (TLS) → Auth Service (JWT) → Phantom Daemon (Unix Socket)"
+  hideCloseButton
+  lowContrast
+/>
+
+---
+
+## Databases
+
+All databases are in SQLite format. They are divided into two categories:
+
+### Persistent Data
+
+User data and configuration. Backup and migration are performed through these databases.
+
+| Database      | Owner        | Container Path        |
+|---------------|--------------|-----------------------|
+| **wallet.db** | daemon       | /var/lib/phantom/db   |
+| **exit.db**   | daemon       | /var/lib/phantom/db   |
+| **auth.db**   | auth-service | /var/lib/phantom/auth |
+
+### Runtime State
+
+Runtime data managed by bridges. Automatically created when the daemon starts, no intervention required.
+
+| Database        | Owner               | Container Path                                    |
+|-----------------|---------------------|---------------------------------------------------|
+| **device.db**   | wireguard-go-bridge | /var/lib/phantom/state/db/wireguard/\{ifname\}/ |
+| **firewall.db** | firewall-bridge     | /var/lib/phantom/state/db                       |

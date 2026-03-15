@@ -1,5 +1,6 @@
 import { CodeSnippet } from '@carbon/react';
 import CodeHighlight from '@shared/components/visualization/CodeHighlight';
+import SimpleTable from '@shared/components/data/SimpleTable';
 
 // noinspection JSUnusedGlobalSymbols
 export const components = {
@@ -27,4 +28,6 @@ export const components = {
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   code: (props: any) => <code {...props} />,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  table: (props: any) => <SimpleTable>{props.children}</SimpleTable>,
 };
