@@ -4,17 +4,8 @@ on:
   push:
     branches:
       - retro
-    paths-ignore:
-      - 'tools/**'
-      - 'recordings/**'
-      - 'documentation/**'
-      - 'assets/**'
-      - '.github/**'
-      - '.idea/**'
-      - '.gitignore'
-      - '**.md'
-      - 'LICENSE'
-      - 'THIRD_PARTY_LICENSES'
+    paths:
+      - 'phantom/**'
   workflow_dispatch:
 
 jobs:
