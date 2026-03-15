@@ -167,10 +167,11 @@ phantom-api multihop enable_multihop exit_name="vpn-exit"
 
 ## الوثائق
 
-| الوثيقة                                                | الوصف                          |
-|--------------------------------------------------------|--------------------------------|
-| [API Documentation](https://retro-docs.phantom.tc/api) | مرجع تفصيلي لجميع إجراءات API  |
-| [Module Architecture](phantom/modules/README.md)       | البنية التقنية ونماذج البيانات |
+| الوثيقة                                                                                          | الوصف                          |
+|--------------------------------------------------------------------------------------------------|--------------------------------|
+| [API Documentation](https://retro-docs.phantom.tc/api)                                           | مرجع تفصيلي لجميع إجراءات API  |
+| [Module Architecture](phantom/modules/README.md)                                                 | البنية التقنية ونماذج البيانات |
+| [macOS Client](https://github.com/ARAS-Workspace/phantom-wg/releases/tag/mac-v1.0.0)            | Phantom-WG Retro Mac Client v1.0.0 |
 
 ---
 
