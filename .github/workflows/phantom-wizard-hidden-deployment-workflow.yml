@@ -2,6 +2,8 @@ name: Phantom-WG Retro - Hidden Service Deployment
 
 on:
   push:
+    branches:
+      - retro
     paths:
       - 'tools/phantom-deployment-wizard/wizard/**'
       - 'tools/phantom-deployment-wizard/deployments/hidden-service/**'
