@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev/daemon
+  workflow_call:
 
 permissions:
   contents: read

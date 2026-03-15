@@ -10,9 +10,12 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Production packager — copies deployment-ready files into dist/phantom-daemon/.
+Production packager — copies deployment-ready files into dist/phantom-wg-modern/.
 
 Included:
+    SETUP                   Setup and usage guide
+    LICENSE                 AGPL-3.0 license
+    THIRD_PARTY_LICENSES    Dependency licenses
     Dockerfile              Production image build
     docker-compose.yml      Production compose stack
     requirements.txt        Python dependencies
@@ -20,12 +23,21 @@ Included:
     services/auth-service/  Auth service (full)
     services/nginx/         Nginx config
     services/react-spa/dist/ SPA build output only
-    tools/                  Dev & prod tooling (full)
+    tools/prod.sh           Production CLI
+    tools/prod.vars         Production variables
+    tools/lib/common.sh     Color helpers
+    tools/lib/keys.sh       WireGuard key generation
+    tools/lib/auth.sh       Auth service bootstrap
+    tools/lib/tls.sh        TLS certificate generation
+    tools/lib/compose.sh    Docker Compose operations
 
 Excluded:
     dev.Dockerfile, docker-compose-dev.yml, e2e_tests/, lib/,
     scripts/, tests/, typings/, container-data/,
     services/react-spa/src, services/react-spa/node_modules,
+    tools/dev.sh, tools/dev.vars, tools/lib/db.sh,
+    tools/lib/test.sh, tools/lib/spa.sh, tools/lib/stubs.sh,
+    tools/lib/openapi.sh, tools/lib/package.sh, tools/lib/helpers/,
     __pycache__, *.pyc, .gitkeep
 
 Usage:
@@ -41,9 +53,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DIST = ROOT / "dist"
-PKG_NAME = "phantom-daemon"
+PKG_NAME = "phantom-wg-modern"
 
 INCLUDE = [
+    "SETUP",
+    "LICENSE",
+    "THIRD_PARTY_LICENSES",
     "Dockerfile",
     "docker-compose.yml",
     "requirements.txt",
@@ -51,7 +66,13 @@ INCLUDE = [
     "services/auth-service",
     "services/nginx",
     "services/react-spa/dist",
-    "tools",
+    "tools/prod.sh",
+    "tools/prod.vars",
+    "tools/lib/common.sh",
+    "tools/lib/keys.sh",
+    "tools/lib/auth.sh",
+    "tools/lib/tls.sh",
+    "tools/lib/compose.sh",
 ]
 
 EXCLUDE_SUFFIXES = (".pyc", ".pyo")
@@ -102,8 +123,10 @@ def package(clean: bool = False) -> Path:
         print(f"  {label} ({count} files)")
 
     # Ensure shell scripts are executable
-    for sh in (pkg_dir / "tools").rglob("*.sh"):
-        sh.chmod(0o755)
+    tools_dir = pkg_dir / "tools"
+    if tools_dir.exists():
+        for sh in tools_dir.rglob("*.sh"):
+            sh.chmod(0o755)
 
     print(f"\nTotal: {total} files → {pkg_dir}")
     return pkg_dir

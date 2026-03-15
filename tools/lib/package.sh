@@ -10,5 +10,5 @@ cmd_generate_production_package() {
 
     bold "Generating production package..."
     python3 "${TOOLS_DIR}/lib/helpers/packager.py" --clean
-    green "Production package ready → dist/phantom-daemon/"
+    green "Production package ready → dist/phantom-wg-modern/"
 }

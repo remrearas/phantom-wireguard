@@ -1,0 +1,77 @@
+Phantom-WG Modern — Setup Guide
+=================================
+
+Prerequisites:
+  - Docker Engine 24+
+  - Docker Compose v2
+
+Directory Structure:
+  phantom-wg-modern/
+  ├── Dockerfile                  Daemon image (multi-stage build)
+  ├── docker-compose.yml          Production stack (3 services)
+  ├── requirements.txt            Python dependencies (pinned, hashed)
+  ├── SETUP                       This file
+  ├── LICENSE                     AGPL-3.0
+  ├── THIRD_PARTY_LICENSES        Dependency licenses
+  ├── phantom_daemon/             Daemon source
+  ├── services/
+  │   ├── auth-service/           Authentication service
+  │   ├── nginx/                  TLS reverse proxy config
+  │   └── react-spa/dist/         Web dashboard (pre-built)
+  └── tools/
+      ├── prod.sh                 Production CLI
+      ├── prod.vars               Environment variables
+      └── lib/                    Shell libraries
+
+Quick Start:
+  1. Setup (first time only):
+     ./tools/prod.sh setup
+
+     This generates:
+       - WireGuard server keypair
+       - Auth service keypair + admin account + database
+       - Self-signed TLS certificate
+
+     Credentials are written to:
+       container-data/secrets/production/
+       container-data/secrets/production/.admin_password
+
+  2. Configure endpoints:
+     Edit docker-compose.yml and set your server's public IP:
+       WIREGUARD_ENDPOINT_V4=203.0.113.1
+       WIREGUARD_ENDPOINT_V6=2001:db8::1    (optional)
+
+  3. Start:
+     ./tools/prod.sh up
+
+  4. Access:
+     Dashboard:  https://localhost
+     WireGuard:  UDP port 51820
+
+Commands:
+  ./tools/prod.sh help            Show all commands
+  ./tools/prod.sh setup           Full setup (keys + auth + TLS)
+  ./tools/prod.sh build           Build Docker images
+  ./tools/prod.sh up              Start stack
+  ./tools/prod.sh down            Stop stack
+  ./tools/prod.sh restart         Restart all services
+  ./tools/prod.sh logs            Follow logs
+  ./tools/prod.sh status          Container status
+  ./tools/prod.sh hard-reset      Wipe ALL data (destructive)
+
+Ports:
+  443/tcp     HTTPS (nginx → auth-service → daemon)
+  51820/udp   WireGuard
+
+Data Directories (created at runtime):
+  container-data/
+  ├── secrets/production/         Keys and certificates
+  ├── db/                         Client and peer databases
+  ├── state/db/                   Runtime state (bridges)
+  └── auth-db/                    Authentication database
+
+TLS Certificate:
+  Default is self-signed. To use your own certificate,
+  replace the files before starting the stack:
+    container-data/secrets/production/tls_cert
+    container-data/secrets/production/tls_key

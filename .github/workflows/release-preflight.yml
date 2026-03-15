@@ -1,0 +1,153 @@
+name: Release Preflight
+
+on:
+  push:
+    tags:
+      - 'package-preflight-v*'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  # ── Run all tests via reusable workflow ──────────────────────────
+  tests:
+    name: Tests
+    uses: ./.github/workflows/test-phantom-daemon.yml
+    permissions:
+      contents: read
+      actions: read
+
+  # ── Build package and create release ─────────────────────────────
+  release:
+    name: Package & Release
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: success()
+    permissions:
+      contents: write
+
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/package-preflight-v}"
+          echo "number=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=v${TAG}-preflight" >> "$GITHUB_OUTPUT"
+          echo "archive_name=phantom-wg-modern-v${TAG}-preflight" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '24'
+
+      - name: Install SPA dependencies
+        run: npm ci
+        working-directory: services/react-spa
+
+      - name: Build SPA
+        run: npm run build
+        working-directory: services/react-spa
+
+      - name: Run packager
+        run: python3 tools/lib/helpers/packager.py --clean
+
+      - name: Create release archive
+        env:
+          ARCHIVE_NAME: ${{ steps.version.outputs.archive_name }}
+        run: |
+          cd dist
+          zip -r "../${ARCHIVE_NAME}.zip" phantom-wg-modern/
+          cd ..
+          echo "Archive created:"
+          ls -lh "${ARCHIVE_NAME}.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          tag_name: ${{ steps.version.outputs.release_tag }}
+          name: Phantom-WG Modern ${{ steps.version.outputs.release_tag }}
+          body: |
+            ## Phantom-WG Modern ${{ steps.version.outputs.release_tag }}
+
+            > Preflight release — tests passed, pending manual verification.
+
+            ---
+
+            ### Quick Start
+
+            1. Extract the archive:
+            ```bash
+            unzip ${{ steps.version.outputs.archive_name }}.zip
+            cd phantom-wg-modern
+            ```
+
+            2. Setup (first time only):
+            ```bash
+            ./tools/prod.sh setup
+            ```
+
+            3. Configure your server's public IP:
+            ```bash
+            # Edit docker-compose.yml
+            WIREGUARD_ENDPOINT_V4=<your-server-ip>
+            ```
+
+            4. Start:
+            ```bash
+            ./tools/prod.sh up
+            ```
+
+            5. Access:
+            - Dashboard: `https://<your-server-ip>`
+            - WireGuard: UDP port `51820`
+
+            See `SETUP` file in the archive for full documentation.
+
+            ---
+
+            ### Hızlı Başlangıç
+
+            1. Arşivi çıkarın:
+            ```bash
+            unzip ${{ steps.version.outputs.archive_name }}.zip
+            cd phantom-wg-modern
+            ```
+
+            2. Kurulum (yalnızca ilk seferde):
+            ```bash
+            ./tools/prod.sh setup
+            ```
+
+            3. Sunucunuzun genel IP adresini yapılandırın:
+            ```bash
+            # docker-compose.yml dosyasını düzenleyin
+            WIREGUARD_ENDPOINT_V4=<sunucu-ip-adresiniz>
+            ```
+
+            4. Başlatma:
+            ```bash
+            ./tools/prod.sh up
+            ```
+
+            5. Erişim:
+            - Kontrol Paneli: `https://<sunucu-ip-adresiniz>`
+            - WireGuard: UDP port `51820`
+
+            Tam dokümantasyon için arşivdeki `SETUP` dosyasına bakın.
+
+          files: |
+            ${{ steps.version.outputs.archive_name }}.zip
+          draft: false
+          prerelease: true
+          generate_release_notes: false
