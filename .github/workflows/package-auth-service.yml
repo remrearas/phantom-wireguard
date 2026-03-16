@@ -1,9 +1,12 @@
 name: Package auth-service
 
 on:
-  push:
-    tags:
-      - 'auth-service-v*'
+  workflow_dispatch:
+    inputs:
+      version_id:
+        description: 'Version (e.g. 1.1.1)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -39,7 +42,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          VERSION="${GITHUB_REF_NAME#auth-service-v}"
+          VERSION="${{ inputs.version_id }}"
           if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "::error::Invalid version: $VERSION"
             exit 1
