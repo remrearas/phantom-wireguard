@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - dev/daemon
+    paths-ignore:
+      - 'www/**'
   workflow_call:
 
 permissions:

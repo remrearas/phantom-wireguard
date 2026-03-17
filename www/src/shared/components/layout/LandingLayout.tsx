@@ -58,7 +58,7 @@ const LandingLayout: React.FC = () => {
         </HeaderGlobalBar>
       </Header>
 
-      <Content id="main-content">
+      <Content id="main-content" className="landing-content">
         <Outlet />
       </Content>
 

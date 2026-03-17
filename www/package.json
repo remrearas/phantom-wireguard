@@ -14,7 +14,7 @@
     "routes": "node scripts/build_routes.js",
     "prerender": "node scripts/utils/prerender-utility/prerender.js",
     "prod": "npm run build && npm run routes && npm run prerender",
-    "deploy": "dotenv -e .env.cf -- wrangler pages deploy dist",
+    "deploy": "dotenv -e .env.cf -- wrangler pages deploy dist --branch main",
     "deploy:preview": "dotenv -e .env.cf -- wrangler pages deploy dist --branch preview"
   },
   "dependencies": {

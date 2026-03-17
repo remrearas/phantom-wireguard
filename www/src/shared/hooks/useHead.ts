@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 const MANAGED_ATTR = 'data-head';
 
@@ -28,8 +28,6 @@ interface HeadConfig {
  * Replaces react-helmet-async with zero dependencies.
  */
 export function useHead(config: HeadConfig) {
-  const managedElements = useRef<HTMLElement[]>([]);
-
   useEffect(() => {
     const head = document.head;
     const elements: HTMLElement[] = [];
@@ -42,11 +40,10 @@ export function useHead(config: HeadConfig) {
       document.documentElement.lang = config.lang;
     }
 
-    // ── Remove previous managed tags ───────────────────────────────
-    managedElements.current.forEach((el) => {
-      if (el.parentNode) el.parentNode.removeChild(el);
+    // ── Remove ALL managed tags (handles prerender→hydration + navigation) ──
+    head.querySelectorAll(`[${MANAGED_ATTR}]`).forEach((el) => {
+      el.parentNode?.removeChild(el);
     });
-    managedElements.current = [];
 
     // ── Meta tags ──────────────────────────────────────────────────
     if (config.meta) {
@@ -86,8 +83,6 @@ export function useHead(config: HeadConfig) {
         elements.push(el);
       }
     }
-
-    managedElements.current = elements;
 
     // ── Cleanup on unmount ─────────────────────────────────────────
     return () => {

@@ -3,7 +3,6 @@ import { getSiteConfig } from '@shared/config/seoConfig';
 import { generateTitle, generateUrl, generateImageUrl } from '@shared/utils/seo-utils';
 import { useLocale } from '@shared/hooks';
 import { useSEO } from '@shared/contexts/SEOContext';
-import { createOrganizationSchema } from '@shared/utils/schema-helpers';
 import { useHead } from '@shared/hooks/useHead';
 
 export interface SEOProps {
@@ -45,17 +44,7 @@ const SEO: React.FC<SEOProps> = ({
     });
   }, [fullTitle, finalDescription, path, locale, updateMetadata]);
 
-  const builtInSchemas = useMemo(() => {
-    const logoFullUrl = siteConfig.logo.startsWith('http')
-      ? siteConfig.logo
-      : `${siteConfig.url}${siteConfig.logo}`;
-    return [createOrganizationSchema(logoFullUrl, locale)];
-  }, [locale, siteConfig]);
-
-  const allSchemas = useMemo(
-    () => [...builtInSchemas, ...propSchemas],
-    [builtInSchemas, propSchemas]
-  );
+  const allSchemas = propSchemas;
 
   const meta = useMemo(() => [
     { name: 'title', content: fullTitle },

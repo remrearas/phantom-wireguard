@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useLocale } from '@shared/hooks';
 import { getSiteConfig } from '@shared/config/seoConfig';
 import SEO from '@shared/components/content/SEO';
-import { createSoftwareApplicationSchema } from '@shared/utils/schema-helpers';
+import { createOrganizationSchema, createSoftwareApplicationSchema } from '@shared/utils/schema-helpers';
 import Hero from '@shared/components/ui/Hero';
 import type { HeroContent } from '@shared/components/ui/Hero';
 
@@ -25,7 +25,12 @@ const LandingPage: React.FC = () => {
   const meta = META_MAP[locale] || META_MAP.en;
   const heroContent = HERO_MAP[locale] || HERO_MAP.en;
 
+  const logoUrl = siteConfig.logo.startsWith('http')
+    ? siteConfig.logo
+    : `${siteConfig.url}${siteConfig.logo}`;
+
   const schemas = useMemo(() => [
+    createOrganizationSchema(logoUrl, locale),
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
@@ -34,7 +39,7 @@ const LandingPage: React.FC = () => {
       url: siteConfig.url,
     },
     createSoftwareApplicationSchema(locale),
-  ], [siteConfig, meta, locale]);
+  ], [siteConfig, meta, locale, logoUrl]);
 
   return (
     <>

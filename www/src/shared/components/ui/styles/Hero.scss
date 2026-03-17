@@ -3,21 +3,31 @@
 @use '@carbon/react/scss/type/index' as type;
 @use '@carbon/react/scss/breakpoint' as bp;
 
+// Landing Content — flex container so Hero fills remaining viewport space
+.landing-content.cds--content {
+  display: flex;
+  flex-direction: column;
+}
+
 .hero-section {
-  min-height: calc(100vh - 3rem);
+  flex: 1;
   display: flex;
   align-items: center;
   background: linear-gradient(135deg,
     var(--cds-layer-01) 0%,
     var(--cds-layer-accent-01) 100%
   );
-  padding: spacing.$spacing-10 0;
+  padding: spacing.$spacing-07 0;
   position: relative;
   overflow: hidden;
   transition: background 0.25s ease;
 
+  // Prevent excessive stretch on very tall monitors (4K / ultrawide)
+  max-height: calc(100vh - 12rem);
+
   @include bp.breakpoint-down(md) {
-    min-height: auto;
+    flex: none;
+    max-height: none;
     padding: spacing.$spacing-08 0;
   }
 }
@@ -29,7 +39,7 @@
 }
 
 .hero-content {
-  padding: spacing.$spacing-07 0;
+  padding: spacing.$spacing-05 0;
   animation: fadeInUp 0.8s ease-out;
 
   // Icon sits on top on tablet/mobile — center content below it
@@ -89,6 +99,7 @@
 
   @include bp.breakpoint-down(xlg) {
     justify-content: center;
+    width: 100%;
   }
 
   @include bp.breakpoint-down(md) {
@@ -109,10 +120,10 @@
     background: var(--cds-layer-hover-01);
   }
 
-  // Tablet: let tiles breathe
+  // Tablet: stretch tiles to fill available width
   @include bp.breakpoint-between(md, xlg) {
-    min-width: 12rem;
-    max-width: 18rem;
+    min-width: 0;
+    max-width: none;
   }
 
   @include bp.breakpoint-down(md) {
