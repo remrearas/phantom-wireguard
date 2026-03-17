@@ -1,0 +1,20 @@
+{
+  "headerNav": [
+    { "label": "Homepage", "href": "/" },
+    { "label": "Documentation", "href": "/docs" },
+    { "label": "GitHub", "href": "https://github.com/ARAS-Workspace/phantom-wg", "external": true }
+  ],
+  "sideNav": [
+    { "label": "Introduction", "href": "/docs" },
+    {
+      "label": "Architecture",
+      "defaultExpanded": true,
+      "children": [
+        { "label": "System Architecture", "href": "/docs/architecture" },
+        { "label": "Terazi Pool", "href": "/docs/architecture/terazi" },
+        { "label": "Multihop", "href": "/docs/architecture/multihop" }
+      ]
+    },
+    { "label": "API Reference", "href": "/docs/api" }
+  ]
+}

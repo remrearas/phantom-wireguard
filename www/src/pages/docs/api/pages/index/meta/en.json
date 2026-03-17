@@ -1,0 +1,6 @@
+{
+  "seo": {
+    "title": "API Reference",
+    "description": "Technical reference for the endpoints served by Phantom Daemon over Unix Domain Socket (UDS)."
+  }
+}

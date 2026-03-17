@@ -1,0 +1,6 @@
+{
+  "seo": {
+    "title": "API Referansı",
+    "description": "Phantom Daemon'un Unix Domain Socket (UDS) üzerinden sunduğu uç noktaların teknik referansıdır."
+  }
+}
