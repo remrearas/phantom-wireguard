@@ -56,7 +56,7 @@ _bootstrap_env() {
             exit 1
         fi
     else
-        dim ".env.daemon already exists, skipping."
+        echo "  .env.daemon already exists, skipping."
     fi
 
     if [[ ! -f "$root/.env.auth-service" ]]; then
@@ -68,7 +68,7 @@ _bootstrap_env() {
             exit 1
         fi
     else
-        dim ".env.auth-service already exists, skipping."
+        echo "  .env.auth-service already exists, skipping."
     fi
 }
 
