@@ -70,7 +70,7 @@ const SimpleTable: React.FC<SimpleTableProps> = ({ children }) => {
   return (
     <DataTable rows={rows} headers={headers}>
       {({ rows, headers, getTableProps, getHeaderProps, getRowProps }: any) => (
-        <TableContainer>
+        <TableContainer className="simple-table">
           <Table {...getTableProps()}>
             <TableHead>
               <TableRow>

@@ -15,6 +15,7 @@ import ContentEn from './index.en.mdx';
 const META_MAP = { en: metaEn, tr: metaTr };
 const CONTENT_MAP: Record<string, React.ComponentType> = { tr: ContentTr, en: ContentEn };
 
+// noinspection DuplicatedCode
 const ArchitecturePage: React.FC = () => {
   const { locale } = useLocale();
   const { pathname } = useLocation();

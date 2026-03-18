@@ -13,6 +13,10 @@ Technical reference for the endpoints served by ***Phantom Daemon*** over Unix D
   A -->|"UDS"| D["Phantom Daemon"]
 `} />
 
+<Mermaid chart={`flowchart LR
+  Q["Request"] -->|"UDS · daemon.sock"| D["Phantom Daemon"]
+`} />
+
 <InlineNotification
   kind="info"
   title="Modular Architecture"

@@ -13,6 +13,10 @@ import { InlineNotification } from '@carbon/react';
   A -->|"UDS"| D["Phantom Daemon"]
 `} />
 
+<Mermaid chart={`flowchart LR
+  Q["Sorgu"] -->|"UDS · daemon.sock"| D["Phantom Daemon"]
+`} />
+
 <InlineNotification
   kind="info"
   title="Modüler Mimari"

@@ -1,56 +1,21 @@
 import Mermaid from '@shared/components/visualization/Mermaid';
 import { InlineNotification } from '@carbon/react';
+import ContentTabs from '@shared/components/content/ContentTabs';
+import ProductionTopology from './data/container-architecture/production-topology/index.mdx';
+import NginxTab from './data/container-architecture/nginx/index.mdx';
+import AuthServiceTab from './data/container-architecture/auth-service/index.mdx';
+import PhantomDaemonTab from './data/container-architecture/phantom-daemon/index.mdx';
 
 # Sistem Mimarisi
 
-***Phantom-WG***, WireGuard® tabanlı bir VPN yönetim platformudur. Tüm bileşenler Docker container yapısı içerisinde çalışır ve asıl işi yapan ***Phantom Daemon*** Unix Domain Socket (UDS) üzerinden haberleşir — daemon hiçbir TCP portunu doğrudan internete açmaz.
-Üretim topolojisindeki yapı üzerinde daemon tarafına sorgu proxy katmanı ile iletilmektedir. Asıl işi yapan parça ***Phantom Daemon***, senaryolarınızda farklı biçimlerde de kullanılabilir, UDS üzerinden nasıl haberleşeceğini bildiğiniz yapıyı konfigürasyonunuza göre esnetebilir, değiştirebilirsiniz.
+***Phantom-WG***, WireGuard® tabanlı bir VPN yönetim platformudur. Tüm bileşenler Docker container yapısı içerisinde çalışır ve asıl işi yapan ***Phantom Daemon*** Unix Domain Socket (UDS) üzerinden haberleşir.
 
----
-
-## Üretim Topolojisi
-
-<Mermaid chart={`flowchart TD
-  B["Tarayıcı"] -->|"HTTPS :443"| N
-  subgraph Docker["Container Architecture"]
-    N["nginx\n(TLS)"]
-    N -->|"/auth/*"| A["auth-service\n(JWT)"]
-    N -->|"/*"| S["SPA\n(React)"]
-    A -->|"/api/* (Proxy) · UDS"| D["Phantom Daemon"]
-  end
-  subgraph WG["WireGuard :51820/udp"]
-    C1["İstemci 1"]
-    C2["İstemci 2"]
-    CN["İstemci N"]
-  end
-  WG -->|"UDP :51820"| D
-`} />
-
-İki bağımsız giriş noktası:
-
-<Mermaid chart={`flowchart LR
-  A[":443 HTTPS"] --> N["nginx"] --> AS["auth-service"] --> D["Phantom Daemon"]
-  B[":51820 UDP"] --> D
-`} />
-
----
-
-## Bridge Mimarisi
-
-Daemon, sistem düzeyindeki işlemleri native bridge'ler aracılığıyla gerçekleştirir. Python katmanı iş mantığını yönetir, bridge'ler ise kernel ile doğrudan iletişim kurar.
-
-<Mermaid chart={`flowchart TD
-  D["Phantom Daemon\n(Python)"]
-  D -->|"FFI"| WGB["wireguard-go-bridge\n(Go)"]
-  D -->|"FFI"| FWB["firewall-bridge\n(Rust)"]
-  WGB -->|"tun.CreateTUN"| TUN["/dev/net/tun\nWireGuard arayüzleri"]
-  FWB -->|"nftables API"| NFT["nftables\nKernel kuralları"]
-`} />
-
-| Bridge                  | Dil  | Sorumluluk                                                               |
-|-------------------------|------|--------------------------------------------------------------------------|
-| **wireguard-go-bridge** | Go   | WireGuard userspace, TUN arayüz oluşturma, peer yönetimi, UAPI protokolü |
-| **firewall-bridge**     | Rust | nftables kural grupları, routing policy, atomik kural uygulaması         |
+<ContentTabs contained={false} tabs={[
+  { label: 'Üretim Topolojisi', content: ProductionTopology },
+  { label: 'Nginx (phantom-nginx)', content: NginxTab },
+  { label: 'Auth Service (phantom-auth)', content: AuthServiceTab },
+  { label: 'Daemon (phantom-daemon)', content: PhantomDaemonTab }
+]} />
 
 ---
 
@@ -180,6 +145,25 @@ Bir API isteğinin sistemden geçiş süreci:
   hideCloseButton
   lowContrast
 />
+
+---
+
+## Bridge Mimarisi
+
+Daemon, sistem düzeyindeki işlemleri native bridge'ler aracılığıyla gerçekleştirir. Python katmanı iş mantığını yönetir, bridge'ler ise kernel ile doğrudan iletişim kurar.
+
+<Mermaid chart={`flowchart TD
+  D["Phantom Daemon\n(Python)"]
+  D -->|"FFI"| WGB["wireguard-go-bridge\n(Go)"]
+  D -->|"FFI"| FWB["firewall-bridge\n(Rust)"]
+  WGB -->|"tun.CreateTUN"| TUN["/dev/net/tun\nWireGuard arayüzleri"]
+  FWB -->|"nftables API"| NFT["nftables\nKernel kuralları"]
+`} />
+
+| Bridge                  | Dil  | Sorumluluk                                                               |
+|-------------------------|------|--------------------------------------------------------------------------|
+| **wireguard-go-bridge** | Go   | WireGuard userspace, TUN arayüz oluşturma, peer yönetimi, UAPI protokolü |
+| **firewall-bridge**     | Rust | nftables kural grupları, routing policy, atomik kural uygulaması         |
 
 ---
 
