@@ -4,11 +4,6 @@
       "label": "Dashboard",
       "href": "/",
       "roles": ["admin", "superadmin"]
-    },
-    {
-      "label": "Documentation",
-      "href": "/documentation",
-      "roles": ["admin", "superadmin"]
     }
   ],
   "sideNav": [

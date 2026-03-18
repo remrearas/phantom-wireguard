@@ -4,11 +4,6 @@
       "label": "Panel",
       "href": "/",
       "roles": ["admin", "superadmin"]
-    },
-    {
-      "label": "Dokümantasyon",
-      "href": "/documentation",
-      "roles": ["admin", "superadmin"]
     }
   ],
   "sideNav": [

@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { useAuth } from '@shared/contexts/AuthContext';
 import LoadingSpinner from '@shared/components/ui/LoadingSpinner';
@@ -28,13 +28,6 @@ import DnsPage from '@pages/vpn/dns/pages/index/DnsPage';
 import NetworkPage from '@pages/vpn/network/pages/index/NetworkPage';
 import BackupPage from '@pages/vpn/backup/pages/index/BackupPage';
 import MultihopPage from '@pages/vpn/multihop/pages/index/MultihopPage';
-
-// ── documentation (lazy — Mermaid + shiki bundle ayrı chunk'ta) ──
-const DocumentationPage = lazy(() => import('@pages/documentation/pages/index/DocumentationPage'));
-const TeraziPage        = lazy(() => import('@pages/documentation/pages/terazi/TeraziPage'));
-const MultihopDocPage   = lazy(() => import('@pages/documentation/pages/multihop/MultihopDocPage'));
-const ApiDocPage        = lazy(() => import('@pages/documentation/pages/api/ApiDocPage'));
-const ArchitecturePage  = lazy(() => import('@pages/documentation/pages/architecture/ArchitecturePage'));
 
 // ── Route guards ──────────────────────────────────────────────────
 
@@ -95,47 +88,6 @@ const router = createBrowserRouter([
       { path: '/vpn/backup', element: <BackupPage /> },
       { path: '/vpn/multihop', element: <MultihopPage /> },
 
-      // documentation
-      {
-        path: '/documentation',
-        element: (
-          <Suspense fallback={<LoadingSpinner fullscreen />}>
-            <DocumentationPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: '/documentation/architecture',
-        element: (
-          <Suspense fallback={<LoadingSpinner fullscreen />}>
-            <ArchitecturePage />
-          </Suspense>
-        ),
-      },
-      {
-        path: '/documentation/terazi',
-        element: (
-          <Suspense fallback={<LoadingSpinner fullscreen />}>
-            <TeraziPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: '/documentation/multihop',
-        element: (
-          <Suspense fallback={<LoadingSpinner fullscreen />}>
-            <MultihopDocPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: '/documentation/api',
-        element: (
-          <Suspense fallback={<LoadingSpinner fullscreen />}>
-            <ApiDocPage />
-          </Suspense>
-        ),
-      },
     ],
   },
 

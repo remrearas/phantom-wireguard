@@ -540,33 +540,6 @@
       "close": "Kapat"
     }
   },
-  "documentation": {
-    "poolSimulator": {
-      "assign": "İstemci Ekle",
-      "revoke": "İstemci Kaldır",
-      "cidrSim": "CIDR Değişikliği",
-      "assigned": "atanmış",
-      "free": "boş",
-      "caption": "Simüle wallet.db users tablosu — alt ağ",
-      "slots": "kullanılabilir slot",
-      "phaseBackup": "İstemciler yedekleniyor",
-      "phaseClear": "Havuz temizleniyor",
-      "phaseRebuild": "Yeni alt ağla yeniden oluşturuluyor",
-      "phaseReassign": "İstemciler yeniden atanıyor",
-      "phaseDone": "Tamamlandı",
-      "cinemaStart": "CIDR değişikliği simülasyonu başladı",
-      "cinemaStage": "Aşama",
-      "cinemaFillStart": "Havuz kapasiteye dolduruluyor",
-      "cinemaFull": "Havuz dolu — CIDR genişlemesi tetikleniyor",
-      "cinemaSubnet": "Sahneleme alt ağı",
-      "cinemaAddClients": "demo istemci eklendi",
-      "cinemaBackedUp": "istemci yedeklendi",
-      "cinemaCleared": "Havuz temizlendi",
-      "cinemaNewSubnet": "Yeni havuz hazır —",
-      "cinemaRestore": "Orijinal durumunuz geri yükleniyor",
-      "cinemaDone": "Bitti — durumunuz geri yüklendi"
-    }
-  },
   "apiDoc": {
     "loading": "API spesifikasyonu yükleniyor...",
     "error": "API spesifikasyonu yüklenemedi.",

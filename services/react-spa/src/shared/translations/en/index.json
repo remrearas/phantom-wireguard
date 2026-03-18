@@ -540,33 +540,6 @@
       "close": "Close"
     }
   },
-  "documentation": {
-    "poolSimulator": {
-      "assign": "Add Client",
-      "revoke": "Revoke Client",
-      "cidrSim": "CIDR Change",
-      "assigned": "assigned",
-      "free": "free",
-      "caption": "Simulated wallet.db users table — subnet",
-      "slots": "usable slots",
-      "phaseBackup": "Backing up clients",
-      "phaseClear": "Clearing pool",
-      "phaseRebuild": "Rebuilding with new subnet",
-      "phaseReassign": "Reassigning clients",
-      "phaseDone": "Complete",
-      "cinemaStart": "CIDR change simulation started",
-      "cinemaStage": "Stage",
-      "cinemaFillStart": "Filling pool to capacity",
-      "cinemaFull": "Pool full — triggering CIDR expansion",
-      "cinemaSubnet": "Staging subnet",
-      "cinemaAddClients": "demo clients added",
-      "cinemaBackedUp": "clients backed up",
-      "cinemaCleared": "Pool cleared",
-      "cinemaNewSubnet": "New pool ready —",
-      "cinemaRestore": "Restoring your original state",
-      "cinemaDone": "Done — your state has been restored"
-    }
-  },
   "apiDoc": {
     "loading": "Loading API specification...",
     "error": "Failed to load API specification.",
