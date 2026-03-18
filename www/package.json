@@ -1,5 +1,5 @@
 {
-  "name": "phantom-www-modern",
+  "name": "phantom-www",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -43,6 +43,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "4.7.0",
+    "dotenv-cli": "8.0.0",
     "js-yaml": "4.1.1",
     "p-limit": "7.2.0",
     "prettier": "3.8.1",
@@ -50,7 +51,6 @@
     "typescript": "5.9.3",
     "vite": "7.3.1",
     "vite-plugin-compression2": "2.4.0",
-    "dotenv-cli": "8.0.0",
-    "wrangler": "4.61.1"
+    "wrangler": "^4.75.0"
   }
 }
