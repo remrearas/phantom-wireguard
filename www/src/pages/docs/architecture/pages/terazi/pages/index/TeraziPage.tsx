@@ -1,3 +1,5 @@
+// noinspection DuplicatedCode
+
 import React, { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useLocale } from '@shared/hooks';
@@ -15,6 +17,7 @@ import ContentEn from './index.en.mdx';
 const META_MAP = { en: metaEn, tr: metaTr };
 const CONTENT_MAP: Record<string, React.ComponentType> = { tr: ContentTr, en: ContentEn };
 
+// noinspection DuplicatedCode
 const TeraziPage: React.FC = () => {
   const { locale } = useLocale();
   const { pathname } = useLocation();
