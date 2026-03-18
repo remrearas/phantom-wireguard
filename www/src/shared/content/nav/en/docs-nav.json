@@ -11,8 +11,11 @@
       "defaultExpanded": true,
       "children": [
         { "label": "System Architecture", "href": "/docs/architecture" },
+        { "label": "Database Schema", "href": "/docs/architecture/database" },
+        { "label": "Bridge Structures", "href": "/docs/architecture/bridge" },
         { "label": "Terazi Pool", "href": "/docs/architecture/terazi" },
-        { "label": "Multihop", "href": "/docs/architecture/multihop" }
+        { "label": "Multihop", "href": "/docs/architecture/multihop" },
+        { "label": "Backup", "href": "/docs/architecture/backup" }
       ]
     },
     { "label": "API Reference", "href": "/docs/api" }

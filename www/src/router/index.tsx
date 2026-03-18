@@ -15,6 +15,9 @@ const ApiPage           = lazy(() => import('@pages/docs/api/pages/index/ApiPage
 const ArchitecturePage  = lazy(() => import('@pages/docs/architecture/pages/index/ArchitecturePage'));
 const TeraziPage        = lazy(() => import('@pages/docs/architecture/pages/terazi/pages/index/TeraziPage'));
 const MultihopPage      = lazy(() => import('@pages/docs/architecture/pages/multihop/pages/index/MultihopPage'));
+const BackupPage        = lazy(() => import('@pages/docs/architecture/pages/backup/pages/index/BackupPage'));
+const DatabasePage      = lazy(() => import('@pages/docs/architecture/pages/database/pages/index/DatabasePage'));
+const BridgePage        = lazy(() => import('@pages/docs/architecture/pages/bridge/pages/index/BridgePage'));
 
 // ── Router ────────────────────────────────────────────────────────
 const router = createBrowserRouter([
@@ -55,6 +58,18 @@ const router = createBrowserRouter([
       {
         path: 'architecture/multihop',
         element: <MultihopPage />,
+      },
+      {
+        path: 'architecture/backup',
+        element: <BackupPage />,
+      },
+      {
+        path: 'architecture/database',
+        element: <DatabasePage />,
+      },
+      {
+        path: 'architecture/bridge',
+        element: <BridgePage />,
       },
     ],
   },
