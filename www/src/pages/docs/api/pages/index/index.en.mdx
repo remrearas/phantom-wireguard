@@ -6,14 +6,14 @@ import { InlineNotification } from '@carbon/react';
 
 Technical reference for the endpoints served by ***Phantom Daemon*** over Unix Domain Socket (UDS). In production, accessed through the ***Auth Service*** proxy layer.
 
-<Mermaid chart={`flowchart LR
+<Mermaid chart={`flowchart
   B["Client"] -->|"HTTPS :443"| N["nginx"]
   N -->|"/auth/*"| A["Auth Service"]
   N -->|"/api/*"| A
   A -->|"UDS"| D["Phantom Daemon"]
 `} />
 
-<Mermaid chart={`flowchart LR
+<Mermaid chart={`flowchart
   Q["Request"] -->|"UDS · daemon.sock"| D["Phantom Daemon"]
 `} />
 

@@ -6,14 +6,14 @@ import { InlineNotification } from '@carbon/react';
 
 ***Phantom Daemon***'un Unix Domain Socket (UDS) üzerinden sunduğu uç noktaların teknik referansıdır. Üretim ortamında ***Auth Service*** proxy katmanı aracılığıyla erişilir.
 
-<Mermaid chart={`flowchart LR
+<Mermaid chart={`flowchart
   B["İstemci"] -->|"HTTPS :443"| N["nginx"]
   N -->|"/auth/*"| A["Auth Service"]
   N -->|"/api/*"| A
   A -->|"UDS"| D["Phantom Daemon"]
 `} />
 
-<Mermaid chart={`flowchart LR
+<Mermaid chart={`flowchart
   Q["Sorgu"] -->|"UDS · daemon.sock"| D["Phantom Daemon"]
 `} />
 

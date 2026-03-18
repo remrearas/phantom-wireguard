@@ -101,7 +101,7 @@ def _calculate_terazi(ipv4_subnet: str) -> tuple[str, str, int, int]:
 
 Her iki protokol aynı host bit sayısını paylaşır. IPv4 prefix'i, IPv6 prefix'ini doğrudan belirler — iki satırlık bir dönüşüm, iki havuzun simetrisini garanti eder:
 
-<Mermaid chart={`flowchart LR
+<Mermaid chart={`flowchart
   A["/24 — IPv4"] -->|"32 − 24 = 8 host bit"| B["/120 — IPv6"]
   B -->|"2⁸ − 3 = 253 slot"| C["253 istemci kapasitesi"]
 `} />

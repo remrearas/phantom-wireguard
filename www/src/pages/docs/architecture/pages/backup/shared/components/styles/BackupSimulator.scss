@@ -7,6 +7,7 @@
 .backup-sim__tile {
   min-height: 140px;
   margin-bottom: sp.$spacing-05;
+  overflow: hidden;
 }
 
 .backup-sim__desc {
@@ -44,4 +45,6 @@
 
 .backup-sim__list {
   margin-bottom: sp.$spacing-05;
+  max-width: 100%;
+  overflow-x: auto;
 }

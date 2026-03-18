@@ -101,7 +101,7 @@ def _calculate_terazi(ipv4_subnet: str) -> tuple[str, str, int, int]:
 
 Both protocols share the same host bit count. The IPv4 prefix directly determines the IPv6 prefix — two lines of conversion, guaranteed symmetry across two pools:
 
-<Mermaid chart={`flowchart LR
+<Mermaid chart={`flowchart
   A["/24 — IPv4"] -->|"32 − 24 = 8 host bits"| B["/120 — IPv6"]
   B -->|"2⁸ − 3 = 253 slots"| C["253 client capacity"]
 `} />

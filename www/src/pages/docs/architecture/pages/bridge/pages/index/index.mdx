@@ -34,7 +34,7 @@ bridge = WireGuardBridge(ifname="wg_phantom_main", mtu=1420, db_path="/var/lib/p
 
 ### Yaşam Döngüsü
 
-<Mermaid chart={`flowchart LR
+<Mermaid chart={`flowchart
   A["WireGuardBridge()"] --> B["up()"]
   B --> C["ipc_set / ipc_get"]
   C --> D["down()"]
@@ -91,7 +91,7 @@ bridge = FirewallBridge(db_path="/var/lib/phantom/state/db/firewall.db")
 
 ### Yaşam Döngüsü
 
-<Mermaid chart={`flowchart LR
+<Mermaid chart={`flowchart
   A["FirewallBridge()"] --> B["start()"]
   B --> C["create_group / add_rule"]
   C --> D["stop()"]
