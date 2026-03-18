@@ -9,8 +9,8 @@
 #   Internet → :443 (nginx, TLS) → auth-service → daemon (UDS)
 #   Internet → :51820/udp (WireGuard) → daemon
 #
-# All environment variables have defaults. Set WIREGUARD_ENDPOINT_V4
-# and/or WIREGUARD_ENDPOINT_V6 to your server's public IP.
+# Environment: .env.daemon + .env.auth-service (see .example files)
+# Set WIREGUARD_ENDPOINT_V4 to your server's public IP.
 # ──────────────────────────────────────────────────────────────────
 
 services:
@@ -27,18 +27,7 @@ services:
     secrets:
       - wg_private_key
       - wg_public_key
-    environment:
-      # ── General ──────────────────────────────────────────────
-      - PYTHONUNBUFFERED=1
-      # ── Daemon Storage ───────────────────────────────────────
-      - PHANTOM_DB_DIR=/var/lib/phantom/db          # client/peer database
-      - PHANTOM_STATE_DIR=/var/lib/phantom/state/db  # runtime state database
-      # ── WireGuard ────────────────────────────────────────────
-      - WIREGUARD_LISTEN_PORT=51820     # UDP listen port
-      - WIREGUARD_MTU=1420              # interface MTU
-      - WIREGUARD_KEEPALIVE=25          # persistent keepalive (seconds)
-      - WIREGUARD_ENDPOINT_V4=          # public IPv4 (required for clients)
-      - WIREGUARD_ENDPOINT_V6=          # public IPv6 (optional)
+    env_file: .env.daemon
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -64,27 +53,7 @@ services:
     secrets:
       - auth_signing_key
       - auth_verify_key
-    environment:
-      # ── General ──────────────────────────────────────────────
-      - PYTHONUNBUFFERED=1
-      - AUTH_HOST=0.0.0.0                      # bind address
-      - AUTH_PORT=8443                         # listen port
-      - AUTH_LOG_LEVEL=info                    # debug | info | warning | error
-      # ── Daemon Connection ────────────────────────────────────
-      - AUTH_PROXY_URL=unix:///var/run/phantom/daemon.sock
-      - AUTH_PROXY_TIMEOUT=30.0                # daemon request timeout (sec)
-      - AUTH_PROXY_MAX_BODY=67108864           # max proxy body size (bytes, 64 MB)
-      # ── Storage ──────────────────────────────────────────────
-      - AUTH_DB_DIR=/var/lib/phantom/auth      # SQLite auth.db location
-      - AUTH_SECRETS_DIR=/run/secrets           # signing/verify key directory
-      # ── Token Lifetime ───────────────────────────────────────
-      - AUTH_TOKEN_LIFETIME=86400              # JWT expiry (sec, 24h)
-      - AUTH_MFA_TOKEN_LIFETIME=120            # MFA pending token (sec, 2m)
-      - AUTH_TOTP_SETUP_LIFETIME=300           # TOTP setup window (sec, 5m)
-      - AUTH_INACTIVITY_TIMEOUT=1800           # session timeout (sec, 30m)
-      # ── Rate Limiting (login endpoint) ───────────────────────
-      - AUTH_RATE_LIMIT_WINDOW=60              # sliding window (sec)
-      - AUTH_RATE_LIMIT_MAX=5                  # max attempts per window
+    env_file: .env.auth-service
 
   nginx:
     image: nginx:1-alpine

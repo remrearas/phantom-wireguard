@@ -43,19 +43,51 @@ _check_secrets() {
     fi
 }
 
+_bootstrap_env() {
+    local root
+    root="$(cd "$TOOLS_DIR/.." && pwd)"
+
+    if [[ ! -f "$root/.env.daemon" ]]; then
+        if [[ -f "$root/.env.daemon.example" ]]; then
+            cp "$root/.env.daemon.example" "$root/.env.daemon"
+            green "Created .env.daemon from .env.daemon.example"
+        else
+            red "Missing .env.daemon.example"
+            exit 1
+        fi
+    else
+        dim ".env.daemon already exists, skipping."
+    fi
+
+    if [[ ! -f "$root/.env.auth-service" ]]; then
+        if [[ -f "$root/.env.auth-service.example" ]]; then
+            cp "$root/.env.auth-service.example" "$root/.env.auth-service"
+            green "Created .env.auth-service from .env.auth-service.example"
+        else
+            red "Missing .env.auth-service.example"
+            exit 1
+        fi
+    else
+        dim ".env.auth-service already exists, skipping."
+    fi
+}
+
 cmd_setup() {
     bold "Full production setup..."
+    _bootstrap_env
     cmd_gen_keys "$@"
     cmd_setup_auth "$@"
     cmd_setup_tls "$@"
     green "Production setup complete."
     echo ""
+    echo "  Environment:  .env.daemon, .env.auth-service"
     echo "  WG keys:      ${SECRETS_DIR}/"
     echo "  Auth keys:    ${SECRETS_DIR}/"
     echo "  TLS cert:     ${SECRETS_DIR}/tls_cert"
     echo "  Auth DB:      ${AUTH_DB_DIR}/auth.db"
     echo "  Admin pass:   ${SECRETS_DIR}/.admin_password"
     echo ""
+    bold "Edit .env.daemon and set WIREGUARD_ENDPOINT_V4 before starting."
     bold "Start with: ./tools/prod.sh up"
 }
 
@@ -87,7 +119,7 @@ cmd_help() {
 Usage: ./tools/prod.sh <command>
 
   Setup:
-    setup               Full setup (gen-keys + setup-auth + setup-tls)
+    setup               Full setup (env bootstrap + gen-keys + setup-auth + setup-tls)
     gen-keys            Generate WireGuard keypair
     setup-auth          Bootstrap auth service
     setup-tls           Generate self-signed TLS certificate
@@ -119,7 +151,7 @@ case "${1:-help}" in
     setup-tls)  shift; cmd_setup_tls "$@" ;;
 
     build)      cmd_build ;;
-    up)         _check_secrets; cmd_up ;;
+    up)         _bootstrap_env; _check_secrets; cmd_up ;;
     down)       cmd_down ;;
     restart)    shift; cmd_restart "$@" ;;
     logs)       shift; cmd_logs "$@" ;;

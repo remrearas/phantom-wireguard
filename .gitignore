@@ -17,6 +17,10 @@ __pycache__/
 dist/
 build/
 
+# Environment (user-specific, created from .example files)
+.env.daemon
+.env.auth-service
+
 # Container data
 container-data/secrets/production/*
 !container-data/secrets/production/.gitkeep

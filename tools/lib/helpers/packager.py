@@ -18,6 +18,8 @@ Included:
     THIRD_PARTY_LICENSES    Dependency licenses
     Dockerfile              Production image build
     docker-compose.yml      Production compose stack
+    .env.daemon.example     Daemon environment template
+    .env.auth-service.example Auth service environment template
     requirements.txt        Python dependencies
     phantom_daemon/         Daemon source
     services/auth-service/  Auth service (full)
@@ -61,6 +63,8 @@ INCLUDE = [
     "THIRD_PARTY_LICENSES",
     "Dockerfile",
     "docker-compose.yml",
+    ".env.daemon.example",
+    ".env.auth-service.example",
     "requirements.txt",
     "phantom_daemon",
     "services/auth-service",
