@@ -63,6 +63,12 @@ jobs:
       - name: Run packager
         run: python3 tools/lib/helpers/packager.py --clean
 
+      - name: Stash packager output
+        run: |
+          cp -r dist/phantom-wg-modern /tmp/phantom-release
+          echo "Stashed to /tmp/phantom-release"
+          ls -la /tmp/phantom-release/
+
       - name: Push to main
         env:
           VERSION: ${{ steps.version.outputs.number }}
@@ -81,9 +87,9 @@ jobs:
           git rm -rf . 2>/dev/null || true
           git clean -fd 2>/dev/null || true
 
-          # Copy packager output to root
-          cp -r dist/phantom-wg-modern/* .
-          cp dist/phantom-wg-modern/.env.* . 2>/dev/null || true
+          # Copy from stash
+          cp -r /tmp/phantom-release/* .
+          cp /tmp/phantom-release/.env.* . 2>/dev/null || true
 
           # Stage all
           git add -A
@@ -100,11 +106,11 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.number }}
         run: |
-          cd dist
-          zip -r "../phantom-wg-modern-v${VERSION}.zip" phantom-wg-modern/
-          cd ..
+          cd /tmp
+          mv phantom-release phantom-wg-modern
+          zip -r "${GITHUB_WORKSPACE}/phantom-wg-modern-v${VERSION}.zip" phantom-wg-modern/
           echo "Archive created:"
-          ls -lh "phantom-wg-modern-v${VERSION}.zip"
+          ls -lh "${GITHUB_WORKSPACE}/phantom-wg-modern-v${VERSION}.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
