@@ -2,11 +2,12 @@ Phantom-WG Modern — Setup Guide
 =================================
 
 Prerequisites:
-  - Docker Engine 24+
+  - Docker Engine 20.10+
   - Docker Compose v2
+  - bash
 
 Directory Structure:
-  phantom-wg-modern/
+  phantom-wg/
   ├── Dockerfile                  Daemon image (multi-stage build)
   ├── docker-compose.yml          Production stack (3 services)
   ├── .env.daemon.example         Daemon environment template
@@ -49,7 +50,7 @@ Quick Start:
      ./tools/prod.sh up
 
   4. Access:
-     Dashboard:  https://localhost
+     Dashboard:  https://<server-ip>
      WireGuard:  UDP port 51820
 
 Environment Files:
@@ -61,15 +62,17 @@ Environment Files:
   Edit them to customize ports, timeouts, or any service parameter.
 
 Commands:
-  ./tools/prod.sh help            Show all commands
-  ./tools/prod.sh setup           Full setup (env + keys + auth + TLS)
-  ./tools/prod.sh build           Build Docker images
-  ./tools/prod.sh up              Start stack
-  ./tools/prod.sh down            Stop stack
-  ./tools/prod.sh restart         Restart all services
-  ./tools/prod.sh logs            Follow logs
-  ./tools/prod.sh status          Container status
-  ./tools/prod.sh hard-reset      Wipe ALL data (destructive)
+  ./tools/prod.sh help             Show all commands
+  ./tools/prod.sh setup            Full setup (env + keys + auth + TLS)
+  ./tools/prod.sh up               Start stack (builds images on first run)
+  ./tools/prod.sh down             Stop stack
+  ./tools/prod.sh restart          Restart all services
+  ./tools/prod.sh build            Rebuild images (after dependency changes)
+  ./tools/prod.sh logs             Follow logs
+  ./tools/prod.sh status           Container status
+  ./tools/prod.sh shell [service]  Open shell (default: daemon)
+  ./tools/prod.sh exec <svc> <cmd> Execute command in service
+  ./tools/prod.sh hard-reset       Wipe ALL data (destructive)
 
 Ports:
   443/tcp     HTTPS (nginx → auth-service → daemon)
@@ -90,8 +93,11 @@ TLS Certificate:
 
 Updating:
   git pull
-  ./tools/prod.sh build
   ./tools/prod.sh restart
+
+  If dependencies changed (requirements.txt, Dockerfile):
+    ./tools/prod.sh build
+    ./tools/prod.sh restart
 
   Environment files (.env.daemon, .env.auth-service) are preserved
   across updates — docker-compose.yml is never manually edited.

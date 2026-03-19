@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "phantom-install",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-11-18",
+  "workers_dev": false,
+  "observability": {
+    "enabled": true
+  },
+
+  // Import install.sh.txt as text
+  "rules": [
+    {
+      "type": "Text",
+      "globs": ["**/*.txt"],
+      "fallthrough": true
+    }
+  ]
+
+  // Custom domain configuration:
+  // Set up install.phantom.tc via Cloudflare Dashboard:
+  // Workers & Pages > phantom-install > Settings > Domains & Routes
+  // Add route: install.phantom.tc/*
+}
