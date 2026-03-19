@@ -1,12 +1,9 @@
 name: Release Phantom-WG Modern
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version (e.g. 1.0.0)'
-        required: true
-        type: string
+  push:
+    tags:
+      - 'release-v*'
 
 permissions:
   contents: read
@@ -43,6 +40,12 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
 
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/release-v}"
+          echo "number=${TAG}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Node
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
@@ -62,7 +65,7 @@ jobs:
 
       - name: Push to main
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.version.outputs.number }}
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
@@ -95,7 +98,7 @@ jobs:
 
       - name: Create release archive
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.version.outputs.number }}
         run: |
           cd dist
           zip -r "../phantom-wg-modern-v${VERSION}.zip" phantom-wg-modern/
@@ -106,10 +109,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
-          tag_name: v${{ inputs.version }}
-          name: Phantom-WG Modern v${{ inputs.version }}
+          tag_name: v${{ steps.version.outputs.number }}
+          name: Phantom-WG Modern v${{ steps.version.outputs.number }}
           body: |
-            ## Phantom-WG Modern v${{ inputs.version }}
+            ## Phantom-WG Modern v${{ steps.version.outputs.number }}
 
             ### Quick Start
 
@@ -120,7 +123,7 @@ jobs:
 
             **Option 2 — Download:**
             ```bash
-            unzip phantom-wg-modern-v${{ inputs.version }}.zip
+            unzip phantom-wg-modern-v${{ steps.version.outputs.number }}.zip
             cd phantom-wg-modern
             ```
 
@@ -138,7 +141,7 @@ jobs:
             See `SETUP` for full guide.
 
           files: |
-            phantom-wg-modern-v${{ inputs.version }}.zip
+            phantom-wg-modern-v${{ steps.version.outputs.number }}.zip
           draft: false
           prerelease: false
           generate_release_notes: false
