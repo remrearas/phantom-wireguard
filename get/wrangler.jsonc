@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "phantom-install",
+  "name": "phantom-get",
   "main": "src/index.ts",
   "compatibility_date": "2025-11-18",
   "workers_dev": false,
@@ -18,7 +18,7 @@
   ]
 
   // Custom domain configuration:
-  // Set up install.phantom.tc via Cloudflare Dashboard:
-  // Workers & Pages > phantom-install > Settings > Domains & Routes
-  // Add route: install.phantom.tc/*
+  // Set up get.phantom.tc via Cloudflare Dashboard:
+  // Workers & Pages > phantom-get > Settings > Domains & Routes
+  // Add route: get.phantom.tc/*
 }

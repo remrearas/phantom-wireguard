@@ -1,7 +1,7 @@
 {
-  "name": "phantom-install",
+  "name": "phantom-get",
   "version": "1.0.0",
-  "description": "Phantom-WG Bootstrap Installer Worker",
+  "description": "Phantom-WG Modern — Get Worker (get.phantom.tc)",
   "private": true,
   "scripts": {
     "dev": "dotenv -- wrangler dev",
@@ -9,11 +9,11 @@
     "tail": "dotenv -- wrangler tail"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250124.0",
-    "typescript": "^5.7.3",
-    "wrangler": "^4.61.0"
+    "@cloudflare/workers-types": "4.20260317.1",
+    "typescript": "5.9.3",
+    "wrangler": "4.75.0"
   },
   "dependencies": {
-    "dotenv-cli": "^11.0.0"
+    "dotenv-cli": "11.0.0"
   }
 }

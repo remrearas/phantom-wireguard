@@ -1,10 +1,10 @@
 // noinspection JSUnusedGlobalSymbols
 
 /**
- * Phantom-WG Bootstrap Installer Worker
+ * Phantom-WG Modern — Get Worker
  *
- * Serves the install.sh script for:
- * curl -sSL https://install.phantom.tc | bash
+ * Serves the install script for:
+ * curl -sSL https://get.phantom.tc | bash
  *
  * Copyright (c) 2025 Rıza Emre ARAS
  * Licensed under AGPL-3.0

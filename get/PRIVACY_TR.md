@@ -8,18 +8,18 @@
 Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 -->
 
-# Gizlilik Bildirimi — install.phantom.tc
+# Gizlilik Bildirimi — get.phantom.tc
 
 **Son Güncelleme:** Ocak 2026
 
 ## Genel Bakış
 
-`install.phantom.tc`, Phantom-WG bootstrap kurulum betiğini sunan bir Cloudflare Worker'dır. Tamamen [phantom-wg](https://github.com/ARAS-Workspace/phantom-wg) GitHub reposundan yönetilir ve GitHub Actions (`.github/workflows/deploy-phantom-install.yml`) aracılığıyla otomatik olarak deploy edilir.
+`get.phantom.tc`, Phantom-WG bootstrap kurulum betiğini sunan bir Cloudflare Worker'dır. Tamamen [phantom-wg](https://github.com/ARAS-Workspace/phantom-wg) GitHub reposundan yönetilir ve GitHub Actions (`.github/workflows/deploy-phantom-get.yml`) aracılığıyla otomatik olarak deploy edilir.
 
 ## Kaynak Kod ve Dağıtım
 
-- **Kaynak:** [`tools/phantom-install/`](https://github.com/ARAS-Workspace/phantom-wg/tree/main/tools/phantom-install)
-- **Dağıtım:** GitHub Actions workflow'u, `main` branch'ine yapılan ve `tools/phantom-install/**` yolunu etkileyen push'larda tetiklenir
+- **Kaynak:** [`get/`](https://github.com/ARAS-Workspace/phantom-wg/tree/main/tools/phantom-install)
+- **Dağıtım:** GitHub Actions workflow'u, `main` branch'ine yapılan ve `get/**` yolunu etkileyen push'larda tetiklenir
 - **Çalışma Ortamı:** Cloudflare Workers (stateless, kalıcı depolama yok)
 
 ## Endpoint'ler ve Veri İşleme
@@ -55,6 +55,6 @@ Bu gizlilik bildirimi, servis geliştikçe güncellenebilir. Değişiklikler, g�
 
 ## İletişim
 
-Bu gizlilik bildirimi veya install.phantom.tc servisi hakkında sorularınız için:
+Bu gizlilik bildirimi veya get.phantom.tc servisi hakkında sorularınız için:
 
 **Rıza Emre ARAS** — [r.emrearas@proton.me](mailto:r.emrearas@proton.me)

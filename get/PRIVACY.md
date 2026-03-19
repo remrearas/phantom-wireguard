@@ -8,18 +8,18 @@
 Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 -->
 
-# Privacy Notice — install.phantom.tc
+# Privacy Notice — get.phantom.tc
 
 **Last Updated:** January 2026
 
 ## Overview
 
-`install.phantom.tc` is a Cloudflare Worker that serves the Phantom-WG bootstrap install script. It is maintained entirely from the [phantom-wg](https://github.com/ARAS-Workspace/phantom-wg) GitHub repository and deployed automatically via GitHub Actions (`.github/workflows/deploy-phantom-install.yml`).
+`get.phantom.tc` is a Cloudflare Worker that serves the Phantom-WG bootstrap install script. It is maintained entirely from the [phantom-wg](https://github.com/ARAS-Workspace/phantom-wg) GitHub repository and deployed automatically via GitHub Actions (`.github/workflows/deploy-phantom-get.yml`).
 
 ## Source Code & Deployment
 
-- **Source:** [`tools/phantom-install/`](https://github.com/ARAS-Workspace/phantom-wg/tree/main/tools/phantom-install)
-- **Deployment:** GitHub Actions workflow, triggered on pushes to `main` that modify the `tools/phantom-install/**` path
+- **Source:** [`get/`](https://github.com/ARAS-Workspace/phantom-wg/tree/main/tools/phantom-install)
+- **Deployment:** GitHub Actions workflow, triggered on pushes to `main` that modify the `get/**` path
 - **Runtime:** Cloudflare Workers (stateless, no persistent storage)
 
 ## Endpoints & Data Handling
@@ -55,6 +55,6 @@ This privacy notice may be updated as the service evolves. Changes will be refle
 
 ## Contact
 
-For questions about this privacy notice or the install.phantom.tc service:
+For questions about this privacy notice or the get.phantom.tc service:
 
 **Rıza Emre ARAS** — [r.emrearas@proton.me](mailto:r.emrearas@proton.me)
