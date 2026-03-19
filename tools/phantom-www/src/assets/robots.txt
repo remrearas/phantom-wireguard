@@ -1,3 +1,0 @@
-# Phantom-WG Landing Page - Robots Configuration
-User-agent: *
-Allow: /
