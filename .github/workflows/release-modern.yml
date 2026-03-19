@@ -1,0 +1,137 @@
+name: Release Phantom-WG Modern
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  # ── Run all tests via reusable workflow ──────────────────────────
+  tests:
+    name: Tests
+    uses: ./.github/workflows/test-phantom-daemon.yml
+    permissions:
+      contents: read
+      actions: read
+
+  # ── Build, push to main, create release ─────────────────────────
+  release:
+    name: Package & Release
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '24'
+          cache: ''
+
+      - name: Install SPA dependencies
+        run: npm ci
+        working-directory: services/react-spa
+
+      - name: Build SPA
+        run: npm run build
+        working-directory: services/react-spa
+
+      - name: Run packager
+        run: python3 tools/lib/helpers/packager.py --clean
+
+      - name: Push to main
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Checkout main (create orphan if not exists)
+          git checkout main 2>/dev/null || git checkout --orphan main
+
+          # Remove everything except .git
+          git rm -rf . 2>/dev/null || true
+          git clean -fd 2>/dev/null || true
+
+          # Copy packager output to root
+          cp -r dist/phantom-wg-modern/* .
+          cp dist/phantom-wg-modern/.env.* . 2>/dev/null || true
+
+          # Stage all
+          git add -A
+
+          # Commit and tag
+          git commit -m "Release: Phantom-WG Modern v${VERSION}"
+          git tag "v${VERSION}"
+
+          # Push
+          git push origin main --force-with-lease
+          git push origin "v${VERSION}"
+
+      - name: Create release archive
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          cd dist
+          zip -r "../phantom-wg-modern-v${VERSION}.zip" phantom-wg-modern/
+          cd ..
+          echo "Archive created:"
+          ls -lh "phantom-wg-modern-v${VERSION}.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          tag_name: v${{ inputs.version }}
+          name: Phantom-WG Modern v${{ inputs.version }}
+          body: |
+            ## Phantom-WG Modern v${{ inputs.version }}
+
+            ### Quick Start
+
+            **Option 1 — Git (recommended):**
+            ```bash
+            curl -sSL get.phantom.tc | bash
+            ```
+
+            **Option 2 — Download:**
+            ```bash
+            unzip phantom-wg-modern-v${{ inputs.version }}.zip
+            cd phantom-wg-modern
+            ```
+
+            **Setup:**
+            ```bash
+            ./tools/prod.sh setup
+            nano .env.daemon              # set WIREGUARD_ENDPOINT_V4
+            ./tools/prod.sh up
+            ```
+
+            - Dashboard: `https://<server-ip>`
+            - WireGuard: UDP port `51820`
+            - Documentation: https://www.phantom.tc/docs
+
+            See `SETUP` for full guide.
+
+          files: |
+            phantom-wg-modern-v${{ inputs.version }}.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: false
