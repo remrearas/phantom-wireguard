@@ -18,8 +18,8 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 
 ## Source Code & Deployment
 
-- **Source:** [`get/`](https://github.com/ARAS-Workspace/phantom-wg/tree/main/tools/phantom-install)
-- **Deployment:** GitHub Actions workflow, triggered on pushes to `main` that modify the `get/**` path
+- **Source:** [`get/`](https://github.com/ARAS-Workspace/phantom-wg/tree/dev/daemon/get)
+- **Deployment:** GitHub Actions workflow, triggered on pushes to `dev/daemon` that modify the `get/**` path
 - **Runtime:** Cloudflare Workers (stateless, no persistent storage)
 
 ## Endpoints & Data Handling

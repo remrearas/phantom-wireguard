@@ -18,8 +18,8 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 
 ## Kaynak Kod ve Dağıtım
 
-- **Kaynak:** [`get/`](https://github.com/ARAS-Workspace/phantom-wg/tree/main/tools/phantom-install)
-- **Dağıtım:** GitHub Actions workflow'u, `main` branch'ine yapılan ve `get/**` yolunu etkileyen push'larda tetiklenir
+- **Kaynak:** [`get/`](https://github.com/ARAS-Workspace/phantom-wg/tree/dev/daemon/get)
+- **Dağıtım:** GitHub Actions workflow'u, `dev/daemon` branch'ine yapılan ve `get/**` yolunu etkileyen push'larda tetiklenir
 - **Çalışma Ortamı:** Cloudflare Workers (stateless, kalıcı depolama yok)
 
 ## Endpoint'ler ve Veri İşleme
