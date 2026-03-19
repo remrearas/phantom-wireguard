@@ -70,8 +70,7 @@ ENV PYTHONUNBUFFERED=1
 RUN mkdir -p /var/run/phantom
 
 WORKDIR /app
-COPY phantom_daemon/ phantom_daemon/
 
 EXPOSE 0
 
-CMD ["python", "-m", "phantom_daemon.main", "/var/run/phantom/daemon.sock"]
+CMD ["python"]

@@ -19,9 +19,11 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: phantom-daemon
+    command: ["python", "-m", "phantom_daemon.main", "/var/run/phantom/daemon.sock"]
     restart: unless-stopped
     volumes:
       - phantom-sock:/var/run/phantom
+      - ./phantom_daemon:/app/phantom_daemon:ro
       - ./container-data/db:/var/lib/phantom/db
       - ./container-data/state/db:/var/lib/phantom/state/db
     secrets:
