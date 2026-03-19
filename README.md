@@ -1,6 +1,6 @@
 # Phantom-WG Retro
 
-[![Release Workflow](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml/badge.svg?branch=retro)](https://github.com/ARAS-Workspace/phantom-wg/actions/workflows/release-workflow.yml)
+[![CI](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/ARAS-Workspace/phantom-wg/actions/runs/23122386542)
 
 > 🇬🇧 **English** | [🇹🇷 Türkçe](README_TR.md) | [🇸🇦 العربية](README_AR.md)
 
