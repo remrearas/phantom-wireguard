@@ -85,6 +85,7 @@ def _resolve_core_preset(env: DaemonEnv, wallet: Wallet) -> dict:
         "listen_port": env.listen_port,
         "wg_interface": WG_INTERFACE_NAME,
         "ipv4_subnet": wallet.get_config("ipv4_subnet") or "",
+        "ipv6_subnet": wallet.get_config("ipv6_subnet") or "",
     }
     return _resolve_templates(spec, context)
 

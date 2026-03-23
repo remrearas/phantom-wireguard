@@ -28,7 +28,7 @@ class TestResolvePreset:
         spec = _read_core_preset()
         assert spec["name"] == CORE_PRESET_NAME
         assert spec["priority"] == 50
-        assert len(spec["rules"]) == 5
+        assert len(spec["rules"]) == 6
 
     def test_resolve_injects_listen_port(self, test_env):
         """rules[0] (input/udp) gets listen_port from env."""
@@ -138,12 +138,12 @@ class TestBootstrap:
             group = svc.get_group(CORE_PRESET_NAME)
             assert group.group_type == "system"
 
-    def test_core_has_five_rules(self, test_env):
+    def test_core_has_six_rules(self, test_env):
         d = test_env.sub("boot-rules")
         with open_firewall(state_dir=d) as svc:
             svc.bootstrap(env=test_env.env, wallet=test_env.wallet)
             rules = svc.list_firewall_rules(CORE_PRESET_NAME)
-            assert len(rules) == 5
+            assert len(rules) == 6
 
     def test_listen_port_injected(self, test_env):
         d = test_env.sub("boot-port")
@@ -273,7 +273,7 @@ class TestReadOperations:
         with open_firewall(state_dir=d) as svc:
             svc.bootstrap(env=test_env.env, wallet=test_env.wallet)
             rules = svc.list_firewall_rules()
-            assert len(rules) == 5
+            assert len(rules) == 6
             chains = {r.chain for r in rules}
             assert "input" in chains
             assert "postrouting" in chains
@@ -283,4 +283,4 @@ class TestReadOperations:
         with open_firewall(state_dir=d) as svc:
             svc.bootstrap(env=test_env.env, wallet=test_env.wallet)
             rules = svc.list_firewall_rules(CORE_PRESET_NAME)
-            assert len(rules) == 5
+            assert len(rules) == 6
