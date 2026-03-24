@@ -46,7 +46,20 @@ class FirewallDB:
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
         self._conn.executescript(_SCHEMA)
+        self._migrate()
         self._ensure_config()
+
+    def _migrate(self) -> None:
+        """Apply schema migrations for existing databases."""
+        cols = {
+            row[1]
+            for row in self._conn.execute("PRAGMA table_info(routing_rules)")
+        }
+        if "family" not in cols:
+            self._conn.execute(
+                "ALTER TABLE routing_rules ADD COLUMN family INTEGER NOT NULL DEFAULT 2"
+            )
+            self._conn.commit()
 
     def _ensure_config(self) -> None:
         row = self._conn.execute("SELECT id FROM config WHERE id=1").fetchone()
