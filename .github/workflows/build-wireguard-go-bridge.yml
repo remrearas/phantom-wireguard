@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'dev/wireguard-go-bridge'
+    paths-ignore:
+      - '.github/**'
   workflow_call:
 
 env:

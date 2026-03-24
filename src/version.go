@@ -12,4 +12,4 @@
 
 package main
 
-const BridgeVersionStr = "2.1.0"
+const BridgeVersionStr = "2.1.2"

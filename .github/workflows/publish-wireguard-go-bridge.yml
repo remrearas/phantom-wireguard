@@ -2,16 +2,51 @@ name: Publish wireguard-go-bridge
 
 on:
   workflow_dispatch:
-    inputs:
-      version_id:
-        description: 'Version (e.g. v2.1.1)'
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 jobs:
+  version:
+    name: Extract version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Extract version from __init__.py
+        id: extract
+        run: |
+          VERSION=$(python3 -c "
+          import re, pathlib
+          text = pathlib.Path('wireguard_go_bridge/__init__.py').read_text()
+          m = re.search(r'__version__\s*=\s*\"(.+?)\"', text)
+          print('v' + m.group(1))
+          ")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Detected version: ${VERSION}"
+
+      - name: Validate version.go matches
+        env:
+          VERSION: ${{ steps.extract.outputs.version }}
+        run: |
+          GO_VER=$(grep 'BridgeVersionStr' src/version.go | sed 's/.*"\(.*\)"/\1/')
+          PY_VER="${VERSION#v}"
+          if [ "$GO_VER" != "$PY_VER" ]; then
+            echo "Version mismatch: version.go=${GO_VER} __init__.py=${PY_VER}"
+            exit 1
+          fi
+          echo "Versions match: ${PY_VER}"
+
   test:
     name: Test
     uses: ./.github/workflows/test-wireguard-go-bridge.yml
@@ -26,21 +61,13 @@ jobs:
       contents: read
 
   publish:
-    name: Publish to dev/vendor
-    needs: [build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    name: Publish to R2
+    needs: [version, build]
+    runs-on: self-hosted
     steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+      - name: Checkout source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          egress-policy: audit
-
-      - name: Checkout dev/vendor
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: dev/vendor
           persist-credentials: false
 
       - name: Download amd64 artifact
@@ -55,79 +82,74 @@ jobs:
           name: wireguard-go-bridge-linux-arm64
           path: artifacts/linux-arm64
 
-      - name: Checkout source for Python package
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: ${{ github.ref_name }}
-          path: source
-          persist-credentials: false
-
-      - name: Extract version
-        id: version
-        run: |
-          VERSION="${{ inputs.version_id }}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-
-      - name: Organize vendor directory
+      - name: Package per-arch zips
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          rm -rf wireguard-go-bridge
-          mkdir -p wireguard-go-bridge/linux-amd64/wireguard_go_bridge \
-                   wireguard-go-bridge/linux-arm64/wireguard_go_bridge
+          for ARCH in linux-amd64 linux-arm64; do
+            mkdir -p "staging/${ARCH}/wireguard_go_bridge"
 
-          # amd64
-          cp artifacts/linux-amd64/wireguard_go_bridge.so \
-             artifacts/linux-amd64/wireguard_go_bridge.so.sha256 \
-             wireguard-go-bridge/linux-amd64/
-          cp source/wireguard_go_bridge/*.py \
-             wireguard-go-bridge/linux-amd64/wireguard_go_bridge/
+            # .so + checksum
+            cp "artifacts/${ARCH}/wireguard_go_bridge.so" "staging/${ARCH}/wireguard_go_bridge/"
+            cp "artifacts/${ARCH}/wireguard_go_bridge.so.sha256" "staging/${ARCH}/wireguard_go_bridge/"
 
-          # arm64
-          cp artifacts/linux-arm64/wireguard_go_bridge.so \
-             artifacts/linux-arm64/wireguard_go_bridge.so.sha256 \
-             wireguard-go-bridge/linux-arm64/
-          cp source/wireguard_go_bridge/*.py \
-             wireguard-go-bridge/linux-arm64/wireguard_go_bridge/
+            # Python package
+            cp wireguard_go_bridge/*.py "staging/${ARCH}/wireguard_go_bridge/"
 
-          rm -rf artifacts source
+            # VERSION
+            echo "${VERSION}" > "staging/${ARCH}/wireguard_go_bridge/VERSION"
 
-          # Write version file
-          echo "${VERSION}" > wireguard-go-bridge/VERSION
+            # Zip
+            cd "staging/${ARCH}"
+            zip -r "../../${ARCH}.zip" wireguard_go_bridge/
+            cd ../..
+          done
+
+          # Standalone VERSION file
+          echo "${VERSION}" > VERSION
 
       - name: Verify checksums
         run: |
           echo "--- linux/amd64 ---"
-          cd wireguard-go-bridge/linux-amd64 && sha256sum -c wireguard_go_bridge.so.sha256 && cd ../..
+          cd staging/linux-amd64/wireguard_go_bridge && sha256sum -c wireguard_go_bridge.so.sha256 && cd ../../..
           echo "--- linux/arm64 ---"
-          cd wireguard-go-bridge/linux-arm64 && sha256sum -c wireguard_go_bridge.so.sha256 && cd ../..
+          cd staging/linux-arm64/wireguard_go_bridge && sha256sum -c wireguard_go_bridge.so.sha256 && cd ../../..
 
-      - name: Push to dev/vendor
+      - name: Upload to R2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          git add -f wireguard-go-bridge/
-          if git diff --cached --quiet; then
-            echo "No changes — force push existing state"
-            git push origin dev/vendor
-          else
-            git commit -m "Vendor: wireguard-go-bridge ${VERSION}"
-            git push origin dev/vendor
-          fi
+          R2_PATH="r2:phantom-vendor/wireguard-go-bridge"
+
+          # Versioned
+          rclone copy linux-amd64.zip "${R2_PATH}/${VERSION}/" --progress
+          rclone copy linux-arm64.zip "${R2_PATH}/${VERSION}/" --progress
+          rclone copy VERSION "${R2_PATH}/${VERSION}/" --progress
+
+          # Latest
+          rclone copy linux-amd64.zip "${R2_PATH}/latest/" --progress
+          rclone copy linux-arm64.zip "${R2_PATH}/latest/" --progress
+          rclone copy VERSION "${R2_PATH}/latest/" --progress
+
+          echo "Published: ${VERSION}"
 
       - name: Summary
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          AMD64_SHA=$(cut -d' ' -f1 wireguard-go-bridge/linux-amd64/wireguard_go_bridge.so.sha256)
-          ARM64_SHA=$(cut -d' ' -f1 wireguard-go-bridge/linux-arm64/wireguard_go_bridge.so.sha256)
-          echo "## wireguard-go-bridge ${VERSION} → dev/vendor" >> "$GITHUB_STEP_SUMMARY"
+          AMD64_SHA=$(cut -d' ' -f1 staging/linux-amd64/wireguard_go_bridge/wireguard_go_bridge.so.sha256)
+          ARM64_SHA=$(cut -d' ' -f1 staging/linux-arm64/wireguard_go_bridge/wireguard_go_bridge.so.sha256)
+          echo "## wireguard-go-bridge ${VERSION} → R2" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Platform | SHA256 |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|--------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| linux/amd64 | \`${AMD64_SHA}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| linux/arm64 | \`${ARM64_SHA}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Download:**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`https://vendor.phantom.tc/wireguard-go-bridge/${VERSION}/linux-amd64.zip\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`https://vendor.phantom.tc/wireguard-go-bridge/${VERSION}/linux-arm64.zip\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf artifacts staging linux-amd64.zip linux-arm64.zip VERSION
