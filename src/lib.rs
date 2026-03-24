@@ -1,4 +1,4 @@
-//! firewall-bridge-linux v2.1 — Kernel operations backend.
+//! firewall-bridge-linux — Kernel operations backend.
 //!
 //! Pure nftables + netlink operations. No database, no state machine.
 //! State management, persistence, presets → Python side.
@@ -164,18 +164,20 @@ pub extern "C" fn rt_table_ensure(table_id: u32, table_name: *const c_char) -> i
 }
 
 /// Add a policy rule (ip rule add from ... table ... priority ...).
+/// family: 2 = AF_INET, 10 = AF_INET6.
 #[no_mangle]
 pub extern "C" fn rt_policy_add(
     from_network: *const c_char,
     to_network: *const c_char,
     table_name: *const c_char,
     priority: u32,
+    family: i32,
 ) -> i32 {
     let frm = unsafe { cstr_to_str(from_network) };
     let to = unsafe { cstr_to_str(to_network) };
     let tn = unsafe { cstr_to_str(table_name) };
 
-    match route::policy_add(frm, to, tn, priority) {
+    match route::policy_add(frm, to, tn, priority, family as u8) {
         Ok(()) => ErrorCode::Ok as i32,
         Err(msg) => { set_last_error(&msg); ErrorCode::NetlinkFailed as i32 }
     }
@@ -188,29 +190,32 @@ pub extern "C" fn rt_policy_delete(
     to_network: *const c_char,
     table_name: *const c_char,
     priority: u32,
+    family: i32,
 ) -> i32 {
     let frm = unsafe { cstr_to_str(from_network) };
     let to = unsafe { cstr_to_str(to_network) };
     let tn = unsafe { cstr_to_str(table_name) };
 
-    match route::policy_delete(frm, to, tn, priority) {
+    match route::policy_delete(frm, to, tn, priority, family as u8) {
         Ok(()) => ErrorCode::Ok as i32,
         Err(msg) => { set_last_error(&msg); ErrorCode::NetlinkFailed as i32 }
     }
 }
 
 /// Add a route (ip route add ... dev ... table ...).
+/// family: 2 = AF_INET, 10 = AF_INET6.
 #[no_mangle]
 pub extern "C" fn rt_route_add(
     destination: *const c_char,
     device: *const c_char,
     table_name: *const c_char,
+    family: i32,
 ) -> i32 {
     let dst = unsafe { cstr_to_str(destination) };
     let dev = unsafe { cstr_to_str(device) };
     let tn = unsafe { cstr_to_str(table_name) };
 
-    match route::route_add(dst, dev, tn) {
+    match route::route_add(dst, dev, tn, family as u8) {
         Ok(()) => ErrorCode::Ok as i32,
         Err(msg) => { set_last_error(&msg); ErrorCode::NetlinkFailed as i32 }
     }
@@ -222,12 +227,13 @@ pub extern "C" fn rt_route_delete(
     destination: *const c_char,
     device: *const c_char,
     table_name: *const c_char,
+    family: i32,
 ) -> i32 {
     let dst = unsafe { cstr_to_str(destination) };
     let dev = unsafe { cstr_to_str(device) };
     let tn = unsafe { cstr_to_str(table_name) };
 
-    match route::route_delete(dst, dev, tn) {
+    match route::route_delete(dst, dev, tn, family as u8) {
         Ok(()) => ErrorCode::Ok as i32,
         Err(msg) => { set_last_error(&msg); ErrorCode::NetlinkFailed as i32 }
     }

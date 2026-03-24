@@ -5,7 +5,7 @@
 
 use std::io;
 use std::mem;
-use std::net::Ipv4Addr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 
 use crate::error::ErrorCode;
@@ -218,17 +218,29 @@ fn push_attr_u32(buf: &mut Vec<u8>, rta_type: u16, val: u32) {
     push_attr(buf, rta_type, &val.to_ne_bytes());
 }
 
-/// Parse "10.66.66.0/24" into (Ipv4Addr, prefix_len).
-fn parse_network(network: &str) -> Result<(Ipv4Addr, u8), String> {
+/// Parse "10.66.66.0/24" or "fd00:d0ce::/64" into (IpAddr, prefix_len, family).
+fn parse_network(network: &str) -> Result<(IpAddr, u8, u8), String> {
     let parts: Vec<&str> = network.split('/').collect();
     if parts.len() != 2 {
         return Err(format!("Invalid network format: {}", network));
     }
-    let addr = Ipv4Addr::from_str(parts[0])
+    let addr = IpAddr::from_str(parts[0])
         .map_err(|e| format!("Invalid IP address: {}", e))?;
     let prefix: u8 = parts[1].parse()
         .map_err(|e| format!("Invalid prefix length: {}", e))?;
-    Ok((addr, prefix))
+    let family = match addr {
+        IpAddr::V4(_) => libc::AF_INET as u8,
+        IpAddr::V6(_) => libc::AF_INET6 as u8,
+    };
+    Ok((addr, prefix, family))
+}
+
+/// Get raw address bytes (4 for IPv4, 16 for IPv6).
+fn addr_bytes(addr: &IpAddr) -> Vec<u8> {
+    match addr {
+        IpAddr::V4(v4) => v4.octets().to_vec(),
+        IpAddr::V6(v6) => v6.octets().to_vec(),
+    }
 }
 
 /// Resolve interface name to ifindex.
@@ -283,21 +295,18 @@ fn resolve_table(table_name: &str) -> Result<u32, String> {
 // ---------------------------------------------------------------------------
 
 /// Add a policy rule: ip rule add from <from> [to <to>] table <table> priority <prio>
-pub fn policy_add(from_network: &str, to_network: &str, table_name: &str, priority: u32) -> Result<(), String> {
+pub fn policy_add(from_network: &str, to_network: &str, table_name: &str, priority: u32, family: u8) -> Result<(), String> {
     let mut sock = NetlinkSocket::open().map_err(|e| e.to_string())?;
     let seq = sock.next_seq();
     let table_id = resolve_table(table_name)?;
 
-    let (from_addr, from_prefix) = parse_network(from_network)?;
+    let (from_addr, from_prefix, _) = parse_network(from_network)?;
 
     let mut buf = Vec::with_capacity(256);
-
-    // Reserve space for nlmsghdr (will fill in later)
     buf.extend_from_slice(&[0u8; mem::size_of::<NlMsgHdr>()]);
 
-    // FIB rule header
     let fib = FibRuleHdr {
-        family: libc::AF_INET as u8,
+        family,
         dst_len: 0,
         src_len: from_prefix,
         tos: 0,
@@ -312,27 +321,21 @@ pub fn policy_add(from_network: &str, to_network: &str, table_name: &str, priori
     };
     buf.extend_from_slice(fib_bytes);
 
-    // Source address attribute
-    push_attr(&mut buf, FRA_SRC, &from_addr.octets());
+    push_attr(&mut buf, FRA_SRC, &addr_bytes(&from_addr));
 
-    // Destination if provided
     if !to_network.is_empty() {
-        let (to_addr, to_prefix) = parse_network(to_network)?;
-        push_attr(&mut buf, FRA_DST, &to_addr.octets());
-        // Update dst_len in the header
-        let dst_len_offset = mem::size_of::<NlMsgHdr>() + 1; // offset of dst_len in FibRuleHdr
+        let (to_addr, to_prefix, _) = parse_network(to_network)?;
+        push_attr(&mut buf, FRA_DST, &addr_bytes(&to_addr));
+        let dst_len_offset = mem::size_of::<NlMsgHdr>() + 1;
         buf[dst_len_offset] = to_prefix;
     }
 
-    // Table attribute (for table IDs > 255)
     if table_id > 255 {
         push_attr_u32(&mut buf, FRA_TABLE, table_id);
     }
 
-    // Priority
     push_attr_u32(&mut buf, FRA_PRIORITY, priority);
 
-    // Fill in nlmsghdr
     let total_len = buf.len() as u32;
     let hdr = NlMsgHdr {
         nlmsg_len: total_len,
@@ -350,18 +353,18 @@ pub fn policy_add(from_network: &str, to_network: &str, table_name: &str, priori
 }
 
 /// Delete a policy rule.
-pub fn policy_delete(from_network: &str, to_network: &str, table_name: &str, priority: u32) -> Result<(), String> {
+pub fn policy_delete(from_network: &str, to_network: &str, table_name: &str, priority: u32, family: u8) -> Result<(), String> {
     let mut sock = NetlinkSocket::open().map_err(|e| e.to_string())?;
     let seq = sock.next_seq();
     let table_id = resolve_table(table_name)?;
 
-    let (from_addr, from_prefix) = parse_network(from_network)?;
+    let (from_addr, from_prefix, _) = parse_network(from_network)?;
 
     let mut buf = Vec::with_capacity(256);
     buf.extend_from_slice(&[0u8; mem::size_of::<NlMsgHdr>()]);
 
     let fib = FibRuleHdr {
-        family: libc::AF_INET as u8,
+        family,
         dst_len: 0,
         src_len: from_prefix,
         tos: 0,
@@ -376,11 +379,11 @@ pub fn policy_delete(from_network: &str, to_network: &str, table_name: &str, pri
     };
     buf.extend_from_slice(fib_bytes);
 
-    push_attr(&mut buf, FRA_SRC, &from_addr.octets());
+    push_attr(&mut buf, FRA_SRC, &addr_bytes(&from_addr));
 
     if !to_network.is_empty() {
-        let (to_addr, to_prefix) = parse_network(to_network)?;
-        push_attr(&mut buf, FRA_DST, &to_addr.octets());
+        let (to_addr, to_prefix, _) = parse_network(to_network)?;
+        push_attr(&mut buf, FRA_DST, &addr_bytes(&to_addr));
         let dst_len_offset = mem::size_of::<NlMsgHdr>() + 1;
         buf[dst_len_offset] = to_prefix;
     }
@@ -409,23 +412,28 @@ pub fn policy_delete(from_network: &str, to_network: &str, table_name: &str, pri
 
 /// Add a route: ip route add <destination> dev <device> table <table>
 /// Use "default" as destination for default route (0.0.0.0/0).
-pub fn route_add(destination: &str, device: &str, table_name: &str) -> Result<(), String> {
+pub fn route_add(destination: &str, device: &str, table_name: &str, family: u8) -> Result<(), String> {
     let mut sock = NetlinkSocket::open().map_err(|e| e.to_string())?;
     let seq = sock.next_seq();
     let table_id = resolve_table(table_name)?;
     let ifindex = if_nametoindex(device)?;
 
-    let (dst_addr, dst_prefix) = if destination == "default" || destination == "0.0.0.0/0" {
-        (Ipv4Addr::new(0, 0, 0, 0), 0u8)
+    let (dst_addr, dst_prefix) = if destination == "default" || destination == "0.0.0.0/0" || destination == "::/0" {
+        if family == libc::AF_INET6 as u8 {
+            (IpAddr::V6(Ipv6Addr::UNSPECIFIED), 0u8)
+        } else {
+            (IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0u8)
+        }
     } else {
-        parse_network(destination)?
+        let (addr, prefix, _) = parse_network(destination)?;
+        (addr, prefix)
     };
 
     let mut buf = Vec::with_capacity(256);
     buf.extend_from_slice(&[0u8; mem::size_of::<NlMsgHdr>()]);
 
     let rtm = RtMsg {
-        rtm_family: libc::AF_INET as u8,
+        rtm_family: family,
         rtm_dst_len: dst_prefix,
         rtm_src_len: 0,
         rtm_tos: 0,
@@ -440,15 +448,12 @@ pub fn route_add(destination: &str, device: &str, table_name: &str) -> Result<()
     };
     buf.extend_from_slice(rtm_bytes);
 
-    // Destination (only if not default)
     if dst_prefix > 0 {
-        push_attr(&mut buf, RTA_DST, &dst_addr.octets());
+        push_attr(&mut buf, RTA_DST, &addr_bytes(&dst_addr));
     }
 
-    // Output interface
     push_attr_u32(&mut buf, RTA_OIF, ifindex);
 
-    // Table (for IDs > 255)
     if table_id > 255 {
         push_attr_u32(&mut buf, RTA_TABLE, table_id);
     }
@@ -470,23 +475,28 @@ pub fn route_add(destination: &str, device: &str, table_name: &str) -> Result<()
 }
 
 /// Delete a route.
-pub fn route_delete(destination: &str, device: &str, table_name: &str) -> Result<(), String> {
+pub fn route_delete(destination: &str, device: &str, table_name: &str, family: u8) -> Result<(), String> {
     let mut sock = NetlinkSocket::open().map_err(|e| e.to_string())?;
     let seq = sock.next_seq();
     let table_id = resolve_table(table_name)?;
     let ifindex = if_nametoindex(device)?;
 
-    let (dst_addr, dst_prefix) = if destination == "default" || destination == "0.0.0.0/0" {
-        (Ipv4Addr::new(0, 0, 0, 0), 0u8)
+    let (dst_addr, dst_prefix) = if destination == "default" || destination == "0.0.0.0/0" || destination == "::/0" {
+        if family == libc::AF_INET6 as u8 {
+            (IpAddr::V6(Ipv6Addr::UNSPECIFIED), 0u8)
+        } else {
+            (IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0u8)
+        }
     } else {
-        parse_network(destination)?
+        let (addr, prefix, _) = parse_network(destination)?;
+        (addr, prefix)
     };
 
     let mut buf = Vec::with_capacity(256);
     buf.extend_from_slice(&[0u8; mem::size_of::<NlMsgHdr>()]);
 
     let rtm = RtMsg {
-        rtm_family: libc::AF_INET as u8,
+        rtm_family: family,
         rtm_dst_len: dst_prefix,
         rtm_src_len: 0,
         rtm_tos: 0,
@@ -502,7 +512,7 @@ pub fn route_delete(destination: &str, device: &str, table_name: &str) -> Result
     buf.extend_from_slice(rtm_bytes);
 
     if dst_prefix > 0 {
-        push_attr(&mut buf, RTA_DST, &dst_addr.octets());
+        push_attr(&mut buf, RTA_DST, &addr_bytes(&dst_addr));
     }
 
     push_attr_u32(&mut buf, RTA_OIF, ifindex);
@@ -570,5 +580,80 @@ pub fn flush_cache() -> Result<(), String> {
 pub fn enable_ip_forward() -> Result<(), String> {
     std::fs::write("/proc/sys/net/ipv4/ip_forward", "1")
         .map_err(|e| format!("Cannot enable ip_forward: {}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── parse_network ────────────────────────────────────────────
+
+    #[test]
+    fn parse_ipv4_network() {
+        let (addr, prefix, family) = parse_network("10.0.0.0/24").unwrap();
+        assert_eq!(addr, IpAddr::V4(Ipv4Addr::new(10, 0, 0, 0)));
+        assert_eq!(prefix, 24);
+        assert_eq!(family, libc::AF_INET as u8);
+    }
+
+    #[test]
+    fn parse_ipv6_network() {
+        let (addr, prefix, family) = parse_network("fd00:70:68::/120").unwrap();
+        assert!(addr.is_ipv6());
+        assert_eq!(prefix, 120);
+        assert_eq!(family, libc::AF_INET6 as u8);
+    }
+
+    #[test]
+    fn parse_ipv6_full() {
+        let (addr, prefix, family) = parse_network("2a03:b0c0:3:f0::2:309c:d000/128").unwrap();
+        assert!(addr.is_ipv6());
+        assert_eq!(prefix, 128);
+        assert_eq!(family, libc::AF_INET6 as u8);
+    }
+
+    #[test]
+    fn parse_ipv4_host() {
+        let (addr, prefix, family) = parse_network("192.168.1.1/32").unwrap();
+        assert_eq!(addr, IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
+        assert_eq!(prefix, 32);
+        assert_eq!(family, libc::AF_INET as u8);
+    }
+
+    #[test]
+    fn parse_invalid_no_prefix() {
+        assert!(parse_network("10.0.0.0").is_err());
+    }
+
+    #[test]
+    fn parse_invalid_addr() {
+        assert!(parse_network("not-an-ip/24").is_err());
+    }
+
+    // ── addr_bytes ───────────────────────────────────────────────
+
+    #[test]
+    fn addr_bytes_ipv4() {
+        let addr = IpAddr::V4(Ipv4Addr::new(10, 8, 0, 1));
+        let bytes = addr_bytes(&addr);
+        assert_eq!(bytes.len(), 4);
+        assert_eq!(bytes, vec![10, 8, 0, 1]);
+    }
+
+    #[test]
+    fn addr_bytes_ipv6() {
+        let addr = IpAddr::V6(Ipv6Addr::LOCALHOST);
+        let bytes = addr_bytes(&addr);
+        assert_eq!(bytes.len(), 16);
+        assert_eq!(bytes[15], 1); // ::1
+    }
+
+    #[test]
+    fn addr_bytes_ipv6_unspecified() {
+        let addr = IpAddr::V6(Ipv6Addr::UNSPECIFIED);
+        let bytes = addr_bytes(&addr);
+        assert_eq!(bytes.len(), 16);
+        assert!(bytes.iter().all(|&b| b == 0));
+    }
 }
 

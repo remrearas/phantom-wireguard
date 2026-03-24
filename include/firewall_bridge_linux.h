@@ -1,5 +1,5 @@
 /**
- * firewall_bridge_linux.h — Kernel operations backend (v2.1.0).
+ * firewall_bridge_linux.h — Kernel operations backend
  *
  * Pure nftables + netlink operations. No database, no state machine.
  * State management, persistence, presets → Python side (ufw pattern).
