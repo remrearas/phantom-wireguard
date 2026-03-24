@@ -1,0 +1,72 @@
+# ──────────────────────────────────────────────────────────────────
+# Firewall Bridge E2E Test Topology (dual-stack)
+# ──────────────────────────────────────────────────────────────────
+#
+# bridge       — .so built in image, source mounted, pytest runner
+# exit-server  — WireGuard exit (dual-stack)
+# client       — WireGuard client (wg-quick)
+# ──────────────────────────────────────────────────────────────────
+
+networks:
+  e2e:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+        - subnet: fd00:30::/64
+
+services:
+  bridge:
+    build:
+      context: ..
+      dockerfile: e2e_tests/bridge.Dockerfile
+    privileged: true
+    cap_add: [NET_ADMIN, SYS_ADMIN]
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../e2e_tests:/workspace/e2e_tests:ro
+      - ../pytest.ini:/workspace/pytest.ini:ro
+    environment:
+      BRIDGE_IP: 172.30.0.10
+      BRIDGE_IP6: fd00:30::10
+      EXIT_IP: 172.30.0.20
+      EXIT_IP6: fd00:30::20
+    networks:
+      e2e:
+        ipv4_address: 172.30.0.10
+        ipv6_address: fd00:30::10
+
+  exit-server:
+    build:
+      context: ..
+      dockerfile: e2e_tests/exit-server.Dockerfile
+    privileged: true
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+    networks:
+      e2e:
+        ipv4_address: 172.30.0.20
+        ipv6_address: fd00:30::20
+
+  client:
+    build:
+      context: ..
+      dockerfile: e2e_tests/client.Dockerfile
+    privileged: true
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv6.conf.all.forwarding=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks:
+      e2e:
+        ipv4_address: 172.30.0.30
+        ipv6_address: fd00:30::30
+    command: ["sleep", "infinity"]
