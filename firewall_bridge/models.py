@@ -59,6 +59,7 @@ class RoutingRule:
     id: int = 0
     group_id: int = 0
     rule_type: str = ""
+    family: int = 2
     from_network: str = ""
     to_network: str = ""
     table_name: str = ""

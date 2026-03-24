@@ -10,7 +10,7 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Preset schema validation for firewall_bridge v2.1.0
+Preset schema validation for firewall_bridge
 
 Pure Python, zero external dependencies.
 Validates YAML preset structure before apply.
@@ -50,8 +50,9 @@ VALID_PROTOS = ("", "tcp", "udp", "icmp")
 VALID_TABLE_ENTRY_KEYS = ("ensure", "policy", "route")
 
 ENSURE_FIELDS = {
-    "id":   {"type": int, "required": True, "min": 1, "max": 65535},
-    "name": {"type": str, "required": True},
+    "id":     {"type": int, "required": True, "min": 1, "max": 65535},
+    "name":   {"type": str, "required": True},
+    "family": {"type": int, "required": False, "default": 2, "enum": VALID_FAMILIES},
 }
 
 POLICY_FIELDS = {
@@ -59,12 +60,14 @@ POLICY_FIELDS = {
     "to":       {"type": str, "required": False, "format": "cidr"},
     "table":    {"type": str, "required": True},
     "priority": {"type": int, "required": True, "min": 0},
+    "family":   {"type": int, "required": False, "default": 2, "enum": VALID_FAMILIES},
 }
 
 ROUTE_FIELDS = {
     "destination": {"type": str, "required": True},
     "device":      {"type": str, "required": True},
     "table":       {"type": str, "required": True},
+    "family":      {"type": int, "required": False, "default": 2, "enum": VALID_FAMILIES},
 }
 
 RULE_FIELDS = {

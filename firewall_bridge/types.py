@@ -10,7 +10,7 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-Native exception hierarchy for firewall_bridge v2.1.0
+Native exception hierarchy for firewall_bridge
 
 Rust FFI error codes (negative) → kernel operation exceptions.
 Python-side errors (DB, state) → Python exceptions.

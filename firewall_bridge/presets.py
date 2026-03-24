@@ -10,7 +10,7 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-YAML preset engine for firewall_bridge v2.1.0
+YAML preset engine for firewall_bridge
 
 Presets are resolved YAML documents (no template variables).
 Two sections: table: (routing operations) and rules: (nftables).
@@ -86,6 +86,7 @@ def apply_preset(bridge: FirewallBridge, preset: Union[str, Path, dict],
             bridge.add_routing_rule(
                 group_name=name,
                 rule_type="ensure",
+                family=e.get("family", 2),
                 table_name=e.get("name", ""),
                 table_id=e.get("id", 0),
             )
@@ -94,6 +95,7 @@ def apply_preset(bridge: FirewallBridge, preset: Union[str, Path, dict],
             bridge.add_routing_rule(
                 group_name=name,
                 rule_type="policy",
+                family=p.get("family", 2),
                 from_network=p.get("from", ""),
                 to_network=p.get("to", ""),
                 table_name=p.get("table", ""),
@@ -104,6 +106,7 @@ def apply_preset(bridge: FirewallBridge, preset: Union[str, Path, dict],
             bridge.add_routing_rule(
                 group_name=name,
                 rule_type="route",
+                family=r.get("family", 2),
                 destination=r.get("destination", ""),
                 device=r.get("device", ""),
                 table_name=r.get("table", ""),

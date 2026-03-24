@@ -10,12 +10,12 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-firewall_bridge v2.1.0 — ufw pattern firewall manager.
+firewall_bridge — ufw pattern firewall manager.
 SQLite state persistence, YAML-driven presets, crash recovery.
 Rust backend: pure nftables + netlink kernel operations.
 """
 
-__version__ = "2.1.0"
+__version__ = "2.1.2"
 
 from .types import (
     BridgeError,

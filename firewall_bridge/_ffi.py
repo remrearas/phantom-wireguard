@@ -109,16 +109,16 @@ def _setup_signatures(lib: ctypes.CDLL) -> None:
     lib.rt_table_ensure.argtypes = [c_u32, c_p]  # table_id, table_name
     lib.rt_table_ensure.restype = c_i32
 
-    lib.rt_policy_add.argtypes = [c_p, c_p, c_p, c_u32]  # from, to, table, priority
+    lib.rt_policy_add.argtypes = [c_p, c_p, c_p, c_u32, c_i32]  # from, to, table, priority, family
     lib.rt_policy_add.restype = c_i32
 
-    lib.rt_policy_delete.argtypes = [c_p, c_p, c_p, c_u32]
+    lib.rt_policy_delete.argtypes = [c_p, c_p, c_p, c_u32, c_i32]
     lib.rt_policy_delete.restype = c_i32
 
-    lib.rt_route_add.argtypes = [c_p, c_p, c_p]  # dest, device, table
+    lib.rt_route_add.argtypes = [c_p, c_p, c_p, c_i32]  # dest, device, table, family
     lib.rt_route_add.restype = c_i32
 
-    lib.rt_route_delete.argtypes = [c_p, c_p, c_p]
+    lib.rt_route_delete.argtypes = [c_p, c_p, c_p, c_i32]
     lib.rt_route_delete.restype = c_i32
 
     lib.rt_enable_ip_forward.argtypes = []

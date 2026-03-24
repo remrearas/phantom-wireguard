@@ -1,4 +1,4 @@
--- firewall_bridge v2.1 — SQLite schema
+-- firewall_bridge — SQLite schema
 -- ufw pattern: config singleton + rule groups + firewall/routing rules
 -- WAL mode for crash recovery, foreign keys for cascade delete
 
@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS routing_rules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL REFERENCES rule_groups(id) ON DELETE CASCADE,
     rule_type TEXT NOT NULL,
+    family INTEGER NOT NULL DEFAULT 2,
     from_network TEXT NOT NULL DEFAULT '',
     to_network TEXT NOT NULL DEFAULT '',
     table_name TEXT NOT NULL DEFAULT '',

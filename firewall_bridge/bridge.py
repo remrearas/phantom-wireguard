@@ -148,12 +148,13 @@ class FirewallBridge:
     # ---- Routing Rules ----
 
     def add_routing_rule(self, group_name: str, rule_type: str,
+                         family: int = 2,
                          from_network: str = "", to_network: str = "",
                          table_name: str = "", table_id: int = 0,
                          priority: int = 0, destination: str = "",
                          device: str = "") -> int:
         rule_id = self._db.add_routing_rule(
-            group_name, rule_type, from_network, to_network,
+            group_name, rule_type, family, from_network, to_network,
             table_name, table_id, priority, destination, device,
         )
         if self._db.get_state() == "started" and self._db.is_group_enabled(group_name):
@@ -213,6 +214,7 @@ class FirewallBridge:
                 _encode(rule.to_network),
                 _encode(rule.table_name),
                 rule.priority,
+                rule.family,
             )
             check_result(rc)
         elif rt == "route":
@@ -220,6 +222,7 @@ class FirewallBridge:
                 _encode(rule.destination),
                 _encode(rule.device),
                 _encode(rule.table_name),
+                rule.family,
             )
             check_result(rc)
 
@@ -231,12 +234,14 @@ class FirewallBridge:
                 _encode(rule.to_network),
                 _encode(rule.table_name),
                 rule.priority,
+                rule.family,
             )
         elif rt == "route":
             self._lib.rt_route_delete(
                 _encode(rule.destination),
                 _encode(rule.device),
                 _encode(rule.table_name),
+                rule.family,
             )
 
     def _apply_group(self, group: Group) -> None:

@@ -183,7 +183,7 @@ class FirewallDB:
     def _row_to_rt_rule(row: sqlite3.Row) -> RoutingRule:
         return RoutingRule(
             id=row["id"], group_id=row["group_id"],
-            rule_type=row["rule_type"],
+            rule_type=row["rule_type"], family=row["family"],
             from_network=row["from_network"], to_network=row["to_network"],
             table_name=row["table_name"], table_id=row["table_id"],
             priority=row["priority"],
@@ -255,6 +255,7 @@ class FirewallDB:
     # ---- Routing Rules ----
 
     def add_routing_rule(self, group_name: str, rule_type: str,
+                         family: int = 2,
                          from_network: str = "", to_network: str = "",
                          table_name: str = "", table_id: int = 0,
                          priority: int = 0, destination: str = "",
@@ -262,10 +263,10 @@ class FirewallDB:
         gid = self._group_id(group_name)
         cur = self._conn.execute(
             """INSERT INTO routing_rules
-               (group_id, rule_type, from_network, to_network, table_name, table_id,
+               (group_id, rule_type, family, from_network, to_network, table_name, table_id,
                 priority, destination, device, applied, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
-            (gid, rule_type, from_network, to_network, table_name, table_id,
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
+            (gid, rule_type, family, from_network, to_network, table_name, table_id,
              priority, destination, device, _now()),
         )
         self._conn.commit()
