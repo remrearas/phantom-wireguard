@@ -17,6 +17,7 @@ jobs:
     uses: ./.github/workflows/test-firewall-bridge.yml
     permissions:
       contents: read
+      actions: read
 
   build:
     name: Build
@@ -57,9 +58,9 @@ jobs:
 
       - name: Extract version
         id: version
-        run: |
-          VERSION="${{ inputs.version_id }}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        env:
+          VERSION: ${{ inputs.version_id }}
+        run: echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Organize vendor directory
         env:
