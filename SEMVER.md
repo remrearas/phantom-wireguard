@@ -17,11 +17,11 @@ The daemon is the central package that defines the product version.
 All other components are dependencies with their own independent semver cycles.
 
 ```
-Phantom-WG Modern v1.0.0
-  └── Phantom Daemon v1.0.0             ← product version source
-        ├── auth-service v1.1.1         ← dependency
-        ├── wireguard-go-bridge v2.1.1  ← dependency
-        ├── firewall-bridge v2.1.0      ← dependency
+Phantom-WG Modern vX.Y.Z
+  └── Phantom Daemon vX.Y.Z             ← product version source
+        ├── auth-service vA.B.C         ← dependency
+        ├── wireguard-go-bridge vA.B.C  ← dependency
+        ├── firewall-bridge vA.B.C      ← dependency
         ├── react-spa (build artifact)  ← bundled with release
         └── nginx config                ← bundled with release
 ```
@@ -65,9 +65,15 @@ dependencies — reaches a new release milestone.
 
 ### Vendor Distribution
 
-Bridge binaries are distributed via `vendor-artifacts.phantom.tc`.
-Each bridge publishes versioned artifacts that the daemon Dockerfile
-fetches at build time. The vendor store lives on the `dev/vendor` branch.
+Bridge binaries are distributed via `vendor.phantom.tc` (Cloudflare R2).
+Each bridge has its own publish workflow that uploads versioned artifacts.
+The daemon Dockerfile fetches the relevant version or `latest` path at build time.
+
+```
+vendor.phantom.tc/
+├── firewall-bridge/{version}/linux-{arch}.zip
+└── wireguard-go-bridge/{version}/linux-{arch}.zip
+```
 
 ## Retro Version
 

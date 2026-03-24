@@ -17,11 +17,11 @@ Daemon, ürün versiyonunu belirleyen merkezi pakettir.
 Diğer tüm bileşenler kendi bağımsız semver döngülerine sahip bağımlılıklardır.
 
 ```
-Phantom-WG Modern v1.0.0
-  └── Phantom Daemon v1.0.0             ← ürün versiyonunun kaynağı
-        ├── auth-service v1.1.1         ← bağımlılık
-        ├── wireguard-go-bridge v2.1.1  ← bağımlılık
-        ├── firewall-bridge v2.1.0      ← bağımlılık
+Phantom-WG Modern vX.Y.Z
+  └── Phantom Daemon vX.Y.Z             ← ürün versiyonunun kaynağı
+        ├── auth-service vA.B.C         ← bağımlılık
+        ├── wireguard-go-bridge vA.B.C  ← bağımlılık
+        ├── firewall-bridge vA.B.C      ← bağımlılık
         ├── react-spa (build artifact)  ← release ile birlikte paketlenir
         └── nginx config                ← release ile birlikte paketlenir
 ```
@@ -65,9 +65,15 @@ yeni bir release kilometre taşına ulaştığında gerçekleşir.
 
 ### Vendor Dağıtımı
 
-Bridge binary'leri `vendor-artifacts.phantom.tc` üzerinden dağıtılır.
-Her bridge, daemon Dockerfile'ının build sırasında çektiği versiyonlanmış
-artifact'ler yayınlar. Vendor deposu `dev/vendor` branch'inde bulunur.
+Bridge binary'leri `vendor.phantom.tc` üzerinden dağıtılır (Cloudflare R2).
+Her bridge kendi publish workflow'u ile versiyonlanmış artifact'ler yayınlar.
+Daemon Dockerfile'ı build sırasında ilgili versiyon veya `latest` path'inden çeker.
+
+```
+vendor.phantom.tc/
+├── firewall-bridge/{version}/linux-{arch}.zip
+└── wireguard-go-bridge/{version}/linux-{arch}.zip
+```
 
 ## Retro Versiyonu
 
