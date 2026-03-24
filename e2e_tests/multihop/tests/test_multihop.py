@@ -582,17 +582,26 @@ class TestMultihopV6:
         print("  Connectivity: client -> daemon WG (IPv6)")
         print(f"{_THIN}")
 
-        # Ping daemon's IPv6 VPN gateway
-        rc, out = container_exec("client", "ping6 -c 3 -W 2 fd00:70:68::1", check=False)
-        _exec_log("ping6 fd00:70:68::1", rc, out)
+        # Ping daemon's IPv6 VPN gateway (retry — IPv6 NDP settle time)
+        for attempt in range(3):
+            rc, out = container_exec("client", "ping6 -c 3 -W 2 fd00:70:68::1", check=False)
+            _exec_log(f"ping6 fd00:70:68::1 (attempt {attempt + 1})", rc, out)
+            if rc == 0:
+                break
+            time.sleep(3)
         assert rc == 0, f"client cannot reach daemon WG IPv6 (fd00:70:68::1)\n{out}"
 
         print(f"\n{_THIN}")
         print("  Connectivity: client -> exit-server (IPv6 multihop)")
         print(f"{_THIN}")
 
-        rc, out = container_exec("client", "ping6 -c 3 -W 2 fd10:0:2::1", check=False)
-        _exec_log("ping6 fd10:0:2::1", rc, out)
+        # Ping exit-server through IPv6 multihop (retry)
+        for attempt in range(3):
+            rc, out = container_exec("client", "ping6 -c 3 -W 2 fd10:0:2::1", check=False)
+            _exec_log(f"ping6 fd10:0:2::1 (attempt {attempt + 1})", rc, out)
+            if rc == 0:
+                break
+            time.sleep(3)
         assert rc == 0, f"client cannot reach exit-server via IPv6 multihop (fd10:0:2::1)\n{out}"
 
         print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
