@@ -83,6 +83,12 @@ jobs:
           # Checkout main (create orphan if not exists)
           git checkout main 2>/dev/null || git checkout --orphan main
 
+          # Preserve docs and assets already on main
+          mkdir -p /tmp/main-preserve
+          for item in *.md assets/; do
+            [ -e "$item" ] && cp -r "$item" /tmp/main-preserve/
+          done
+
           # Remove everything except .git
           git rm -rf . 2>/dev/null || true
           git clean -fd 2>/dev/null || true
@@ -90,6 +96,10 @@ jobs:
           # Copy from stash
           cp -r /tmp/phantom-release/* .
           cp /tmp/phantom-release/.env.* . 2>/dev/null || true
+
+          # Restore preserved docs and assets
+          cp -r /tmp/main-preserve/* . 2>/dev/null || true
+          rm -rf /tmp/main-preserve
 
           # Stage all
           git add -A
