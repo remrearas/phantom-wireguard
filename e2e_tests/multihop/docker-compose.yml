@@ -28,6 +28,7 @@ services:
       - |
         mkdir -p /var/lib/phantom/db /var/lib/phantom/state/db
         exec python -m phantom_daemon.main /var/run/phantom/daemon.sock
+    privileged: true
     cap_add: [NET_ADMIN, NET_RAW]
     sysctls:
       - net.ipv4.ip_forward=1
@@ -84,6 +85,7 @@ services:
       - net.ipv6.conf.all.forwarding=1
     networks:
       e2e:
+        ipv4_address: 172.30.0.100
         ipv6_address: fd00:e2e::100
 
   client:
@@ -96,7 +98,10 @@ services:
       - net.ipv6.conf.all.forwarding=1
     devices:
       - /dev/net/tun:/dev/net/tun
-    networks: [e2e]
+    networks:
+      e2e:
+        ipv4_address: 172.30.0.30
+        ipv6_address: fd00:e2e::30
 
 secrets:
   wg_private_key:
