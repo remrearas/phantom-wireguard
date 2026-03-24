@@ -11,9 +11,11 @@
 
 networks:
   e2e:
+    enable_ipv6: true
     ipam:
       config:
         - subnet: 172.30.0.0/24
+        - subnet: "fd00:e2e::/64"
 
 services:
   daemon:
@@ -29,6 +31,7 @@ services:
     cap_add: [NET_ADMIN, NET_RAW]
     sysctls:
       - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
     devices:
       - /dev/net/tun:/dev/net/tun
     volumes:
@@ -43,9 +46,11 @@ services:
       WIREGUARD_LISTEN_PORT: "51820"
       WIREGUARD_MTU: "1420"
       WIREGUARD_ENDPOINT_V4: "172.30.0.10"
+      WIREGUARD_ENDPOINT_V6: "fd00:e2e::10"
     networks:
       e2e:
         ipv4_address: 172.30.0.10
+        ipv6_address: fd00:e2e::10
 
   gateway:
     image: alpine/socat:latest
@@ -74,7 +79,12 @@ services:
       dockerfile: e2e_tests/multihop/exit-server.Dockerfile
     privileged: true
     cap_add: [NET_ADMIN]
-    networks: [e2e]
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+    networks:
+      e2e:
+        ipv6_address: fd00:e2e::100
 
   client:
     build:
@@ -82,6 +92,8 @@ services:
       dockerfile: e2e_tests/multihop/client.Dockerfile
     privileged: true
     cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv6.conf.all.forwarding=1
     devices:
       - /dev/net/tun:/dev/net/tun
     networks: [e2e]

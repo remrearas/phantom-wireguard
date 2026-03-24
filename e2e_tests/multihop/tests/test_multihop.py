@@ -106,7 +106,7 @@ def api(gateway_url):
 
 @pytest.fixture(scope="module")
 def exit_conf(container_exec, container_ip):
-    """Read exit-server WG config with resolved IP."""
+    """Read exit-server WG config (IPv4) with resolved IP."""
     for _ in range(30):
         rc, out = container_exec("exit-server", "cat /config/client.conf", check=False)
         if rc == 0 and "PublicKey" in out:
@@ -118,6 +118,22 @@ def exit_conf(container_exec, container_ip):
     exit_ip = container_ip("exit-server")
     _, conf = container_exec("exit-server", "cat /config/client.conf")
     return conf.replace("__EXIT_SERVER_IP__", exit_ip)
+
+
+@pytest.fixture(scope="module")
+def exit_conf_v6(container_exec, container_ip6):
+    """Read exit-server WG config (IPv6) with resolved IP."""
+    for _ in range(30):
+        rc, out = container_exec("exit-server", "cat /config/client-v6.conf", check=False)
+        if rc == 0 and "PublicKey" in out:
+            break
+        time.sleep(1)
+    else:
+        pytest.fail("exit-server v6 config not ready after 30s")
+
+    exit_ip6 = container_ip6("exit-server")
+    _, conf = container_exec("exit-server", "cat /config/client-v6.conf")
+    return conf.replace("__EXIT_SERVER_IP6__", exit_ip6)
 
 
 # -- Test class ------------------------------------------------------
@@ -384,5 +400,247 @@ class TestMultihop:
         print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
 
         print(f"\n{_SEP}")
-        print("  ALL PHASES PASSED")
+        print("  ALL PHASES PASSED (IPv4)")
+        print(f"{_SEP}\n")
+
+
+# -- IPv6 Test class -----------------------------------------------
+
+class TestMultihopV6:
+    """Multihop lifecycle E2E (IPv6) — 5 phases."""
+
+    # ================================================================
+    #  PHASE 1 — CLIENT SETUP
+    # ================================================================
+
+    def test_assign_client(self, api):
+        """Create a test client via API."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 1 (v6) — CLIENT SETUP")
+        print(f"{_SEP}")
+
+        resp = api.post("/api/core/clients/assign", body={"name": "e2e-client-v6"})
+        assert resp.status_code == 201, f"assign: {resp.status_code} {resp.text}"
+
+        data = resp.json()["data"]
+        assert data["name"] == "e2e-client-v6"
+        assert data["ipv6_address"]
+
+        print(f"\n  Client name   : {data['name']}")
+        print(f"  IPv6 address  : {data['ipv6_address']}")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 2 — MULTIHOP IMPORT + ENABLE (IPv6)
+    # ================================================================
+
+    def test_import_exit_v6(self, api, exit_conf_v6):
+        """Import exit-server WG config (IPv6 endpoint)."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 2a (v6) — IMPORT EXIT CONFIG")
+        print(f"{_SEP}")
+
+        print(f"\n  Exit config (IPv6):")
+        for line in exit_conf_v6.strip().splitlines():
+            print(f"    | {line}")
+
+        resp = api.post("/api/multihop/import", body={"name": "test-exit-v6", "config": exit_conf_v6})
+        assert resp.status_code == 201, f"import: {resp.status_code} {resp.text}"
+        assert resp.json()["ok"] is True
+
+        resp = api.get("/api/multihop/list")
+        assert resp.status_code == 200
+        names = [e["name"] for e in resp.json()["data"]["exits"]]
+        assert "test-exit-v6" in names
+        print(f"\n  Import verify : test-exit-v6 in {names}")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    def test_enable_multihop_v6(self, api):
+        """Enable multihop with IPv6 exit."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 2b (v6) — ENABLE MULTIHOP")
+        print(f"{_SEP}")
+
+        resp = api.post("/api/multihop/enable", body={"name": "test-exit-v6"})
+        assert resp.status_code == 200, f"enable: {resp.status_code} {resp.text}"
+        assert resp.json()["data"]["status"] == "enabled"
+
+        resp = api.get("/api/multihop/status")
+        assert resp.status_code == 200
+        status = resp.json()["data"]
+        assert status["enabled"] is True
+        assert status["active"] == "test-exit-v6"
+
+        print(f"\n  Multihop      : enabled={status['enabled']}  active={status['active']}")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 3 — DAEMON CONNECTIVITY (IPv6 tunnel)
+    # ================================================================
+
+    def test_daemon_reaches_exit_v6(self, api, container_exec):
+        """Verify: daemon can ping exit-server through IPv6 WG tunnel."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 3 (v6) — DAEMON CONNECTIVITY & STATE INSPECTION")
+        print(f"{_SEP}")
+
+        time.sleep(5)
+
+        print(f"\n{_THIN}")
+        print("  Connectivity: daemon -> exit-server (fd10:0:2::1)")
+        print(f"{_THIN}")
+
+        rc, out = container_exec("daemon", "ping6 -c 3 -W 2 fd10:0:2::1", check=False)
+        _exec_log("ping6 fd10:0:2::1", rc, out)
+        assert rc == 0, f"daemon cannot reach exit-server (fd10:0:2::1)\n{out}"
+
+        print(f"\n{_THIN}")
+        print("  Firewall state (API)")
+        print(f"{_THIN}")
+
+        resp = api.get("/api/core/firewall/groups/list")
+        assert resp.status_code == 200
+        groups = resp.json()["data"]
+        group_names = [g["name"] for g in groups] if isinstance(groups, list) else list(groups.keys()) if isinstance(groups, dict) else []
+        print(f"\n  Groups        : {group_names}")
+
+        # Check IPv6 preset applied
+        resp = api.post("/api/core/firewall/rules/list", body={"group": "multihop-exit-v6"})
+        if resp.status_code == 200:
+            rules = resp.json().get("data", [])
+            print(f"  Rules (mhop6) : {len(rules)} rules")
+
+        print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 4 — CLIENT E2E (IPv6 MULTIHOP CHAIN)
+    # ================================================================
+
+    def test_client_e2e_v6(self, api, container_exec, container_write_file):
+        """Client connects through IPv6 multihop chain."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 4 (v6) — CLIENT E2E (IPv6 MULTIHOP CHAIN)")
+        print(f"{_SEP}")
+
+        resp = api.post(
+            "/api/core/clients/config",
+            body={"name": "e2e-client-v6", "version": "v6"},
+        )
+        assert resp.status_code == 200, f"config export: {resp.status_code} {resp.text}"
+
+        client_conf_raw = base64.b64decode(resp.json()["data"]).decode()
+
+        print(f"\n{_THIN}")
+        print("  Client wg-quick config (from API, raw)")
+        print(f"{_THIN}")
+        for line in client_conf_raw.strip().splitlines():
+            print(f"    | {line}")
+
+        # Adapt config for E2E: remove DNS, narrow AllowedIPs to tunnel range
+        adapted_lines = []
+        for line in client_conf_raw.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("DNS"):
+                continue
+            if stripped.startswith("AllowedIPs") and "::/0" in stripped:
+                line = line.replace("::/0", "fd00:70:68::/48, fd10::/16")
+            adapted_lines.append(line)
+        client_conf = "\n".join(adapted_lines)
+
+        print(f"\n{_THIN}")
+        print("  Client wg-quick config (adapted for E2E)")
+        print(f"{_THIN}")
+        for line in client_conf.strip().splitlines():
+            print(f"    | {line}")
+
+        container_write_file("client", "/etc/wireguard/wg0.conf", client_conf)
+        container_exec("client", "wg-quick up wg0")
+        time.sleep(5)
+
+        print(f"\n{_THIN}")
+        print("  Client WireGuard state")
+        print(f"{_THIN}")
+
+        rc, out = container_exec("client", "wg show wg0", check=False)
+        _exec_log("wg show wg0", rc, out)
+
+        print(f"\n{_THIN}")
+        print("  Connectivity: client -> daemon WG (IPv6)")
+        print(f"{_THIN}")
+
+        # Ping daemon's IPv6 VPN gateway
+        rc, out = container_exec("client", "ping6 -c 3 -W 2 fd00:70:68::1", check=False)
+        _exec_log("ping6 fd00:70:68::1", rc, out)
+        assert rc == 0, f"client cannot reach daemon WG IPv6 (fd00:70:68::1)\n{out}"
+
+        print(f"\n{_THIN}")
+        print("  Connectivity: client -> exit-server (IPv6 multihop)")
+        print(f"{_THIN}")
+
+        rc, out = container_exec("client", "ping6 -c 3 -W 2 fd10:0:2::1", check=False)
+        _exec_log("ping6 fd10:0:2::1", rc, out)
+        assert rc == 0, f"client cannot reach exit-server via IPv6 multihop (fd10:0:2::1)\n{out}"
+
+        print(f"\n  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    # ================================================================
+    #  PHASE 5 — CLEANUP
+    # ================================================================
+
+    def test_disable_multihop_v6(self, api, container_exec):
+        """Disable multihop and tear down client."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 5a (v6) — DISABLE MULTIHOP")
+        print(f"{_SEP}")
+
+        container_exec("client", "wg-quick down wg0", check=False)
+
+        resp = api.post("/api/multihop/disable")
+        assert resp.status_code == 200
+
+        resp = api.get("/api/multihop/status")
+        assert resp.json()["data"]["enabled"] is False
+
+        print(f"\n  Multihop      : disabled")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+        print(f"{_THIN}")
+
+    def test_cleanup_v6(self, api):
+        """Remove exit config and revoke client."""
+        t0 = time.perf_counter()
+
+        print(f"\n{_SEP}")
+        print("  PHASE 5b (v6) — CLEANUP")
+        print(f"{_SEP}")
+
+        api.post("/api/multihop/remove", body={"name": "test-exit-v6"})
+        api.post("/api/core/clients/revoke", body={"name": "e2e-client-v6"})
+
+        resp = api.get("/api/multihop/list")
+        names = [e["name"] for e in resp.json()["data"]["exits"]]
+        assert "test-exit-v6" not in names
+
+        print(f"\n  Exits after   : {names}")
+        print(f"  Client        : e2e-client-v6 revoked")
+        print(f"  Phase time    : {time.perf_counter() - t0:.2f}s")
+
+        print(f"\n{_SEP}")
+        print("  ALL PHASES PASSED (IPv6)")
         print(f"{_SEP}\n")

@@ -105,7 +105,7 @@ def container_write_file(container_exec):
 
 @pytest.fixture(scope="session")
 def container_ip(docker_client, project_name):
-    """Factory fixture: get container IP on compose default network."""
+    """Factory fixture: get container IPv4 on compose default network."""
 
     def _ip(service: str) -> str:
         container = _find_container(docker_client, project_name, service)
@@ -115,6 +115,23 @@ def container_ip(docker_client, project_name):
             ip = net_info.get("IPAddress")
             if ip:
                 return ip
-        raise RuntimeError(f"No IP found for {service}")
+        raise RuntimeError(f"No IPv4 found for {service}")
 
     return _ip
+
+
+@pytest.fixture(scope="session")
+def container_ip6(docker_client, project_name):
+    """Factory fixture: get container IPv6 on compose default network."""
+
+    def _ip6(service: str) -> str:
+        container = _find_container(docker_client, project_name, service)
+        container.reload()
+        networks = container.attrs["NetworkSettings"]["Networks"]
+        for net_info in networks.values():
+            ip6 = net_info.get("GlobalIPv6Address")
+            if ip6:
+                return ip6
+        raise RuntimeError(f"No IPv6 found for {service}")
+
+    return _ip6
