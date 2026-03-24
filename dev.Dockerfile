@@ -16,8 +16,10 @@ FROM python:3.12-slim AS base
 # Manual override: --build-arg TARGETARCH=arm64
 ARG TARGETARCH
 
-ARG VENDOR_URL=https://vendor-artifacts.phantom.tc
+ARG VENDOR_URL=https://vendor.phantom.tc
 ARG VENDOR_DIR=/opt/phantom/vendor
+ARG FIREWALL_BRIDGE_VERSION=latest
+ARG WIREGUARD_GO_BRIDGE_VERSION=latest
 
 # ── System deps ──────────────────────────────────────────────────
 RUN apt-get update \
@@ -27,19 +29,24 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p /etc/iproute2
 
-# ── Download & unpack vendor pack ────────────────────────────────
+# ── Download & unpack vendor bridges ─────────────────────────────
 RUN set -e; \
     case "${TARGETARCH}" in \
         amd64|arm64) ;; \
         *) echo "Unsupported arch: ${TARGETARCH}" && exit 1 ;; \
     esac; \
-    ZIP_NAME="vendor-pack-linux-${TARGETARCH}.zip"; \
-    URL="${VENDOR_URL}/${ZIP_NAME}"; \
-    echo "Fetching ${URL}"; \
-    curl -fSL -o /tmp/vendor-pack.zip "${URL}"; \
     mkdir -p "${VENDOR_DIR}"; \
-    unzip -o /tmp/vendor-pack.zip -d "${VENDOR_DIR}"; \
-    rm /tmp/vendor-pack.zip
+    for BRIDGE in firewall-bridge wireguard-go-bridge; do \
+        case "${BRIDGE}" in \
+            firewall-bridge)      VER="${FIREWALL_BRIDGE_VERSION}" ;; \
+            wireguard-go-bridge)  VER="${WIREGUARD_GO_BRIDGE_VERSION}" ;; \
+        esac; \
+        URL="${VENDOR_URL}/${BRIDGE}/${VER}/linux-${TARGETARCH}.zip"; \
+        echo "Fetching ${URL}"; \
+        curl -fSL -o /tmp/bridge.zip "${URL}"; \
+        unzip -o /tmp/bridge.zip -d "${VENDOR_DIR}"; \
+        rm /tmp/bridge.zip; \
+    done
 
 # ── Bridge env vars (.so absolute paths) ─────────────────────────
 # _ffi.py 3-tier discovery: env var → sibling → system ldconfig
