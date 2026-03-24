@@ -266,10 +266,27 @@ class TestRoutingRules:
         )
         r = db.list_routing_rules("g1")[0]
         assert r.rule_type == "policy"
+        assert r.family == 2
         assert r.from_network == "10.0.0.0/24"
         assert r.to_network == "0.0.0.0/0"
         assert r.table_name == "mh"
         assert r.table_id == 200
         assert r.priority == 100
         assert r.destination == "default"
+
+    def test_family_ipv6(self, db):
+        db.create_group("g1")
+        db.add_routing_rule(
+            "g1", "policy", family=10, from_network="fd00:70:68::/120",
+            table_name="mh6", priority=100,
+        )
+        r = db.list_routing_rules("g1")[0]
+        assert r.family == 10
+        assert r.from_network == "fd00:70:68::/120"
+
+    def test_family_default(self, db):
+        db.create_group("g1")
+        db.add_routing_rule("g1", "route", destination="default", device="wg0")
+        r = db.list_routing_rules("g1")[0]
+        assert r.family == 2
         assert r.device == "wg0"

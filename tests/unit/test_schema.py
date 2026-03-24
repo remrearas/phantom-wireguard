@@ -5,6 +5,7 @@ Pure Python, no .so required.
 
 import pytest
 
+# noinspection PyProtectedMember
 from firewall_bridge.schema import validate_preset, _is_cidr
 from firewall_bridge.types import PresetValidationError
 
@@ -186,6 +187,36 @@ class TestValidPresets:
         spec["table"] = [{"ensure": {"id": 65535, "name": "max"}}]
         result = validate_preset(spec)
         assert result["table"][0]["ensure"]["id"] == 65535
+
+    def test_routing_family_default(self):
+        spec = {
+            "name": "rt-fam-default",
+            "table": [{"policy": {"from": "10.0.0.0/24", "table": "mh", "priority": 100}}],
+        }
+        result = validate_preset(spec)
+        assert result["table"][0]["policy"]["family"] == 2
+
+    def test_routing_family_ipv6(self):
+        spec = {
+            "name": "rt-fam-v6",
+            "table": [
+                {"ensure": {"id": 201, "name": "mh6", "family": 10}},
+                {"policy": {"from": "fd00:70:68::/120", "table": "mh6", "priority": 100, "family": 10}},
+                {"route": {"destination": "default", "device": "wg0", "table": "mh6", "family": 10}},
+            ],
+        }
+        result = validate_preset(spec)
+        assert result["table"][0]["ensure"]["family"] == 10
+        assert result["table"][1]["policy"]["family"] == 10
+        assert result["table"][2]["route"]["family"] == 10
+
+    def test_routing_family_invalid(self):
+        with pytest.raises(PresetValidationError, match="family.*must be one of"):
+            validate_preset({
+                "name": "bad",
+                "table": [{"policy": {"from": "10.0.0.0/24", "table": "mh",
+                                       "priority": 100, "family": 4}}],
+            })
 
 
 # ---- Missing required fields ----

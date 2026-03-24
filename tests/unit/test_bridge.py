@@ -65,7 +65,7 @@ class TestLifecycle:
         assert bridge.get_state() == "started"
         mock_lib.nft_flush_table.assert_called()
 
-    def test_stop(self, bridge, mock_lib):
+    def test_stop(self, bridge):
         bridge.start()
         bridge.stop()
         assert bridge.get_state() == "stopped"
@@ -240,6 +240,17 @@ class TestRoutingRules:
                                  table_name="mh", priority=100)
         mock_lib.rt_policy_add.assert_called()
 
+    def test_routing_policy_ipv6_apply(self, bridge, mock_lib):
+        bridge.create_group("g1")
+        bridge.start()
+        bridge.add_routing_rule("g1", "policy", family=10,
+                                 from_network="fd00:70:68::/120",
+                                 table_name="mh6", priority=100)
+        mock_lib.rt_policy_add.assert_called()
+        # family=10 passed as last arg
+        call_args = mock_lib.rt_policy_add.call_args
+        assert call_args[0][-1] == 10
+
     def test_routing_route_apply(self, bridge, mock_lib):
         bridge.create_group("g1")
         bridge.start()
@@ -248,6 +259,17 @@ class TestRoutingRules:
                                  device="wg0",
                                  table_name="mh")
         mock_lib.rt_route_add.assert_called()
+
+    def test_routing_route_ipv6_apply(self, bridge, mock_lib):
+        bridge.create_group("g1")
+        bridge.start()
+        bridge.add_routing_rule("g1", "route", family=10,
+                                 destination="default",
+                                 device="wg_exit",
+                                 table_name="mh6")
+        mock_lib.rt_route_add.assert_called()
+        call_args = mock_lib.rt_route_add.call_args
+        assert call_args[0][-1] == 10
 
 
 class TestCrashRecovery:

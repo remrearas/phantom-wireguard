@@ -27,3 +27,7 @@ coverage_html/
 
 # Claude workspace
 .claude/
+
+# Lib (downloaded artifacts)
+lib/*
+!lib/.gitkeep

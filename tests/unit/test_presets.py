@@ -327,3 +327,63 @@ class TestMultihopPreset:
         assert fw_calls[1][1]["state_match"] == "established,related"
         assert fw_calls[2][1]["action"] == "masquerade"
         assert fw_calls[2][1]["source"] == "10.0.1.0/24"
+
+    def test_multihop_v6_full(self, bridge):
+        spec = {
+            "name": "multihop-exit-v6",
+            "priority": 80,
+            "metadata": {"description": "IPv6 forward traffic between interfaces"},
+            "table": [
+                {"ensure": {"id": 201, "name": "mh6", "family": 10}},
+                {"policy": {"from": "fd00:70:68::/120", "table": "mh6", "priority": 100, "family": 10}},
+                {"route": {"destination": "default", "device": "wg_exit", "table": "mh6", "family": 10}},
+            ],
+            "rules": [
+                {"chain": "forward", "action": "accept", "family": 10,
+                 "in_iface": "wg_main", "out_iface": "wg_exit"},
+                {"chain": "forward", "action": "accept", "family": 10,
+                 "in_iface": "wg_exit", "out_iface": "wg_main",
+                 "state": "established,related"},
+                {"chain": "postrouting", "action": "masquerade", "family": 10,
+                 "source": "fd00:70:68::/120", "out_iface": "wg_exit"},
+            ],
+        }
+        apply_preset(bridge, spec)
+
+        # 3 routing rules with family=10
+        assert bridge.add_routing_rule.call_count == 3
+        rt_calls = bridge.add_routing_rule.call_args_list
+        assert rt_calls[0][1]["family"] == 10
+        assert rt_calls[1][1]["family"] == 10
+        assert rt_calls[1][1]["from_network"] == "fd00:70:68::/120"
+        assert rt_calls[2][1]["family"] == 10
+        assert rt_calls[2][1]["destination"] == "default"
+
+        # 3 firewall rules with family=10
+        assert bridge.add_firewall_rule.call_count == 3
+        fw_calls = bridge.add_firewall_rule.call_args_list
+        assert fw_calls[0][1]["family"] == 10
+        assert fw_calls[1][1]["family"] == 10
+        assert fw_calls[2][1]["family"] == 10
+
+    def test_routing_family_default_ipv4(self, bridge):
+        spec = {
+            "name": "fam-default",
+            "table": [
+                {"policy": {"from": "10.0.0.0/24", "table": "t1", "priority": 100}},
+            ],
+        }
+        apply_preset(bridge, spec)
+        args = bridge.add_routing_rule.call_args
+        assert args[1]["family"] == 2
+
+    def test_routing_family_explicit_ipv6(self, bridge):
+        spec = {
+            "name": "fam-v6",
+            "table": [
+                {"route": {"destination": "default", "device": "wg0", "table": "t1", "family": 10}},
+            ],
+        }
+        apply_preset(bridge, spec)
+        args = bridge.add_routing_rule.call_args
+        assert args[1]["family"] == 10
