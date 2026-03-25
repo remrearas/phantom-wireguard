@@ -417,11 +417,23 @@ class TestInvalidEnums:
             })
 
     def test_invalid_action(self):
-        with pytest.raises(PresetValidationError, match="action.*must be one of"):
+        with pytest.raises(PresetValidationError, match="action.*must start with one of"):
             validate_preset({
                 "name": "bad",
                 "rules": [{"chain": "input", "action": "allow"}],
             })
+
+    def test_dnat_action(self):
+        result = validate_preset({
+            "name": "dnat-test",
+            "rules": [{
+                "chain": "prerouting",
+                "action": "dnat to 172.28.0.4:443",
+                "proto": "tcp",
+                "dport": 443,
+            }],
+        })
+        assert result["rules"][0]["action"] == "dnat to 172.28.0.4:443"
 
     def test_invalid_family(self):
         with pytest.raises(PresetValidationError, match="family.*must be one of"):

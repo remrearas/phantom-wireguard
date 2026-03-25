@@ -44,7 +44,7 @@ def _is_cidr(value: str) -> bool:
 # ---- Schema definitions ----
 
 VALID_CHAINS = ("input", "output", "forward", "postrouting", "prerouting")
-VALID_ACTIONS = ("accept", "drop", "reject", "masquerade")
+VALID_ACTIONS = ("accept", "drop", "reject", "masquerade", "dnat")
 VALID_FAMILIES = (2, 10)
 VALID_PROTOS = ("", "tcp", "udp", "icmp")
 VALID_TABLE_ENTRY_KEYS = ("ensure", "policy", "route")
@@ -72,7 +72,7 @@ ROUTE_FIELDS = {
 
 RULE_FIELDS = {
     "chain":       {"type": str, "required": True, "enum": VALID_CHAINS},
-    "action":      {"type": str, "required": True, "enum": VALID_ACTIONS},
+    "action":      {"type": str, "required": True, "enum_prefix": VALID_ACTIONS},
     "family":      {"type": int, "required": False, "default": 2, "enum": VALID_FAMILIES},
     "proto":       {"type": str, "required": False, "default": "", "enum": VALID_PROTOS},
     "dport":       {"type": int, "required": False, "default": 0, "min": 0, "max": 65535},
@@ -124,6 +124,11 @@ def _validate_fields(path: str, data: dict, schema: dict) -> dict:
             if "enum" in spec and val not in spec["enum"]:
                 _fail(f"{path}.{key}",
                       f"must be one of {list(spec['enum'])}", val)
+
+            if "enum_prefix" in spec:
+                if not any(val == p or val.startswith(p + " ") for p in spec["enum_prefix"]):
+                    _fail(f"{path}.{key}",
+                          f"must start with one of {list(spec['enum_prefix'])}", val)
 
             if "min" in spec and val < spec["min"]:
                 _fail(f"{path}.{key}",
