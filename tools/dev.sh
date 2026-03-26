@@ -87,6 +87,7 @@ case "${1:-help}" in
     rebuild)     cmd_rebuild ;;
     logs)        cmd_logs "$DAEMON" ;;
     status)      cmd_status ;;
+    show-versions) cmd_show_versions ;;
     shell)       cmd_shell ;;
     curl)        shift; cmd_curl "$@" ;;
 
