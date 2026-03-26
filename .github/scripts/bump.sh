@@ -38,5 +38,10 @@ p.write_text(p.read_text().replace('__version__ = \"${CURRENT}\"', '__version__ 
 "
 
 echo "${CURRENT} → ${NEW}"
+
+# Commit
+git -C "${REPO_ROOT}" add "${INIT_FILE}"
+git -C "${REPO_ROOT}" commit -m "Bump v${NEW}"
+
 echo ""
-echo "Commit and push, then run: .github/scripts/release.sh"
+echo "Push, wait for CI, then run: .github/scripts/release.sh"
