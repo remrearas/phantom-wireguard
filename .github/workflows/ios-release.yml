@@ -1,0 +1,100 @@
+name: Phantom-WG Retro - iOS Client Release
+
+on:
+  push:
+    tags: [ "ios-v*" ]
+
+jobs:
+  extract-version:
+    name: Extract Version
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/ios-v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "::error::Invalid semver format: $VERSION (expected X.Y or X.Y.Z)"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  deploy-testflight:
+    needs: extract-version
+    uses: ./.github/workflows/ios-deploy-testflight.yml
+    permissions:
+      contents: read
+    with:
+      version: ${{ needs.extract-version.outputs.version }}
+    secrets:
+      IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_APP: ${{ secrets.IOS_PROVISIONING_PROFILE_APP }}
+      IOS_PROVISIONING_PROFILE_EXTENSION: ${{ secrets.IOS_PROVISIONING_PROFILE_EXTENSION }}
+      ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+
+  create-release:
+    name: Create GitHub Release
+    needs: [extract-version, deploy-testflight]
+    runs-on: ubuntu-latest
+    if: success()
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          tag_name: "ios-v${{ needs.extract-version.outputs.version }}"
+          name: "Phantom-WG Retro iOS Client ${{ needs.extract-version.outputs.version }}"
+          body: |
+            ## Phantom-WG Retro iOS Client ${{ needs.extract-version.outputs.version }}
+
+            ---
+
+            ### 🇺🇸
+
+            #### Distribution
+
+            This release has been uploaded to **TestFlight**.
+
+            #### Installation
+
+            1. Install [TestFlight](https://apps.apple.com/app/testflight/id899247664) from the App Store
+            2. Accept the TestFlight invitation or open the public test link
+            3. Install **Phantom-WG** from TestFlight
+            4. Import your tunnel configuration (JSON or QR code) and connect
+
+            #### Requirements
+
+            - iOS 17.0 or later
+            - iPhone or iPad
+
+            ---
+
+            ### 🇹🇷
+
+            #### Dağıtım
+
+            Bu sürüm **TestFlight**'a yüklenmiştir.
+
+            #### Kurulum
+
+            1. App Store'dan [TestFlight](https://apps.apple.com/app/testflight/id899247664) uygulamasını yükleyin
+            2. TestFlight davetini kabul edin veya herkese açık test bağlantısını açın
+            3. TestFlight üzerinden **Phantom-WG** uygulamasını yükleyin
+            4. Tünel yapılandırmanızı (JSON veya QR kod) içe aktarın ve bağlanın
+
+            #### Gereksinimler
+
+            - iOS 17.0 veya üzeri
+            - iPhone veya iPad
+
+          draft: false
+          prerelease: false
+          generate_release_notes: false
