@@ -20,6 +20,7 @@ build/
 # Environment (user-specific, created from .example files)
 .env.daemon
 .env.auth-service
+.terazi-subnet
 
 # Container data
 container-data/secrets/production/*
