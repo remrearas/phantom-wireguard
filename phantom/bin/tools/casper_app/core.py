@@ -209,12 +209,14 @@ class CasperAppService:
             "Endpoint = 127.0.0.1:51820",
         )
 
-        if server_ipv6:
-            modified_config = re.sub(
-                r'(Address\s*=\s*[^\n]+)',
-                r'\1, fd00::2/128',
-                modified_config,
-            )
+        # TODO: IPv6 support — currently running 4in6, hardcoded fd00::2/128
+        # is incorrect. Revisit when preparing full native IPv6 transition.
+        # if server_ipv6:
+        #     modified_config = re.sub(
+        #         r'(Address\s*=\s*[^\n]+)',
+        #         r'\1, fd00::2/128',
+        #         modified_config,
+        #     )
 
         allowed_ips_match = re.search(r'AllowedIPs\s*=\s*([^\n]+)', modified_config)
         if allowed_ips_match and ghost_info.get('server_ip'):
