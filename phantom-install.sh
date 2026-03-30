@@ -452,7 +452,14 @@ create_commands() {
         chmod +x "$INSTALL_DIR/phantom/bin/phantom-casper-ios.py"
         log "Command created: phantom-casper-ios" "$GREEN"
     fi
-    
+
+    # phantom-casper-app command
+    if [[ -f "$INSTALL_DIR/phantom/bin/phantom-casper-app.py" ]]; then
+        ln -sf "$INSTALL_DIR/phantom/bin/phantom-casper-app.py" /usr/local/bin/phantom-casper-app
+        chmod +x "$INSTALL_DIR/phantom/bin/phantom-casper-app.py"
+        log "Command created: phantom-casper-app" "$GREEN"
+    fi
+
 }
 
 # Install multihop monitor service
