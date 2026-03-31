@@ -21,12 +21,8 @@ targets:
       - path: Phantom-WG-MacOS
         excludes:
           - "**/.DS_Store"
-          - Assets/pages
           - Localization/translations
       - path: Phantom-WG-MacOS/Localization/translations
-        type: folder
-        buildPhase: resources
-      - path: Phantom-WG-MacOS/Assets/pages
         type: folder
         buildPhase: resources
     dependencies:
