@@ -1,0 +1,313 @@
+name: Phantom-WG Mac - Deploy DMG
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to build (e.g. 1.0.1)"
+        required: true
+        type: string
+    secrets:
+      DEVELOPER_ID_CERTIFICATE_P12:
+        required: true
+      DEVELOPER_ID_CERTIFICATE_PASSWORD:
+        required: true
+      MAC_PROVISIONING_PROFILE_APP:
+        required: true
+      MAC_PROVISIONING_PROFILE_EXTENSION:
+        required: true
+      APPLE_ID:
+        required: true
+      APPLE_ID_PASSWORD:
+        required: true
+
+concurrency:
+  group: deploy-dmg-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  deploy:
+    name: Archive & DMG
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      APP_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS
+      TUNNEL_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS.PhantomTunnel
+      TEAM_ID: 9C5SL5H7CM
+      APP_NAME: "Phantom-WG Mac"
+      MAC_DIR: .
+
+    steps:
+      # ── 0. Setup temp paths ─────────────────────────────────
+      - name: Setup temp paths
+        run: |
+          echo "KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db" >> "$GITHUB_ENV"
+          echo "KEYCHAIN_PASSWORD=ci_ephemeral_${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+          echo "P12_PATH=$RUNNER_TEMP/certificate.p12" >> "$GITHUB_ENV"
+          echo "PP_APP_PATH=$RUNNER_TEMP/app.provisionprofile" >> "$GITHUB_ENV"
+          echo "PP_TUNNEL_PATH=$RUNNER_TEMP/tunnel.provisionprofile" >> "$GITHUB_ENV"
+          echo "ARCHIVE_PATH=$RUNNER_TEMP/Phantom-WG-MacOS.xcarchive" >> "$GITHUB_ENV"
+          echo "EXPORT_PATH=$RUNNER_TEMP/export" >> "$GITHUB_ENV"
+          echo "EXPORT_OPTIONS_PATH=$RUNNER_TEMP/ExportOptions.plist" >> "$GITHUB_ENV"
+
+      # ── 1. Checkout ──────────────────────────────────────────
+      - name: Checkout with submodules
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      # ── 2. Extract version & build number ────────────────────
+      - name: Extract version & build number
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ -n "$INPUT_VERSION" ]]; then
+            VERSION="$INPUT_VERSION"
+          elif [[ "$GITHUB_REF" == refs/tags/dmg-v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/dmg-v}"
+          else
+            echo "::error::No version found. Push a dmg-v* tag or pass version via workflow_call."
+            exit 1
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "::error::Invalid semver format: $VERSION (expected X.Y or X.Y.Z)"
+            exit 1
+          fi
+
+          BUILD_NUMBER=$(TZ=Europe/Istanbul date +"%Y%m%d.%H%M")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "### Version Info" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Version:** $VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Build:** $BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── 3. Import signing certificate ────────────────────────
+      - name: Import signing certificate
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          echo -n "$APPLE_CERTIFICATE_P12" | base64 --decode -o "$P12_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security import "$P12_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          echo "Certificate imported. Identities found:"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+      # ── 4. Install provisioning profiles ─────────────────────
+      - name: Install provisioning profiles
+        env:
+          PROVISIONING_PROFILE_APP: ${{ secrets.MAC_PROVISIONING_PROFILE_APP }}
+          PROVISIONING_PROFILE_TUNNEL: ${{ secrets.MAC_PROVISIONING_PROFILE_EXTENSION }}
+        run: |
+          set -euo pipefail
+
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+
+          echo -n "$PROVISIONING_PROFILE_APP" | base64 --decode -o "$PP_APP_PATH"
+          echo -n "$PROVISIONING_PROFILE_TUNNEL" | base64 --decode -o "$PP_TUNNEL_PATH"
+
+          extract_and_install() {
+            local profile_path="$1"
+            local expected_bundle_id="$2"
+            local label="$3"
+
+            local plist
+            plist=$(security cms -D -i "$profile_path")
+
+            local uuid name
+            uuid=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$plist")
+            name=$(/usr/libexec/PlistBuddy -c "Print Name" /dev/stdin <<< "$plist")
+
+            local app_id=""
+            app_id=$(/usr/libexec/PlistBuddy -c "Print Entitlements:com.apple.application-identifier" /dev/stdin <<< "$plist" 2>/dev/null) || \
+            app_id=$(/usr/libexec/PlistBuddy -c "Print Entitlements:application-identifier" /dev/stdin <<< "$plist" 2>/dev/null) || true
+
+            if [[ -n "$app_id" ]]; then
+              local bundle_id="${app_id#*.}"
+              echo "$label: UUID=$uuid, Name=$name, BundleID=$bundle_id" >&2
+              if [[ "$bundle_id" != "$expected_bundle_id" ]]; then
+                echo "::error::$label profile bundle ID mismatch: got '$bundle_id', expected '$expected_bundle_id'"
+                exit 1
+              fi
+            else
+              echo "$label: UUID=$uuid, Name=$name (no app-id in entitlements)" >&2
+            fi
+
+            cp "$profile_path" "$PROFILES_DIR/$uuid.provisionprofile"
+            echo "$uuid $name"
+          }
+
+          read -r APP_UUID APP_PROFILE_NAME <<< "$(extract_and_install "$PP_APP_PATH" "$APP_BUNDLE_ID" "App")"
+          read -r TUNNEL_UUID TUNNEL_PROFILE_NAME <<< "$(extract_and_install "$PP_TUNNEL_PATH" "$TUNNEL_BUNDLE_ID" "Tunnel")"
+
+          echo "PP_APP_UUID=$APP_UUID" >> "$GITHUB_ENV"
+          echo "PP_TUNNEL_UUID=$TUNNEL_UUID" >> "$GITHUB_ENV"
+          echo "APP_PROFILE_NAME=$APP_PROFILE_NAME" >> "$GITHUB_ENV"
+          echo "TUNNEL_PROFILE_NAME=$TUNNEL_PROFILE_NAME" >> "$GITHUB_ENV"
+
+      # ── 5. Patch project.yml with CI profile names ──────────
+      - name: Patch project.yml for CI signing
+        working-directory: ${{ env.MAC_DIR }}
+        run: |
+          set -euo pipefail
+
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Mac_Phantom_WG_DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${APP_PROFILE_NAME}/" project.yml
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Mac_PhantomTunnel_DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${TUNNEL_PROFILE_NAME}/" project.yml
+
+          echo "--- Patched project.yml signing settings ---"
+          grep -A2 'CODE_SIGN_STYLE\|PROVISIONING_PROFILE_SPECIFIER' project.yml
+
+      # ── 6. Install tools ─────────────────────────────────────
+      - name: Install Go & XcodeGen
+        run: brew install go@1.25 xcodegen
+
+      # ── 7. Generate Xcode project ───────────────────────────
+      - name: Generate Xcode project
+        working-directory: ${{ env.MAC_DIR }}
+        run: xcodegen generate
+
+      # ── 8. Archive ──────────────────────────────────────────
+      - name: Archive
+        working-directory: ${{ env.MAC_DIR }}
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+        run: |
+          xcodebuild archive \
+            -scheme "Phantom-WG-MacOS" \
+            -destination 'platform=macOS,arch=arm64' \
+            -archivePath "$ARCHIVE_PATH" \
+            MARKETING_VERSION="$APP_VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$TEAM_ID"
+
+      # ── 9. Generate ExportOptions.plist ──────────────────────
+      - name: Generate ExportOptions.plist
+        run: |
+          cat > "$EXPORT_OPTIONS_PATH" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>developer-id</string>
+            <key>teamID</key>
+            <string>${TEAM_ID}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${APP_BUNDLE_ID}</key>
+              <string>${PP_APP_UUID}</string>
+              <key>${TUNNEL_BUNDLE_ID}</key>
+              <string>${PP_TUNNEL_UUID}</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+
+      # ── 10. Export app ───────────────────────────────────────
+      - name: Export app
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportOptionsPlist "$EXPORT_OPTIONS_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -allowProvisioningUpdates
+
+      # ── 11. Notarize app ─────────────────────────────────────
+      - name: Notarize app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        run: |
+          APP_PATH="$EXPORT_PATH/$APP_NAME.app"
+
+          ditto -c -k --keepParent "$APP_PATH" "$RUNNER_TEMP/app.zip"
+
+          xcrun notarytool submit "$RUNNER_TEMP/app.zip" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait
+
+          xcrun stapler staple "$APP_PATH"
+
+      # ── 12. Create DMG ──────────────────────────────────────
+      - name: Create DMG
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        run: |
+          DMG_PATH="$RUNNER_TEMP/Phantom-WG-MacOS-$APP_VERSION.dmg"
+          DMG_STAGING="$RUNNER_TEMP/dmg-staging"
+
+          mkdir -p "$DMG_STAGING"
+          cp -R "$EXPORT_PATH/$APP_NAME.app" "$DMG_STAGING/"
+          ln -s /Applications "$DMG_STAGING/Applications"
+
+          hdiutil create -volname "$APP_NAME" \
+            -srcfolder "$DMG_STAGING" \
+            -ov -format UDZO \
+            "$DMG_PATH"
+
+          rm -rf "$DMG_STAGING"
+
+          xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait
+
+          xcrun stapler staple "$DMG_PATH"
+
+          echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
+          echo "### DMG Created" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **File:** Phantom-WG-MacOS-$APP_VERSION.dmg" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── 13. Upload artifact ──────────────────────────────────
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: "Phantom-WG-MacOS-${{ steps.version.outputs.version }}.dmg"
+          path: "${{ env.DMG_PATH }}"
+          retention-days: 90
+
+      # ── 14. Cleanup ─────────────────────────────────────────
+      - name: Cleanup signing artifacts
+        if: always()
+        run: |
+          security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
+          rm -f "$P12_PATH" "$PP_APP_PATH" "$PP_TUNNEL_PATH"
+          rm -rf "$ARCHIVE_PATH" "$EXPORT_PATH" "$EXPORT_OPTIONS_PATH"

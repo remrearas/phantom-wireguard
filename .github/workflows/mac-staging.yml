@@ -1,0 +1,38 @@
+name: Phantom-WG Mac - Staging DMG
+
+on:
+  push:
+    tags: [ "staging-v*" ]
+
+jobs:
+  extract-version:
+    name: Extract Version
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/staging-v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "::error::Invalid semver format: $VERSION (expected X.Y or X.Y.Z)"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  build-dmg:
+    needs: extract-version
+    uses: ./.github/workflows/mac-deploy-dmg.yml
+    permissions:
+      contents: read
+    with:
+      version: ${{ needs.extract-version.outputs.version }}
+    secrets:
+      DEVELOPER_ID_CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+      DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+      MAC_PROVISIONING_PROFILE_APP: ${{ secrets.MAC_PROVISIONING_PROFILE_APP }}
+      MAC_PROVISIONING_PROFILE_EXTENSION: ${{ secrets.MAC_PROVISIONING_PROFILE_EXTENSION }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
