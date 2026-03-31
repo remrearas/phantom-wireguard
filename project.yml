@@ -50,7 +50,7 @@ targets:
           - "-lresolv"
           - "-Wl,-w"
         SWIFT_VERSION: "5.0"
-        MARKETING_VERSION: "1.0.1"
+        MARKETING_VERSION: "1.0.2"
         CURRENT_PROJECT_VERSION: 1
         CODE_SIGN_IDENTITY: "Developer ID Application"
         PROVISIONING_PROFILE_SPECIFIER: Mac_Phantom_WG_DeveloperID
@@ -167,7 +167,7 @@ targets:
           - "-lwstunnel_mac"
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: YES
         SWIFT_VERSION: "5.0"
-        MARKETING_VERSION: "1.0.1"
+        MARKETING_VERSION: "1.0.2"
         CURRENT_PROJECT_VERSION: 1
         LIBRARY_SEARCH_PATHS:
           - "$(PROJECT_DIR)/Libraries/WstunnelKit"
