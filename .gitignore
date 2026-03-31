@@ -74,6 +74,7 @@ xcuserdata/
 DerivedData/
 build/
 Libraries/
+!Libraries/WstunnelKit/
 
 # Project exclude paths
 /phantom/reports/
