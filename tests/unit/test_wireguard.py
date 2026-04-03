@@ -13,6 +13,7 @@ from phantom_daemon.base.services.wireguard.ipc import parse_ipc_peers
 from phantom_daemon.base.services.wireguard.service import (
     WireGuardService,
     _ensure_device_db,
+    _split_addresses,
     open_wireguard,
 )
 from pathlib import Path
@@ -29,6 +30,45 @@ def _ifname() -> str:
     global _counter
     _counter += 1
     return f"wg_u_{_tag}{_counter:x}"
+
+
+# ── TestSplitAddresses ──────────────────────────────────────────
+
+
+class TestSplitAddresses:
+    def test_single_ipv4(self):
+        v4, v6 = _split_addresses("10.66.66.2/24")
+        assert v4 == ["10.66.66.2/24"]
+        assert v6 == []
+
+    def test_single_ipv6(self):
+        v4, v6 = _split_addresses("fd10:66:66::2/64")
+        assert v4 == []
+        assert v6 == ["fd10:66:66::2/64"]
+
+    def test_dual_stack(self):
+        v4, v6 = _split_addresses("10.66.66.2/24, fd10:66:66::2/64")
+        assert v4 == ["10.66.66.2/24"]
+        assert v6 == ["fd10:66:66::2/64"]
+
+    def test_host_prefix_v4(self):
+        v4, v6 = _split_addresses("10.0.0.2/32")
+        assert v4 == ["10.0.0.2/32"]
+        assert v6 == []
+
+    def test_host_prefix_v6(self):
+        v4, v6 = _split_addresses("fd10:66:66::2/128")
+        assert v4 == []
+        assert v6 == ["fd10:66:66::2/128"]
+
+    def test_invalid_address_raises(self):
+        with pytest.raises(ValueError):
+            _split_addresses("not-an-address")
+
+    def test_whitespace_tolerance(self):
+        v4, v6 = _split_addresses("  10.0.0.1/24 ,  fd00::1/64  ")
+        assert v4 == ["10.0.0.1/24"]
+        assert v6 == ["fd00::1/64"]
 
 
 # ── TestEnsureDeviceDb ───────────────────────────────────────────
