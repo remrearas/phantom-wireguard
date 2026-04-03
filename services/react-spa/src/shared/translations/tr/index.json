@@ -501,45 +501,6 @@
     "EXIT_REMOVED": "Exit başarıyla kaldırıldı.",
     "BACKUP_ERROR": "Yedek işlemi başarısız oldu."
   },
-  "mermaid": {
-    "loading": {
-      "title": "Diyagram Yükleniyor",
-      "subtitle": "Lütfen bekleyin..."
-    },
-    "error": {
-      "title": "Diyagram Yüklenemedi",
-      "subtitle": "Diyagram render edilirken bir hata oluştu",
-      "containerNotReady": "Diyagram konteyneri hazır değil",
-      "emptyContent": "Boş diyagram içeriği",
-      "svgNotFound": "SVG elementi bulunamadı",
-      "svgEmpty": "SVG içeriği boş",
-      "renderFailed": "Diyagram render edilemedi",
-      "syntaxError": "Diyagram sözdizimi hatalı. Lütfen kontrol edin.",
-      "unsupportedType": "Desteklenmeyen diyagram türü veya komut.",
-      "helpTitle": "Mermaid diyagram sözdizimini kontrol edin. Yaygın hatalar",
-      "commonErrors": {
-        "arrows": "Eksik veya hatalı ok işaretleri",
-        "specialChars": "Düğüm adlarında özel karakterler",
-        "indentation": "Hatalı girintileme veya boşluk kullanımı",
-        "unsupported": "Desteklenmeyen diyagram türü"
-      },
-      "codeTitle": "Diyagram Kodu",
-      "retry": "Tekrar Dene",
-      "copyCode": "Kodu Kopyala"
-    },
-    "controls": {
-      "zoomIn": "Yakınlaştır",
-      "zoomOut": "Uzaklaştır",
-      "resetZoom": "Sıfırla",
-      "fullscreen": "Tam Ekran",
-      "copyCode": "Kodu Kopyala",
-      "download": "SVG İndir",
-      "refresh": "Yenile"
-    },
-    "modal": {
-      "close": "Kapat"
-    }
-  },
   "apiDoc": {
     "loading": "API spesifikasyonu yükleniyor...",
     "error": "API spesifikasyonu yüklenemedi.",

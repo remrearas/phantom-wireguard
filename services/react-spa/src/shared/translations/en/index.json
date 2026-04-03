@@ -501,45 +501,6 @@
     "SESSION_EXPIRED": "Your session has expired. Please sign in again.",
     "FORBIDDEN": "You do not have permission for this action."
   },
-  "mermaid": {
-    "loading": {
-      "title": "Loading Diagram",
-      "subtitle": "Please wait..."
-    },
-    "error": {
-      "title": "Diagram Failed to Load",
-      "subtitle": "An error occurred while rendering the diagram",
-      "containerNotReady": "Diagram container is not ready",
-      "emptyContent": "Empty diagram content",
-      "svgNotFound": "SVG element not found",
-      "svgEmpty": "SVG content is empty",
-      "renderFailed": "Failed to render diagram",
-      "syntaxError": "Diagram syntax error. Please check.",
-      "unsupportedType": "Unsupported diagram type or command.",
-      "helpTitle": "Check Mermaid diagram syntax. Common errors",
-      "commonErrors": {
-        "arrows": "Missing or incorrect arrow notation",
-        "specialChars": "Special characters in node names",
-        "indentation": "Incorrect indentation or spacing",
-        "unsupported": "Unsupported diagram type"
-      },
-      "codeTitle": "Diagram Code",
-      "retry": "Try Again",
-      "copyCode": "Copy Code"
-    },
-    "controls": {
-      "zoomIn": "Zoom In",
-      "zoomOut": "Zoom Out",
-      "resetZoom": "Reset",
-      "fullscreen": "Fullscreen",
-      "copyCode": "Copy Code",
-      "download": "Download SVG",
-      "refresh": "Refresh"
-    },
-    "modal": {
-      "close": "Close"
-    }
-  },
   "apiDoc": {
     "loading": "Loading API specification...",
     "error": "Failed to load API specification.",
