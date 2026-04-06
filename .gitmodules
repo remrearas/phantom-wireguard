@@ -1,8 +1,0 @@
-[submodule "tools/client-applications/mac/Libraries/WireGuardKit"]
-	path = tools/client-applications/mac/Libraries/WireGuardKit
-	url = https://github.com/ARAS-Workspace/wireguard-apple.git
-	branch = ios/phantom-wg
-[submodule "tools/client-applications/ios/Libraries/WireGuardKit"]
-	path = tools/client-applications/ios/Libraries/WireGuardKit
-	url = https://github.com/ARAS-Workspace/wireguard-apple.git
-	branch = ios/phantom-wg
