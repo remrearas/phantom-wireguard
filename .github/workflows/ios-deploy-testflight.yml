@@ -10,13 +10,13 @@ on:
         required: true
         type: string
     secrets:
-      IOS_CERTIFICATE_P12:
+      APPLE_CERTIFICATE_P12:
         required: true
-      IOS_CERTIFICATE_PASSWORD:
+      APPLE_CERTIFICATE_PASSWORD:
         required: true
-      IOS_PROVISIONING_PROFILE_APP:
+      PROVISIONING_PROFILE_APP:
         required: true
-      IOS_PROVISIONING_PROFILE_EXTENSION:
+      PROVISIONING_PROFILE_TUNNEL:
         required: true
       ASC_PRIVATE_KEY:
         required: true
@@ -95,8 +95,8 @@ jobs:
       # ── 3. Import signing certificate ────────────────────────
       - name: Import signing certificate
         env:
-          APPLE_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
           set -euo pipefail
 
@@ -125,8 +125,8 @@ jobs:
       # ── 4. Install provisioning profiles ─────────────────────
       - name: Install provisioning profiles
         env:
-          PROVISIONING_PROFILE_APP: ${{ secrets.IOS_PROVISIONING_PROFILE_APP }}
-          PROVISIONING_PROFILE_TUNNEL: ${{ secrets.IOS_PROVISIONING_PROFILE_EXTENSION }}
+          PROVISIONING_PROFILE_APP: ${{ secrets.PROVISIONING_PROFILE_APP }}
+          PROVISIONING_PROFILE_TUNNEL: ${{ secrets.PROVISIONING_PROFILE_TUNNEL }}
         run: |
           set -euo pipefail
 
