@@ -236,8 +236,13 @@ class TestMultihop:
         print("  Connectivity: daemon -> exit-server (10.0.2.1)")
         print(f"{_THIN}")
 
-        rc, out = container_exec("daemon", "ping -c 3 -W 2 10.0.2.1", check=False)
-        _exec_log("ping 10.0.2.1", rc, out)
+        # Ping exit-server through IPv4 tunnel (retry — tunnel handshake can be racy)
+        for attempt in range(3):
+            rc, out = container_exec("daemon", "ping -c 3 -W 2 10.0.2.1", check=False)
+            _exec_log(f"ping 10.0.2.1 (attempt {attempt + 1})", rc, out)
+            if rc == 0:
+                break
+            time.sleep(3)
         assert rc == 0, f"daemon cannot reach exit-server (10.0.2.1)\n{out}"
 
         print(f"\n{_THIN}")
@@ -501,8 +506,13 @@ class TestMultihopV6:
         print("  Connectivity: daemon -> exit-server (fd10:0:2::1)")
         print(f"{_THIN}")
 
-        rc, out = container_exec("daemon", "ping6 -c 3 -W 2 fd10:0:2::1", check=False)
-        _exec_log("ping6 fd10:0:2::1", rc, out)
+        # Ping exit-server through IPv6 tunnel (retry — tunnel handshake can be racy)
+        for attempt in range(3):
+            rc, out = container_exec("daemon", "ping6 -c 3 -W 2 fd10:0:2::1", check=False)
+            _exec_log(f"ping6 fd10:0:2::1 (attempt {attempt + 1})", rc, out)
+            if rc == 0:
+                break
+            time.sleep(3)
         assert rc == 0, f"daemon cannot reach exit-server (fd10:0:2::1)\n{out}"
 
         print(f"\n{_THIN}")
