@@ -40,7 +40,10 @@ Excluded:
     tools/dev.sh, tools/dev.vars, tools/lib/db.sh,
     tools/lib/test.sh, tools/lib/spa.sh, tools/lib/stubs.sh,
     tools/lib/openapi.sh, tools/lib/package.sh, tools/lib/helpers/,
-    __pycache__, *.pyc, .gitkeep
+    tools/lib/templates/, __pycache__, *.pyc, .gitkeep
+
+Templates:
+    tools/lib/templates/production/.gitignore → .gitignore
 
 Usage:
     python tools/lib/helpers/packager.py
@@ -56,6 +59,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DIST = ROOT / "dist"
 PKG_NAME = "phantom-wg-modern"
+TEMPLATES = ROOT / "tools" / "lib" / "templates"
 
 INCLUDE = [
     "SETUP",
@@ -77,6 +81,11 @@ INCLUDE = [
     "tools/lib/auth.sh",
     "tools/lib/tls.sh",
     "tools/lib/compose.sh",
+]
+
+# (template_source, package_destination) pairs
+TEMPLATE_FILES = [
+    ("production/.gitignore", ".gitignore"),
 ]
 
 EXCLUDE_SUFFIXES = (".pyc", ".pyo")
@@ -125,6 +134,18 @@ def package(clean: bool = False) -> Path:
         total += count
         label = f"{entry}/" if src.is_dir() else entry
         print(f"  {label} ({count} files)")
+
+    # Templates — copied to fixed destinations, decoupled from source layout
+    for template_src, package_dst in TEMPLATE_FILES:
+        src = TEMPLATES / template_src
+        if not src.exists():
+            print(f"  SKIP template (not found): {template_src}")
+            continue
+        dst = pkg_dir / package_dst
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        total += 1
+        print(f"  {package_dst} (template: {template_src})")
 
     # Ensure shell scripts are executable
     tools_dir = pkg_dir / "tools"
