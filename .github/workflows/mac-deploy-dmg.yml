@@ -178,8 +178,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Mac_Phantom_WG_DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${APP_PROFILE_NAME}/" project.yml
-          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Mac_PhantomTunnel_DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${TUNNEL_PROFILE_NAME}/" project.yml
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Phantom-WG Mac DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${APP_PROFILE_NAME}/" project.yml
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Phantom-WG Mac Tunnel DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${TUNNEL_PROFILE_NAME}/" project.yml
 
           echo "--- Patched project.yml signing settings ---"
           grep -A2 'CODE_SIGN_STYLE\|PROVISIONING_PROFILE_SPECIFIER' project.yml
