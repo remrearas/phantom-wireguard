@@ -10,20 +10,11 @@ permissions:
   actions: read
 
 jobs:
-  # ── Run all tests via reusable workflow ──────────────────────────
-  tests:
-    name: Tests
-    uses: ./.github/workflows/test-phantom-daemon.yml
-    permissions:
-      contents: read
-      actions: read
-
   # ── Build, push to main, create release ─────────────────────────
+  # Tests already run on push to dev/daemon via test-phantom-daemon.yml
   release:
     name: Package & Release
-    needs: [tests]
     runs-on: ubuntu-latest
-    if: success()
     permissions:
       contents: write
 
@@ -89,13 +80,12 @@ jobs:
             [ -e "$item" ] && cp -r "$item" /tmp/main-preserve/
           done
 
-          # Remove everything except .git
+          # Remove everything except .git (including ignored files)
           git rm -rf . 2>/dev/null || true
-          git clean -fd 2>/dev/null || true
+          git clean -fdx 2>/dev/null || true
 
-          # Copy from stash
-          cp -r /tmp/phantom-release/* .
-          cp /tmp/phantom-release/.env.* . 2>/dev/null || true
+          # Copy from stash (trailing dot includes hidden files like .gitignore)
+          cp -a /tmp/phantom-release/. .
 
           # Restore preserved docs and assets
           cp -r /tmp/main-preserve/* . 2>/dev/null || true
@@ -104,13 +94,22 @@ jobs:
           # Stage all
           git add -A
 
-          # Commit and tag
-          git commit -m "Release: Phantom-WG Modern v${VERSION}"
-          git tag "v${VERSION}"
+          # Amend if HEAD is already the release commit for this version,
+          # otherwise create a new commit
+          RELEASE_MSG="Release: Phantom-WG Modern v${VERSION}"
+          LAST_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "")
+          if [[ "$LAST_MSG" == "$RELEASE_MSG" ]]; then
+            git commit --amend --no-edit
+          else
+            git commit -m "$RELEASE_MSG"
+          fi
+
+          # Tag (force if already exists — tag points to new commit)
+          git tag -f "v${VERSION}"
 
           # Push
           git push origin main --force-with-lease
-          git push origin "v${VERSION}"
+          git push origin "v${VERSION}" --force
 
       - name: Create release archive
         env:
