@@ -5,7 +5,6 @@ import WireGuardKit
 enum WireGuardConfigBuilder {
 
     /// Converts WireguardConfig + optional WstunnelConfig into WireGuardKit's TunnelConfiguration.
-    /// - Filters to IPv4-only addresses and AllowedIPs (iOS routing constraint)
     /// - Ghost mode: overrides endpoint to 127.0.0.1:localPort (wstunnel proxy)
     /// - Standalone: uses peer endpoint directly
     static func build(wireguard: WireguardConfig, wstunnel: WstunnelConfig?) throws -> TunnelConfiguration {
@@ -33,14 +32,13 @@ enum WireGuardConfigBuilder {
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .compactMap { IPAddressRange(from: $0) }
-            .filter { $0.address is IPv4Address }
 
         guard !config.addresses.isEmpty else {
-            SharedLogger.log(.wireGuard, "ERROR: No valid IPv4 addresses")
+            SharedLogger.log(.wireGuard, "ERROR: No valid addresses")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
 
-        SharedLogger.log(.wireGuard, "Interface addresses (IPv4 only): \(config.addresses.map { $0.stringRepresentation })")
+        SharedLogger.log(.wireGuard, "Interface addresses: \(config.addresses.map { $0.stringRepresentation })")
 
         config.dns = wireguard.interface.dns
             .components(separatedBy: ",")
@@ -73,9 +71,8 @@ enum WireGuardConfigBuilder {
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .compactMap { IPAddressRange(from: $0) }
-            .filter { $0.address is IPv4Address }
 
-        SharedLogger.log(.wireGuard, "AllowedIPs (IPv4 only): \(config.allowedIPs.count) entries")
+        SharedLogger.log(.wireGuard, "AllowedIPs: \(config.allowedIPs.count) entries")
 
         // Endpoint: Ghost mode → wstunnel proxy, standalone → direct
         let endpointString: String
