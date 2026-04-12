@@ -29,21 +29,11 @@ permissions: {}
 
 jobs:
   deploy:
-    name: Archive & DMG (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 45
+    name: Archive & DMG (arm64 + x86_64)
+    runs-on: macos-26
+    timeout-minutes: 60
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: arm64
-            runner: macos-26
-            xcode_dest: "platform=macOS,arch=arm64"
-          - arch: x86_64
-            runner: macos-13
-            xcode_dest: "platform=macOS,arch=x86_64"
     env:
       APP_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS
       TUNNEL_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS.PhantomTunnel
@@ -60,8 +50,6 @@ jobs:
           echo "P12_PATH=$RUNNER_TEMP/certificate.p12" >> "$GITHUB_ENV"
           echo "PP_APP_PATH=$RUNNER_TEMP/app.provisionprofile" >> "$GITHUB_ENV"
           echo "PP_TUNNEL_PATH=$RUNNER_TEMP/tunnel.provisionprofile" >> "$GITHUB_ENV"
-          echo "ARCHIVE_PATH=$RUNNER_TEMP/Phantom-WG-MacOS.xcarchive" >> "$GITHUB_ENV"
-          echo "EXPORT_PATH=$RUNNER_TEMP/export" >> "$GITHUB_ENV"
           echo "EXPORT_OPTIONS_PATH=$RUNNER_TEMP/ExportOptions.plist" >> "$GITHUB_ENV"
 
       # ── 1. Checkout ──────────────────────────────────────────
@@ -95,10 +83,6 @@ jobs:
           BUILD_NUMBER=$(TZ=Europe/Istanbul date +"%Y%m%d.%H%M")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "### Version Info (${{ matrix.arch }})" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Version:** $VERSION" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Build:** $BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Arch:** ${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
 
       # ── 3. Import signing certificate ────────────────────────
       - name: Import signing certificate
@@ -126,9 +110,6 @@ jobs:
             "$KEYCHAIN_PATH"
 
           security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
-
-          echo "Certificate imported. Identities found:"
-          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       # ── 4. Install provisioning profiles ─────────────────────
       - name: Install provisioning profiles
@@ -162,13 +143,10 @@ jobs:
 
             if [[ -n "$app_id" ]]; then
               local bundle_id="${app_id#*.}"
-              echo "$label: UUID=$uuid, Name=$name, BundleID=$bundle_id" >&2
               if [[ "$bundle_id" != "$expected_bundle_id" ]]; then
                 echo "::error::$label profile bundle ID mismatch: got '$bundle_id', expected '$expected_bundle_id'"
                 exit 1
               fi
-            else
-              echo "$label: UUID=$uuid, Name=$name (no app-id in entitlements)" >&2
             fi
 
             cp "$profile_path" "$PROFILES_DIR/$uuid.provisionprofile"
@@ -188,42 +166,14 @@ jobs:
         working-directory: ${{ env.MAC_DIR }}
         run: |
           set -euo pipefail
-
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Phantom-WG Mac DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${APP_PROFILE_NAME}/" project.yml
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Phantom-WG Mac Tunnel DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${TUNNEL_PROFILE_NAME}/" project.yml
-
-          echo "--- Patched project.yml signing settings ---"
-          grep -A2 'CODE_SIGN_STYLE\|PROVISIONING_PROFILE_SPECIFIER' project.yml
 
       # ── 6. Install tools ─────────────────────────────────────
       - name: Install Go & XcodeGen
         run: brew install go@1.25 xcodegen
 
-      # ── 7. Generate Xcode project ───────────────────────────
-      - name: Generate Xcode project
-        working-directory: ${{ env.MAC_DIR }}
-        run: xcodegen generate
-
-      # ── 8. Archive ──────────────────────────────────────────
-      - name: Archive
-        working-directory: ${{ env.MAC_DIR }}
-        env:
-          APP_VERSION: ${{ steps.version.outputs.version }}
-          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
-        run: |
-          xcodebuild archive \
-            -scheme "Phantom-WG-MacOS" \
-            -destination '${{ matrix.xcode_dest }}' \
-            -archivePath "$ARCHIVE_PATH" \
-            MARKETING_VERSION="$APP_VERSION" \
-            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Developer ID Application" \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            ARCHS="${{ matrix.arch }}" \
-            ONLY_ACTIVE_ARCH=YES
-
-      # ── 9. Generate ExportOptions.plist ──────────────────────
+      # ── 7. Generate ExportOptions.plist ──────────────────────
       - name: Generate ExportOptions.plist
         run: |
           cat > "$EXPORT_OPTIONS_PATH" <<PLIST
@@ -249,80 +199,137 @@ jobs:
           </plist>
           PLIST
 
-      # ── 10. Export app ───────────────────────────────────────
-      - name: Export app
+      # ── 8. Build arm64 DMG ──────────────────────────────────
+      - name: Build arm64
+        working-directory: ${{ env.MAC_DIR }}
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
         run: |
+          xcodegen generate
+
+          xcodebuild archive \
+            -scheme "Phantom-WG-MacOS" \
+            -destination 'platform=macOS,arch=arm64' \
+            -archivePath "$RUNNER_TEMP/arm64.xcarchive" \
+            MARKETING_VERSION="$APP_VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=YES
+
           xcodebuild -exportArchive \
-            -archivePath "$ARCHIVE_PATH" \
+            -archivePath "$RUNNER_TEMP/arm64.xcarchive" \
             -exportOptionsPlist "$EXPORT_OPTIONS_PATH" \
-            -exportPath "$EXPORT_PATH" \
+            -exportPath "$RUNNER_TEMP/export-arm64" \
             -allowProvisioningUpdates
 
-      # ── 11. Notarize app ─────────────────────────────────────
-      - name: Notarize app
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-        run: |
-          APP_PATH="$EXPORT_PATH/$APP_NAME.app"
-
-          ditto -c -k --keepParent "$APP_PATH" "$RUNNER_TEMP/app.zip"
-
-          xcrun notarytool submit "$RUNNER_TEMP/app.zip" \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_ID_PASSWORD" \
-            --team-id "$TEAM_ID" \
-            --wait
-
-          xcrun stapler staple "$APP_PATH"
-
-      # ── 12. Create DMG ──────────────────────────────────────
-      - name: Create DMG
+      - name: Notarize & DMG arm64
         env:
           APP_VERSION: ${{ steps.version.outputs.version }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         run: |
-          DMG_NAME="Phantom-WG-MacOS-$APP_VERSION-${{ matrix.arch }}.dmg"
-          DMG_PATH="$RUNNER_TEMP/$DMG_NAME"
-          DMG_STAGING="$RUNNER_TEMP/dmg-staging"
+          APP_PATH="$RUNNER_TEMP/export-arm64/$APP_NAME.app"
 
+          ditto -c -k --keepParent "$APP_PATH" "$RUNNER_TEMP/arm64-app.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/arm64-app.zip" \
+            --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" \
+            --team-id "$TEAM_ID" --wait
+          xcrun stapler staple "$APP_PATH"
+
+          DMG_PATH="$RUNNER_TEMP/Phantom-WG-MacOS-${APP_VERSION}-arm64.dmg"
+          DMG_STAGING="$RUNNER_TEMP/dmg-arm64"
           mkdir -p "$DMG_STAGING"
-          cp -R "$EXPORT_PATH/$APP_NAME.app" "$DMG_STAGING/"
+          cp -R "$APP_PATH" "$DMG_STAGING/"
           ln -s /Applications "$DMG_STAGING/Applications"
-
-          hdiutil create -volname "$APP_NAME" \
-            -srcfolder "$DMG_STAGING" \
-            -ov -format UDZO \
-            "$DMG_PATH"
-
+          hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_STAGING" -ov -format UDZO "$DMG_PATH"
           rm -rf "$DMG_STAGING"
 
           xcrun notarytool submit "$DMG_PATH" \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_ID_PASSWORD" \
-            --team-id "$TEAM_ID" \
-            --wait
-
+            --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" \
+            --team-id "$TEAM_ID" --wait
           xcrun stapler staple "$DMG_PATH"
 
-          echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
-          echo "DMG_NAME=$DMG_NAME" >> "$GITHUB_ENV"
-          echo "### DMG Created (${{ matrix.arch }})" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **File:** $DMG_NAME" >> "$GITHUB_STEP_SUMMARY"
+          echo "DMG_ARM64=$DMG_PATH" >> "$GITHUB_ENV"
 
-      # ── 13. Upload artifact ──────────────────────────────────
-      - name: Upload DMG artifact
+      # ── 9. Build x86_64 DMG ─────────────────────────────────
+      - name: Build x86_64
+        working-directory: ${{ env.MAC_DIR }}
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+        run: |
+          xcodegen generate
+
+          xcodebuild archive \
+            -scheme "Phantom-WG-MacOS" \
+            -destination 'platform=macOS,arch=x86_64' \
+            -archivePath "$RUNNER_TEMP/x86_64.xcarchive" \
+            MARKETING_VERSION="$APP_VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            ARCHS=x86_64 \
+            ONLY_ACTIVE_ARCH=YES
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/x86_64.xcarchive" \
+            -exportOptionsPlist "$EXPORT_OPTIONS_PATH" \
+            -exportPath "$RUNNER_TEMP/export-x86_64" \
+            -allowProvisioningUpdates
+
+      - name: Notarize & DMG x86_64
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        run: |
+          APP_PATH="$RUNNER_TEMP/export-x86_64/$APP_NAME.app"
+
+          ditto -c -k --keepParent "$APP_PATH" "$RUNNER_TEMP/x86_64-app.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/x86_64-app.zip" \
+            --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" \
+            --team-id "$TEAM_ID" --wait
+          xcrun stapler staple "$APP_PATH"
+
+          DMG_PATH="$RUNNER_TEMP/Phantom-WG-MacOS-${APP_VERSION}-x86_64.dmg"
+          DMG_STAGING="$RUNNER_TEMP/dmg-x86_64"
+          mkdir -p "$DMG_STAGING"
+          cp -R "$APP_PATH" "$DMG_STAGING/"
+          ln -s /Applications "$DMG_STAGING/Applications"
+          hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_STAGING" -ov -format UDZO "$DMG_PATH"
+          rm -rf "$DMG_STAGING"
+
+          xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" \
+            --team-id "$TEAM_ID" --wait
+          xcrun stapler staple "$DMG_PATH"
+
+          echo "DMG_X86_64=$DMG_PATH" >> "$GITHUB_ENV"
+
+      # ── 10. Upload artifacts ─────────────────────────────────
+      - name: Upload arm64 DMG
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: "${{ env.DMG_NAME }}"
-          path: "${{ env.DMG_PATH }}"
+          name: "Phantom-WG-MacOS-${{ steps.version.outputs.version }}-arm64.dmg"
+          path: "${{ env.DMG_ARM64 }}"
           retention-days: 90
 
-      # ── 14. Cleanup ─────────────────────────────────────────
+      - name: Upload x86_64 DMG
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: "Phantom-WG-MacOS-${{ steps.version.outputs.version }}-x86_64.dmg"
+          path: "${{ env.DMG_X86_64 }}"
+          retention-days: 90
+
+      # ── 11. Cleanup ─────────────────────────────────────────
       - name: Cleanup signing artifacts
         if: always()
         run: |
           security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
           rm -f "$P12_PATH" "$PP_APP_PATH" "$PP_TUNNEL_PATH"
-          rm -rf "$ARCHIVE_PATH" "$EXPORT_PATH" "$EXPORT_OPTIONS_PATH"
+          rm -rf "$RUNNER_TEMP"/*.xcarchive "$RUNNER_TEMP"/export-* "$EXPORT_OPTIONS_PATH"
