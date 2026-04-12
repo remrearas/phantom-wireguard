@@ -1,0 +1,117 @@
+name: Release Phantom-WG Frontmatter
+
+on:
+  push:
+    tags:
+      - 'release-frontmatter-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Package & Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/release-frontmatter-v}"
+          echo "number=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify version matches source
+        env:
+          VERSION: ${{ steps.version.outputs.number }}
+        run: |
+          SOURCE_VERSION=$(python3 -c "
+          import re, pathlib
+          text = pathlib.Path('phantom_frontmatter/__init__.py').read_text()
+          m = re.search(r'__version__\s*=\s*\"(.+?)\"', text)
+          print(m.group(1))
+          ")
+          if [[ "$SOURCE_VERSION" != "$VERSION" ]]; then
+            echo "::error::Tag version ${VERSION} does not match source version ${SOURCE_VERSION}"
+            exit 1
+          fi
+          echo "Version verified: ${VERSION}"
+
+      - name: Create release archive
+        env:
+          VERSION: ${{ steps.version.outputs.number }}
+        run: |
+          ARCHIVE="phantom-wg-frontmatter-v${VERSION}"
+
+          mkdir -p "/tmp/${ARCHIVE}"
+
+          cp -r phantom_frontmatter "/tmp/${ARCHIVE}/"
+          cp frontmatter-install.sh "/tmp/${ARCHIVE}/"
+          cp requirements.txt "/tmp/${ARCHIVE}/"
+          cp LICENSE "/tmp/${ARCHIVE}/"
+          cp THIRD_PARTY_LICENSES "/tmp/${ARCHIVE}/"
+
+          for f in SETUP ARCHITECTURE ARCHITECTURE_TR README.md README_TR.md; do
+            [ -f "$f" ] && cp "$f" "/tmp/${ARCHIVE}/"
+          done
+
+          cd /tmp
+          zip -r "${GITHUB_WORKSPACE}/${ARCHIVE}.zip" "${ARCHIVE}/"
+          echo "Archive created:"
+          ls -lh "${GITHUB_WORKSPACE}/${ARCHIVE}.zip"
+
+      - name: Tag release version
+        env:
+          VERSION: ${{ steps.version.outputs.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git tag -f "frontmatter-v${VERSION}"
+          git push origin "frontmatter-v${VERSION}" --force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          tag_name: frontmatter-v${{ steps.version.outputs.number }}
+          name: Phantom-WG Frontmatter v${{ steps.version.outputs.number }}
+          body: |
+            ## Phantom-WG Frontmatter v${{ steps.version.outputs.number }}
+
+            Ghost Mode entry point for any WireGuard server or UDP endpoint.
+
+            ### Install
+
+            ```bash
+            unzip phantom-wg-frontmatter-v${{ steps.version.outputs.number }}.zip
+            cd phantom-wg-frontmatter-v${{ steps.version.outputs.number }}
+            sudo ./frontmatter-install.sh
+            ```
+
+            ### Setup
+
+            ```bash
+            sudo frontmatter-api setup init backend=<BACKEND_IP[:PORT]>
+            sudo frontmatter-api ghost start
+            sudo frontmatter-api ghost client_config
+            ```
+
+            See `SETUP` for the full guide.
+
+          files: |
+            phantom-wg-frontmatter-v${{ steps.version.outputs.number }}.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: false
