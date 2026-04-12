@@ -9,10 +9,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         }
     }()
 
-    /// Resolved wstunnel server IPv4 addresses (for excluded routes)
     private var wstunnelServerIPv4: [String] = []
-
-    /// Ghost mode flag — set during startTunnel based on config
+    private var wstunnelServerIPv6: [String] = []
     private var isGhostMode = false
 
     // MARK: - Tunnel Lifecycle
@@ -35,7 +33,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         if isGhostMode {
             if let host = URL(string: config.wstunnel!.url)?.host {
                 wstunnelServerIPv4 = DNSResolver.resolveIPv4(host)
-                SharedLogger.log(.tunnel, "Wstunnel server resolved: \(host) \u{2192} \(wstunnelServerIPv4)")
+                wstunnelServerIPv6 = DNSResolver.resolveIPv6(host)
+                SharedLogger.log(.tunnel, "Wstunnel server resolved: \(host) \u{2192} v4:\(wstunnelServerIPv4) v6:\(wstunnelServerIPv6)")
             }
             try WstunnelLifecycle.start(config: config.wstunnel!)
         }
@@ -109,7 +108,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     override func setTunnelNetworkSettings(_ tunnelNetworkSettings: NETunnelNetworkSettings?,
                                            completionHandler: ((Error?) -> Void)? = nil) {
         if let settings = tunnelNetworkSettings as? NEPacketTunnelNetworkSettings {
-            NetworkSettingsManager.apply(to: settings, excludedIPv4: wstunnelServerIPv4, isGhostMode: isGhostMode)
+            NetworkSettingsManager.apply(to: settings, excludedIPv4: wstunnelServerIPv4, excludedIPv6: wstunnelServerIPv6, isGhostMode: isGhostMode)
         }
 
         super.setTunnelNetworkSettings(tunnelNetworkSettings, completionHandler: completionHandler)
