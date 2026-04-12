@@ -46,10 +46,16 @@ jobs:
       contents: write
 
     steps:
-      - name: Download DMG artifact
+      - name: Download arm64 DMG
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: "Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}.dmg"
+          name: "Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}-arm64.dmg"
+          path: ${{ runner.temp }}/release
+
+      - name: Download x86_64 DMG
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: "Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}-x86_64.dmg"
           path: ${{ runner.temp }}/release
 
       - name: Create GitHub Release
@@ -64,60 +70,53 @@ jobs:
 
             ### 🇺🇸
 
-            #### Contents
+            #### Downloads
 
-            - `Phantom-WG Mac.app`
+            | Architecture | File |
+            |---|---|
+            | Apple Silicon (M1/M2/M3/M4) | `Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}-arm64.dmg` |
+            | Intel | `Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}-x86_64.dmg` |
 
             #### Installation
 
-            1. Download and open the DMG:
-            ```
-            Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}.dmg
-            ```
-
+            1. Download the DMG for your architecture
             2. Drag **Phantom-WG Mac** to the **Applications** folder
-
             3. On first launch, approve the system extension:
                - **macOS 15+ (Sequoia):** System Settings → General → Login Items & Extensions → Network Extensions
                - **macOS 14 (Sonoma):** System Settings → Privacy & Security → Extensions → Network Extensions
-
             4. Import your tunnel configuration (.conf) and connect
 
             #### Requirements
 
             - macOS 14.0 (Sonoma) or later
-            - Apple Silicon (arm64)
 
             ---
 
             ### 🇹🇷
 
-            #### Paket
+            #### İndirmeler
 
-            - `Phantom-WG Mac.app`
+            | Mimari | Dosya |
+            |---|---|
+            | Apple Silicon (M1/M2/M3/M4) | `Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}-arm64.dmg` |
+            | Intel | `Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}-x86_64.dmg` |
 
             #### Kurulum
 
-            1. DMG dosyasını indirin ve açın:
-            ```
-            Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}.dmg
-            ```
-
+            1. Mimarinize uygun DMG dosyasını indirin
             2. **Phantom-WG Mac** uygulamasını **Applications** klasörüne sürükleyin
-
             3. İlk çalıştırmada sistem uzantısını onaylayın:
                - **macOS 15+ (Sequoia):** Sistem Ayarları → Genel → Oturum Açma Öğeleri ve Uzantılar → Ağ Uzantıları
                - **macOS 14 (Sonoma):** Sistem Ayarları → Gizlilik ve Güvenlik → Uzantılar → Ağ Uzantıları
-
-            4. Tünel yapılandırmanızı (JSON) içe aktarın ve bağlanın
+            4. Tünel yapılandırmanızı (.conf) içe aktarın ve bağlanın
 
             #### Gereksinimler
 
             - macOS 14.0 (Sonoma) veya üzeri
-            - Apple Silicon (arm64)
 
           files: |
-            ${{ runner.temp }}/release/Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}.dmg
+            ${{ runner.temp }}/release/Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}-arm64.dmg
+            ${{ runner.temp }}/release/Phantom-WG-MacOS-${{ needs.extract-version.outputs.version }}-x86_64.dmg
           draft: false
           prerelease: false
           generate_release_notes: false

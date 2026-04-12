@@ -33,7 +33,7 @@ targets:
         embed: false
     settings:
       base:
-        ARCHS: arm64
+        ARCHS: "$(ARCHS_STANDARD)"
         ENABLE_HARDENED_RUNTIME: YES
         PRODUCT_NAME: Phantom-WG Mac
         PRODUCT_BUNDLE_IDENTIFIER: com.remrearas.Phantom-WG-MacOS
@@ -99,7 +99,7 @@ targets:
       - target: Phantom-WG-MacOS
     settings:
       base:
-        ARCHS: arm64
+        ARCHS: "$(ARCHS_STANDARD)"
         SWIFT_VERSION: "5.0"
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Phantom-WG Mac.app/Contents/MacOS/Phantom-WG Mac"
@@ -146,7 +146,7 @@ targets:
         basedOnDependencyAnalysis: false
     settings:
       base:
-        ARCHS: arm64
+        ARCHS: "$(ARCHS_STANDARD)"
         ENABLE_HARDENED_RUNTIME: YES
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO

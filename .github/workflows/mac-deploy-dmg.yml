@@ -29,11 +29,21 @@ permissions: {}
 
 jobs:
   deploy:
-    name: Archive & DMG
-    runs-on: macos-26
+    name: Archive & DMG (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-26
+            xcode_dest: "platform=macOS,arch=arm64"
+          - arch: x86_64
+            runner: macos-13
+            xcode_dest: "platform=macOS,arch=x86_64"
     env:
       APP_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS
       TUNNEL_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS.PhantomTunnel
@@ -85,9 +95,10 @@ jobs:
           BUILD_NUMBER=$(TZ=Europe/Istanbul date +"%Y%m%d.%H%M")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "### Version Info" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Version Info (${{ matrix.arch }})" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Version:** $VERSION" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Build:** $BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Arch:** ${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
 
       # ── 3. Import signing certificate ────────────────────────
       - name: Import signing certificate
@@ -202,13 +213,15 @@ jobs:
         run: |
           xcodebuild archive \
             -scheme "Phantom-WG-MacOS" \
-            -destination 'platform=macOS,arch=arm64' \
+            -destination '${{ matrix.xcode_dest }}' \
             -archivePath "$ARCHIVE_PATH" \
             MARKETING_VERSION="$APP_VERSION" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Developer ID Application" \
-            DEVELOPMENT_TEAM="$TEAM_ID"
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            ARCHS="${{ matrix.arch }}" \
+            ONLY_ACTIVE_ARCH=YES
 
       # ── 9. Generate ExportOptions.plist ──────────────────────
       - name: Generate ExportOptions.plist
@@ -270,7 +283,8 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         run: |
-          DMG_PATH="$RUNNER_TEMP/Phantom-WG-MacOS-$APP_VERSION.dmg"
+          DMG_NAME="Phantom-WG-MacOS-$APP_VERSION-${{ matrix.arch }}.dmg"
+          DMG_PATH="$RUNNER_TEMP/$DMG_NAME"
           DMG_STAGING="$RUNNER_TEMP/dmg-staging"
 
           mkdir -p "$DMG_STAGING"
@@ -293,14 +307,15 @@ jobs:
           xcrun stapler staple "$DMG_PATH"
 
           echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
-          echo "### DMG Created" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **File:** Phantom-WG-MacOS-$APP_VERSION.dmg" >> "$GITHUB_STEP_SUMMARY"
+          echo "DMG_NAME=$DMG_NAME" >> "$GITHUB_ENV"
+          echo "### DMG Created (${{ matrix.arch }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **File:** $DMG_NAME" >> "$GITHUB_STEP_SUMMARY"
 
       # ── 13. Upload artifact ──────────────────────────────────
       - name: Upload DMG artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: "Phantom-WG-MacOS-${{ steps.version.outputs.version }}.dmg"
+          name: "${{ env.DMG_NAME }}"
           path: "${{ env.DMG_PATH }}"
           retention-days: 90
 
