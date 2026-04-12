@@ -34,6 +34,7 @@ set -euo pipefail
 INSTALL_DIR="/opt/phantom-frontmatter"
 VENV_DIR="${INSTALL_DIR}/.phantom-venv"
 BIN_LINK="/usr/local/bin/frontmatter-api"
+CERTBOT_LINK="/usr/local/bin/frontmatter-certbot"
 UNINSTALL_LINK="/usr/local/sbin/frontmatter-uninstall"
 
 SUPPORTED_DEBIAN_VERSIONS=("12" "13")
@@ -137,6 +138,8 @@ install_system_deps() {
         socat \
         openssl \
         ca-certificates \
+        certbot \
+        cron \
         > /dev/null
 
     log "System dependencies installed" "$GREEN"
@@ -166,19 +169,9 @@ create_directories() {
 copy_sources() {
     log "Copying source files..." "$CYAN"
 
-    # Python package
     rm -rf "${INSTALL_DIR}/phantom_frontmatter"
     cp -r "${SCRIPT_DIR}/phantom_frontmatter" "${INSTALL_DIR}/phantom_frontmatter"
-
-    # Requirements
     cp "${SCRIPT_DIR}/requirements.txt" "${INSTALL_DIR}/requirements.txt"
-
-    # Meta files (optional — skip if missing)
-    for f in LICENSE THIRD_PARTY_LICENSES README.md README_TR.md SECURITY.md ARCHITECTURE ARCHITECTURE_TR; do
-        if [[ -f "${SCRIPT_DIR}/${f}" ]]; then
-            cp "${SCRIPT_DIR}/${f}" "${INSTALL_DIR}/${f}"
-        fi
-    done
 
     log "Source files copied" "$GREEN"
 }
@@ -186,15 +179,14 @@ copy_sources() {
 # ── Python environment ───────────────────────────────────────
 
 create_venv() {
-    log "Creating Python virtual environment..." "$CYAN"
-
-    if [[ -d "$VENV_DIR" ]]; then
-        rm -rf "$VENV_DIR"
+    if [[ -d "$VENV_DIR" ]] && [[ -x "${VENV_DIR}/bin/python3" ]]; then
+        log "Virtual environment already exists at ${VENV_DIR}" "$GREEN"
+        return
     fi
 
+    log "Creating Python virtual environment..." "$CYAN"
     python3 -m venv "$VENV_DIR"
     "${VENV_DIR}/bin/pip" install --quiet --upgrade pip
-
     log "Virtual environment created at ${VENV_DIR}" "$GREEN"
 }
 
@@ -218,20 +210,30 @@ create_global_command() {
     log "Creating global commands..." "$CYAN"
 
     local api_script="${INSTALL_DIR}/phantom_frontmatter/bin/frontmatter-api.py"
+    local certbot_script="${INSTALL_DIR}/phantom_frontmatter/bin/frontmatter-certbot.py"
     local uninstall_script="${INSTALL_DIR}/phantom_frontmatter/frontmatter-uninstall.sh"
 
-    chmod +x "$api_script"
-    chmod +x "$uninstall_script"
+    if [[ -f "$api_script" ]]; then
+        chmod +x "$api_script"
+        sed -i "1s|.*|#!${VENV_DIR}/bin/python3|" "$api_script"
+        ln -sf "$api_script" "$BIN_LINK"
+        log "  ${BIN_LINK}" "$GREEN"
+    fi
 
-    # Re-write shebang to point at the venv we just created
-    sed -i "1s|.*|#!${VENV_DIR}/bin/python3|" "$api_script"
+    if [[ -f "$certbot_script" ]]; then
+        chmod +x "$certbot_script"
+        sed -i "1s|.*|#!${VENV_DIR}/bin/python3|" "$certbot_script"
+        ln -sf "$certbot_script" "$CERTBOT_LINK"
+        log "  ${CERTBOT_LINK}" "$GREEN"
+    fi
 
-    # Symlinks
-    ln -sf "$api_script" "$BIN_LINK"
-    ln -sf "$uninstall_script" "$UNINSTALL_LINK"
+    if [[ -f "$uninstall_script" ]]; then
+        chmod +x "$uninstall_script"
+        ln -sf "$uninstall_script" "$UNINSTALL_LINK"
+        log "  ${UNINSTALL_LINK}" "$GREEN"
+    fi
 
-    log "Global command: $BIN_LINK" "$GREEN"
-    log "Uninstall:      $UNINSTALL_LINK" "$GREEN"
+    log "Global commands ready" "$GREEN"
 }
 
 # ── Verification ─────────────────────────────────────────────
@@ -262,59 +264,56 @@ print(f'phantom_frontmatter {__version__}')
 # ── Next steps ───────────────────────────────────────────────
 
 print_next_steps() {
+    local db_file="${INSTALL_DIR}/data/frontmatter.db"
+    local is_update=0
+    [[ -f "$db_file" ]] && is_update=1
+
     echo ""
-    echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
-    echo -e "${GREEN}  Installation complete.${NC}"
-    echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo "Install location: ${INSTALL_DIR}"
-    echo "Python venv:      ${VENV_DIR}"
-    echo "Global command:   ${BIN_LINK}"
-    echo "Uninstall:        ${UNINSTALL_LINK}"
-    echo ""
-    echo "Next steps:"
-    echo ""
-    echo "  Phantom-WG Frontmatter is a Ghost Mode entry point for"
-    echo "  any WireGuard server (or any UDP endpoint). The client"
-    echo "  sees only the front; the backend address lives exclusively"
-    echo "  on this host inside one rendered systemd unit and one"
-    echo "  SQLite row."
-    echo ""
-    echo "  1. Bootstrap the host (one-shot):"
-    echo "     frontmatter-api setup init backend=<BACKEND_IP[:PORT]>"
-    echo ""
-    echo "     This generates a self-signed TLS cert, downloads the"
-    echo "     pinned wstunnel binary, generates a fresh secret, and"
-    echo "     renders both ghost systemd units. It does NOT start"
-    echo "     any service yet."
-    echo ""
-    echo "  2. Bring the data path up:"
-    echo "     frontmatter-api ghost start"
-    echo ""
-    echo "     This enables + starts phantom-frontmatter-ghost-wstunnel,"
-    echo "     which pulls in phantom-frontmatter-ghost-egress via"
-    echo "     systemd Requires=/After= dependencies."
-    echo ""
-    echo "  Verify:"
-    echo "     frontmatter-api setup status"
-    echo "     frontmatter-api ghost status"
-    echo ""
-    echo "  Get the client [Wstunnel] block for Ghost Mode:"
-    echo "     frontmatter-api ghost client_config | jq -r '.data.wstunnel_block'"
-    echo ""
-    echo "  Replace <FRONTMATTER-PUBLIC-IP> in the snippet with this"
-    echo "  host's public IP (or hostname) before pasting it into a"
-    echo "  client .conf — frontmatter never queries an external IP"
-    echo "  service on its own."
-    echo ""
-    echo "  Reset (full re-init): frontmatter-api setup clean yes=true"
-    echo ""
-    echo "Backend note: No changes required on the backend host."
-    echo "  Whatever WireGuard server (or other UDP endpoint) you point"
-    echo "  frontmatter at keeps running unchanged — frontmatter just"
-    echo "  forwards datagrams to it from the front host's own outbound"
-    echo "  socket, hidden from every client artifact."
-    echo ""
+    if (( is_update )); then
+        echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
+        echo -e "${GREEN}  Update complete.${NC}"
+        echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "Install location: ${INSTALL_DIR}"
+        echo ""
+        echo "Package source updated. State and secrets preserved."
+        echo ""
+        echo "  Restart the data path to load the new version:"
+        echo "     frontmatter-api ghost restart"
+        echo ""
+        echo "  Verify:"
+        echo "     frontmatter-api --version"
+        echo "     frontmatter-api ghost status"
+        echo ""
+    else
+        echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
+        echo -e "${GREEN}  Installation complete.${NC}"
+        echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "Install location: ${INSTALL_DIR}"
+        echo ""
+        echo "  1. Bootstrap:"
+        echo "     frontmatter-api setup init backend=<BACKEND_IP[:PORT]>"
+        echo ""
+        echo "  2. Start:"
+        echo "     frontmatter-api ghost start"
+        echo ""
+        echo "  3. Verify:"
+        echo "     frontmatter-api setup status"
+        echo "     frontmatter-api ghost status"
+        echo ""
+        echo "  4. Client snippet:"
+        echo "     frontmatter-api ghost client_config"
+        echo ""
+        echo "  5. Client command:"
+        echo "     frontmatter-api ghost client_command"
+        echo ""
+        echo "  Replace <FRONTMATTER-PUBLIC-IP> with this host's public"
+        echo "  address before handing config to clients."
+        echo ""
+        echo "  Reset: frontmatter-api setup clean yes=true"
+        echo ""
+    fi
 }
 
 # ── Main ─────────────────────────────────────────────────────

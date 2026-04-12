@@ -36,6 +36,7 @@ set -euo pipefail
 
 INSTALL_DIR="/opt/phantom-frontmatter"
 BIN_LINK="/usr/local/bin/frontmatter-api"
+CERTBOT_LINK="/usr/local/bin/frontmatter-certbot"
 UNINSTALL_LINK="/usr/local/sbin/frontmatter-uninstall"
 
 WSTUNNEL_SERVICE="phantom-frontmatter-ghost-wstunnel.service"
@@ -91,6 +92,7 @@ confirm() {
     echo -e "${YELLOW}This will remove:${NC}"
     echo -e "  ${WHITE}• ${INSTALL_DIR}${NC}"
     echo -e "  ${WHITE}• ${BIN_LINK}${NC}"
+    echo -e "  ${WHITE}• ${CERTBOT_LINK}${NC}"
     echo -e "  ${WHITE}• ${UNINSTALL_LINK}${NC}"
     echo -e "  ${WHITE}• systemd units (${WSTUNNEL_SERVICE}, ${EGRESS_SERVICE})${NC}"
     echo ""
@@ -149,7 +151,7 @@ kill_stray_processes() {
 
 remove_global_command() {
     log "Removing global command symlinks..." "$CYAN"
-    for link in "$BIN_LINK" "$UNINSTALL_LINK"; do
+    for link in "$BIN_LINK" "$CERTBOT_LINK" "$UNINSTALL_LINK"; do
         if [[ -L "$link" ]] || [[ -f "$link" ]]; then
             rm -f "$link"
             log "  removed: $link" "$GREEN"
@@ -174,6 +176,7 @@ verify_clean() {
 
     [[ -d "$INSTALL_DIR" ]] && { log "  ! still present: $INSTALL_DIR" "$YELLOW"; ((issues++)); }
     [[ -e "$BIN_LINK" ]] && { log "  ! still present: $BIN_LINK" "$YELLOW"; ((issues++)); }
+    [[ -e "$CERTBOT_LINK" ]] && { log "  ! still present: $CERTBOT_LINK" "$YELLOW"; ((issues++)); }
     [[ -e "$UNINSTALL_LINK" ]] && { log "  ! still present: $UNINSTALL_LINK" "$YELLOW"; ((issues++)); }
 
     for svc in "$WSTUNNEL_SERVICE" "$EGRESS_SERVICE"; do
