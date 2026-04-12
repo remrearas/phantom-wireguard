@@ -1,8 +1,8 @@
 # WstunnelKit
 
-Pre-built static library for [wstunnel](https://github.com/ARAS-Workspace/wstunnel) (macOS arm64 / Apple Silicon).
+Pre-built universal static library for [wstunnel](https://github.com/ARAS-Workspace/wstunnel) (macOS arm64 + x86_64).
 
-**Source**: Built from the `mac/v10.5.2` branch via the [macOS Static Library workflow](https://github.com/ARAS-Workspace/wstunnel/actions/runs/22015722890).
+**Source**: Built from the `mac/v10.5.2` branch via the [macOS Static Library workflow](https://github.com/ARAS-Workspace/wstunnel/actions/runs/24308011867).
 
 ### Verify checksum
 
