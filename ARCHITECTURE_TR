@@ -1,0 +1,245 @@
+Phantom-WG Frontmatter — Mimari
+=================================
+
+Rol:
+  Herhangi bir WireGuard sunucusu (veya UDP endpoint) önüne
+  yerleştirilen WSS/TLS tünel katmanı. wstunnel üzerinden TCP 443
+  portu ile WebSocket Secure bağlantıları kabul eder, içlerinde
+  opak UDP datagramları taşır ve bunları yapılandırılmış backend
+  adresine teslim eder.
+
+  Frontmatter, backend sunucusundan ayrı ve bağımsız bir sunucuya
+  kurulur. Bu döküman boyunca frontmatter'ın kurulduğu sunucu
+  "front", trafiğin yönlendirildiği hedef sunucu "backend" olarak
+  adlandırılacaktır. İki katman aynı host üzerinde çalıştırılmaz.
+
+  İstemcinin ağındaki bir gözlemcinin gördüğü:
+    - TCP 443, TLS handshake, front'un açık IP'sine giden trafik
+
+  İstemcinin ağındaki bir gözlemcinin görmediği:
+    - Backend adresi
+    - WireGuard protokol parmak izi
+
+  .conf dosyasının içerdiği:
+    - Front'un açık host'u
+    - wstunnel secret path öneki
+    - 127.0.0.1:51820 dizgisi (iki kez)
+
+  Backend adresi front host üzerinde tam olarak iki yerde kayıtlıdır:
+    - setup SQLite tablosundaki backend_ip satırı
+    - render edilmiş ghost-egress systemd unit dosyası
+
+
+Topoloji:
+
+                                Internet
+                                   |
+                             TCP 443 (WSS)
+                                   |
+                                   v
+            +------------------------------------------+
+            |              Front Server                |
+            |                                          |
+            |   +----------------------------------+   |
+            |   | wstunnel server                  |   |
+            |   |   :443  (TLS termination)        |   |
+            |   |   --restrict-to 127.0.0.1:51820  |   |
+            |   +----------------+-----------------+   |
+            |                    |                     |
+            |                    v                     |
+            |           127.0.0.1:51820/udp            |
+            |                    |                     |
+            |                    v                     |
+            |   +----------------------------------+   |
+            |   | egress (socat)                   |   |
+            |   |   LISTEN 127.0.0.1:51820/udp     |   |
+            |   |   FORWARD -> backend:<port>/udp  |   |
+            |   +----------------+-----------------+   |
+            |                    |                     |
+            +--------------------+---------------------+
+                                 |  düz UDP
+                                 |  (front'un kendi src IP'si)
+                                 v
+                       +--------------------+
+                       |   Backend Server   |
+                       |   (WireGuard veya  |
+                       |    UDP hedef)      |
+                       +--------------------+
+
+
+Paket akışı:
+
+  İstemci -> Front (WSS / TLS 443):
+    1. İstemcideki wstunnel, secret path öneki ile
+       wss://<front_host>:443 adresine WSS bağlantısı açar.
+
+    2. Front'taki wstunnel sunucusu TLS ve upgrade path'i
+       doğrular. --restrict-to 127.0.0.1:51820 yalnızca bu
+       hedefi kabul eder.
+
+    3. wstunnel her WSS frame'ini UDP datagramına çözer ve
+       loopback üzerinden 127.0.0.1:51820'ye yazar.
+
+  Loopback -> Backend:
+    4. socat (ghost-egress servisi) 127.0.0.1:51820/udp
+       üzerinde dinler ve gelen datagramları backend adresine
+       iletir.
+
+    5. Datagram front'un açık arayüzünden çıkar. Kaynak IP
+       front'un kendi dış IP'sidir.
+
+    6. Yanıtlar aynı yolu geriye izler: socat -> wstunnel ->
+       WSS tüneli -> istemcinin yerel 127.0.0.1:<port>.
+
+  Backend, peer endpoint olarak front'un açık IP'sini görür.
+
+Modüller:
+
+  phantom_frontmatter/
+  +-- api/
+  |   +-- core.py
+  |   +-- store.py
+  |   +-- exceptions.py
+  |   +-- validators.py
+  |   +-- response.py
+  +-- bin/
+  |   +-- frontmatter-api.py
+  |   +-- frontmatter-certbot.py
+  |   +-- path_helper.py
+  |   +-- lib/
+  +-- modules/
+  |   +-- base.py
+  |   +-- setup/
+  |   |   +-- module.py
+  |   |   +-- data/
+  |   |   |   +-- cert_defaults.json
+  |   |   +-- lib/
+  |   |       +-- cert_utils.py
+  |   |       +-- binary_utils.py
+  |   |       +-- secret_utils.py
+  |   |       +-- render_utils.py
+  |   +-- ghost/
+  |       +-- module.py
+  +-- systemd/
+  |   +-- phantom-frontmatter-ghost-egress.service.template
+  |   +-- phantom-frontmatter-ghost-wstunnel.service.template
+  +-- frontmatter-uninstall.sh
+
+  setup:
+    Front host'unun tek seferlik yapılandırması.
+
+    setup init: backend adresini parse eder (IPv4/IPv6),
+    self-signed TLS sertifikası üretir, gömülü wstunnel
+    binary'sini çıkarır, secret üretir, systemd unit'lerini
+    render eder ve parametreleri SQLite'a yazar. Servisleri
+    başlatmaz.
+
+    setup clean yes=true: servisleri durdurur, unit dosyalarını,
+    sertifikaları, binary'yi ve veritabanını siler.
+
+    setup status: yapılandırma durumunu raporlar.
+
+    setup init, mevcut yapılandırma varken çalışmayı reddeder.
+    Yeniden yapılandırma için önce setup clean gerekir.
+
+  ghost:
+    wstunnel + socat egress çiftinin yaşam döngüsü.
+
+    ghost start: wstunnel unit'ini etkinleştirir; systemd
+    bağımlılıkları egress unit'ini otomatik çeker.
+    ghost stop: her ikisini durdurur.
+    ghost restart: sırayla egress, sonra wstunnel.
+    ghost status: systemctl sorguları + SQLite parametreleri.
+    ghost client_config: [Wstunnel] bloğunu üretir.
+    ghost client_command: wstunnel CLI komutunu üretir.
+
+    client_config ve client_command çıktılarında
+    <FRONTMATTER-PUBLIC-IP> placeholder'ı bulunur; operatör
+    bunu front'un açık adresi ile değiştirir.
+
+
+Systemd entegrasyonu:
+
+  Her iki veri yolu servisi Restart=always altında systemd
+  unit'leri olarak çalışır.
+
+    phantom-frontmatter-ghost-wstunnel.service
+      Type=simple. :443 portu için CAP_NET_BIND_SERVICE.
+      ProtectSystem=strict.
+      Requires=phantom-frontmatter-ghost-egress.service,
+      After=phantom-frontmatter-ghost-egress.service
+      BindsTo=phantom-frontmatter-ghost-egress.service
+
+    phantom-frontmatter-ghost-egress.service
+      Type=simple. socat ile loopback UDP'yi backend adresine
+      iletir. IPv4 backend'ler UDP4, IPv6 backend'ler bracket
+      notasyonu ile UDP6 kullanır. Güvenlik direktifleri:
+      NoNewPrivileges, ProtectSystem=strict,
+      MemoryDenyWriteExecute.
+
+  Kompakt yaşam döngüsü bağlaması:
+    systemctl enable --now ghost-wstunnel egress unit'ini çeker
+    ve wstunnel'i başlatmadan önce ayağa kalkmasını bekler.
+    BindsTo= ikisini birbirine bağlar: egress düşerse wstunnel
+    da düşer. ghost restart sırayla egress'i sonra wstunnel'i
+    yeniden başlatır.
+
+
+State + config:
+
+  /opt/phantom-frontmatter/
+  +-- .phantom-venv/                    Python Virtual Environment
+  +-- data/
+  |   +-- frontmatter.db                SQLite DB
+  +-- secrets/
+  |   +-- tls_cert                      TLS sertifikası
+  |   +-- tls_key                       TLS özel anahtarı
+  +-- bin/
+  |   +-- wstunnel                      Sabitlenmiş wstunnel binary
+  +-- phantom_frontmatter/              Paketin kendisi
+
+  /usr/local/bin/frontmatter-api        -> CLI giriş noktası
+  /usr/local/bin/frontmatter-certbot    -> Let's Encrypt aracı
+  /usr/local/sbin/frontmatter-uninstall -> Kaldırma scripti
+
+  /etc/systemd/system/
+  +-- phantom-frontmatter-ghost-wstunnel.service
+  +-- phantom-frontmatter-ghost-egress.service
+
+  SQLite şeması:
+    Tek veritabanı dosyası: data/frontmatter.db. Modül başına
+    bir tablo. Her tablo aynı şekle sahiptir:
+
+        CREATE TABLE IF NOT EXISTS <module> (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+
+  setup init sonrası tablolar:
+
+    setup
+      backend_ip            "203.0.113.10"
+      backend_port          "51820"
+      tls_cert_path         "/opt/phantom-frontmatter/secrets/tls_cert"
+      tls_key_path          "/opt/phantom-frontmatter/secrets/tls_key"
+      wstunnel_binary_path  "/opt/phantom-frontmatter/bin/wstunnel"
+      wstunnel_version      "10.5.2"
+      socat_binary_path     "/usr/bin/socat"
+      initialized_at        "2026-01-01T00:00:00+00:00"
+
+    ghost
+      wstunnel_listen_port  "443"
+      wstunnel_secret       "<43 karakterlik URL-safe random>"
+      loopback_port         "51820"
+
+
+Backend gereksinimleri:
+
+  Backend UDP endpoint'i değişiklik gerektirmez. Erişilebilir
+  bir UDP portu yeterlidir; frontmatter datagramları front
+  host'unun kendi dış soketinden gönderir.
+
+
+Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
+AGPL-3.0 altında lisanslanmıştır — ayrıntılar için LICENSE dosyasına bakın.
+WireGuard, Jason A. Donenfeld'in tescilli ticari markasıdır.
