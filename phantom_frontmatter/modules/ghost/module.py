@@ -84,6 +84,7 @@ class GhostModule(BaseModule):
             "restart": self.restart,
             "status": self.status,
             "client_config": self.client_config,
+            "client_command": self.client_command,
         }
 
     # ── Pre-flight ──────────────────────────────────────────────
@@ -290,6 +291,49 @@ class GhostModule(BaseModule):
                 f"Replace {self.PUBLIC_HOST_PLACEHOLDER} with the "
                 "front server's public host before handing this "
                 "snippet to a client."
+            ),
+        }
+
+
+    # ── client_command ───────────────────────────────────────────
+
+    def client_command(self, **_: Any) -> Dict[str, Any]:
+        """Emit a ready-to-run wstunnel client CLI command.
+
+        For users who run the wstunnel binary directly rather than
+        through an app that reads [Wstunnel] blocks.
+        """
+        secret = self.store.get("wstunnel_secret")
+        listen_port = self.store.get_int("wstunnel_listen_port")
+        loopback_port = self.store.get_int(
+            "loopback_port", default=self.LOOPBACK_PORT,
+        )
+
+        if not secret or listen_port is None:
+            raise ConfigurationError(
+                "Ghost has no secret / listen port stored. Run "
+                "'frontmatter-api setup init backend=<IP[:PORT]>' first."
+            )
+
+        tunnel = (
+            f"udp://{self.LOOPBACK_HOST}:{loopback_port}:"
+            f"{self.LOOPBACK_HOST}:{loopback_port}"
+        )
+        server_url = f"wss://{self.PUBLIC_HOST_PLACEHOLDER}:{listen_port}"
+
+        command = (
+            f"wstunnel client"
+            f" --http-upgrade-path-prefix={secret}"
+            f" -L {tunnel}"
+            f" {server_url}"
+        )
+
+        return {
+            "command": command,
+            "note": (
+                f"Replace {self.PUBLIC_HOST_PLACEHOLDER} with the "
+                "front server's public host before running this "
+                "command."
             ),
         }
 
