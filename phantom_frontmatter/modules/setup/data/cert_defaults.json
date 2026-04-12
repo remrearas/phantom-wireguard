@@ -1,0 +1,7 @@
+{
+  "common_name": "phantom-frontmatter",
+  "organization": null,
+  "validity_days": 825,
+  "key_type": "ec",
+  "key_curve": "prime256v1"
+}

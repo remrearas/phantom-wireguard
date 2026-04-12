@@ -1,0 +1,1 @@
+"""Setup module — bootstrap and factory reset for the frontmatter host."""

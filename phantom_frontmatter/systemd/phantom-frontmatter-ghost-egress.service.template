@@ -1,0 +1,33 @@
+[Unit]
+Description=Phantom-WG Frontmatter Ghost Egress (socat → backend)
+Documentation=https://github.com/ARAS-Workspace/phantom-wg
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=__SOCAT_BINARY__ -d \
+    UDP4-LISTEN:__LOOPBACK_PORT__,bind=127.0.0.1,fork,reuseaddr \
+    UDP4:__BACKEND_IP__:__BACKEND_PORT__
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=phantom-frontmatter-ghost-egress
+
+# Security hardening — socat only ever talks to loopback (in) and the
+# backend (out); it has no business touching the filesystem.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target

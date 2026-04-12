@@ -1,0 +1,67 @@
+╔══════════════════════════════════════════════════════════════╗
+║         Phantom-WG Frontmatter — Third-Party Licenses        ║
+╚══════════════════════════════════════════════════════════════╝
+
+This document lists the third-party components used by the
+Phantom-WG Frontmatter project and their respective licenses.
+
+Phantom-WG Frontmatter has no direct Python dependencies at this
+time — it relies only on the Python standard library. A runtime
+binary (wstunnel) and standard OS packages are documented below.
+
+───────────────────────────────────────────────────────────────
+  Python Dependencies
+───────────────────────────────────────────────────────────────
+
+  (none)
+
+The Phantom-WG Frontmatter Python package uses only modules from
+the Python 3.11+ standard library (argparse, json, logging,
+pathlib, subprocess, ipaddress, secrets, dataclasses, etc.).
+
+───────────────────────────────────────────────────────────────
+  Bundled Binaries
+───────────────────────────────────────────────────────────────
+
+wstunnel (BSD 3-Clause License)
+  Version:   10.5.2
+  Upstream:  https://github.com/erebe/wstunnel
+  Fork:      https://github.com/ARAS-Workspace/wstunnel
+  Purpose:   WebSocket/TLS tunnel server used for Ghost Mode
+             clients — wraps WireGuard UDP traffic inside a
+             WebSocket over TLS to traverse networks that block
+             or filter UDP.
+  License:   BSD-3-Clause
+  Notes:     Linux/amd64 and linux/arm64 builds ship inside this
+             package as
+             phantom_frontmatter/bin/lib/wstunnel_<version>_linux_<arch>.tar.gz
+             and are extracted at `setup init` time. Frontmatter
+             never reaches out to GitHub at runtime.
+             The bundled tarballs are produced by the
+             "Release Linux" workflow on the ARAS-Workspace fork.
+
+───────────────────────────────────────────────────────────────
+  System Dependencies (installed via apt)
+───────────────────────────────────────────────────────────────
+
+  - python3         (PSF License)
+  - python3-venv    (PSF License)
+  - python3-pip     (MIT)
+  - socat           (GPL-2.0)
+  - openssl         (Apache-2.0)
+  - ca-certificates (MPL-2.0)
+
+These are standard Debian/Ubuntu packages and are governed by
+their respective licenses as distributed by the OS vendor.
+
+socat is the data-path workhorse for the egress module: it
+listens on 127.0.0.1:51820/udp and forwards every datagram to the
+backend address rendered into the egress systemd unit. socat was
+chosen instead of an in-house Python relay because it is a
+30-year-old, single-binary, well-audited tool with no equivalent
+in the Python standard library.
+
+───────────────────────────────────────────────────────────────
+Copyright (c) 2025 Rıza Emre ARAS
+Licensed under AGPL-3.0 - see LICENSE file for details
+WireGuard® is a registered trademark of Jason A. Donenfeld.

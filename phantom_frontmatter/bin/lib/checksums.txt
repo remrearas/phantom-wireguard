@@ -1,0 +1,2 @@
+7cb9d2f88d5f0058f626cb479dc23ebbcdfc11da387059a34b79e782543730e9  wstunnel_10.5.2_linux_amd64.tar.gz
+11ee9a2bf6a54d11c746da46d09909dec489af67cf1edc83ec03f978ad186d87  wstunnel_10.5.2_linux_arm64.tar.gz

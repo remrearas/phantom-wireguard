@@ -1,0 +1,1 @@
+"""Setup module helpers — cert generation, binary install, secret gen, render."""
