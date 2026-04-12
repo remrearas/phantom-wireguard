@@ -30,6 +30,7 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0
 """
 
+import ipaddress
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -110,7 +111,12 @@ class SetupModule(BaseModule):
     def _parse_backend(self, backend: str) -> tuple[str, int]:
         """Parse a backend argument string into ``(ip, port)``.
 
-        Accepts ``IP`` (port defaults to 51820) or ``IP:PORT``.
+        Accepted formats:
+            203.0.113.10              IPv4, default port
+            203.0.113.10:51820        IPv4 with explicit port
+            2001:db8::1               IPv6, default port
+            [2001:db8::1]:51820       IPv6 with explicit port
+
         Raises ValidationError on bad input.
         """
         if not isinstance(backend, str) or not backend.strip():
@@ -118,18 +124,25 @@ class SetupModule(BaseModule):
                 "Missing 'backend' parameter. Usage: "
                 "frontmatter-api setup init backend=<IP[:PORT]>"
             )
-        backend = backend.strip()
-        if ":" in backend:
-            host, _, port_str = backend.rpartition(":")
-            if not host or not port_str:
-                raise ValidationError(
-                    f"Invalid backend {backend!r}, expected IP or IP:PORT"
-                )
-            ip = validate_ip(host, allow_ipv6=False)
-            port = validate_port(int(port_str))
-        else:
-            ip = validate_ip(backend, allow_ipv6=False)
-            port = self.DEFAULT_BACKEND_PORT
+        raw = backend.strip()
+
+        # Try as a bare IP address first (covers both v4 and v6
+        # without port). Strip brackets for the bare-[IPv6] case.
+        try:
+            ip = validate_ip(raw.strip("[]"))
+            return ip, self.DEFAULT_BACKEND_PORT
+        except ValidationError:
+            pass
+
+        # IP:PORT or [IPv6]:PORT — split on the last ':'
+        host, sep, port_str = raw.rpartition(":")
+        if not sep or not host or not port_str:
+            raise ValidationError(
+                f"Invalid backend {raw!r}, expected "
+                "IP, IP:PORT, or [IPv6]:PORT"
+            )
+        ip = validate_ip(host.strip("[]"))
+        port = validate_port(int(port_str))
         return ip, port
 
     # ── init ────────────────────────────────────────────────────
@@ -220,7 +233,6 @@ class SetupModule(BaseModule):
             "backend_port":        str(backend_port),
             "tls_cert_path":       str(self.cert_path),
             "tls_key_path":        str(self.key_path),
-            "tls_common_name":     tls_common_name,
             "wstunnel_binary_path": str(self.wstunnel_binary),
             "wstunnel_version":    installed_version,
             "socat_binary_path":   socat_binary,
@@ -275,13 +287,21 @@ class SetupModule(BaseModule):
             f"--restrict-http-upgrade-path-prefix={wstunnel_secret}"
         )
 
+        # socat address syntax differs by address family:
+        #   IPv4 → UDP4:203.0.113.10:51820
+        #   IPv6 → UDP6:[2001:db8::1]:51820
+        addr = ipaddress.ip_address(backend_ip)
+        if isinstance(addr, ipaddress.IPv6Address):
+            socat_target = f"UDP6:[{backend_ip}]:{backend_port}"
+        else:
+            socat_target = f"UDP4:{backend_ip}:{backend_port}"
+
         egress_text = render_utils.render_template(
             self.GHOST_EGRESS_TEMPLATE,
             {
-                "SOCAT_BINARY":  socat_binary,
-                "LOOPBACK_PORT": str(self.LOOPBACK_PORT),
-                "BACKEND_IP":    backend_ip,
-                "BACKEND_PORT":  str(backend_port),
+                "SOCAT_BINARY":       socat_binary,
+                "LOOPBACK_PORT":      str(self.LOOPBACK_PORT),
+                "BACKEND_SOCAT_TARGET": socat_target,
             },
         )
         if not render_utils.write_unit_file(
@@ -428,7 +448,6 @@ class SetupModule(BaseModule):
             "backend_port": self.store.get_int("backend_port"),
             "tls_cert_path": self.store.get("tls_cert_path"),
             "tls_key_path": self.store.get("tls_key_path"),
-            "tls_common_name": self.store.get("tls_common_name"),
             "wstunnel_binary_path": self.store.get("wstunnel_binary_path"),
             "wstunnel_version": self.store.get("wstunnel_version"),
             "socat_binary_path": self.store.get("socat_binary_path"),
