@@ -31,7 +31,7 @@ struct TunnelDetailView: View {
     var body: some View {
         List {
             statusSection
-            if PhantomUIEngine.shouldShowStats(status: tunnel.status) { statsSection }
+            statsSection
             nameSection
             if editConfig.isGhostMode { wstunnelSection }
             interfaceSection
