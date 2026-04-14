@@ -7,9 +7,6 @@ links:
     url: https://retro-docs.phantom.tc
   - text: Spin & Deploy
     url: wheel/index-tr.html
-  - text: Destek Ol
-    url: "#"
-    id: supportMeLink
 ---
 
 © 2025 Rıza Emre ARAS - All Rights Reserved

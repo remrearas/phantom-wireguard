@@ -215,9 +215,8 @@ body::before {
         "install"
         "modules"
         "features"
-        "wizard"
         "navigation";
-    grid-template-rows: auto auto auto auto auto auto;
+    grid-template-rows: auto auto auto auto auto;
     grid-template-columns: minmax(0, 1fr);
     gap: clamp(15px, 2.5vw, 25px);
     width: 100%;

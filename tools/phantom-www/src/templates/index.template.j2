@@ -67,9 +67,7 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/module-cards.css">
     <link rel="stylesheet" href="assets/css/module-lightbox.css">
-    <link rel="stylesheet" href="assets/css/crypto-cards.css">
     <link rel="stylesheet" href="assets/css/language-switcher.css">
-    <link rel="stylesheet" href="assets/css/wizard-section.css">
     <link rel="stylesheet" href="assets/css/print.css">
 
 </head>
@@ -181,54 +179,6 @@
                 </div>
             </div>
 
-            <!-- Wizard Deployment Section -->
-            <div class="grid-section wizard-section">
-                <div class="wizard-container">
-                    <!-- Header with Icon -->
-                    <div class="wizard-header">
-                        <div class="wizard-icon">
-                            <svg class="phantom-icon">
-                                <use href="assets/icons/sprite.svg#icon-{{ wizard.icon }}"></use>
-                            </svg>
-                        </div>
-                        <h2 class="wizard-title">{{ wizard.title }}</h2>
-                    </div>
-
-                    <!-- Features Strip -->
-                    <div class="wizard-features">
-                        {% for feature in wizard.features %}
-                        <span>{{ feature }}</span>
-                        {% if not loop.last %}<span class="wizard-separator">•</span>{% endif %}
-                        {% endfor %}
-                    </div>
-
-                    <!-- Buttons -->
-                    <div class="wizard-buttons">
-                        <a href="{{ wizard.mainnet.url }}"
-                           class="wizard-btn wizard-btn-primary"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           aria-label="{{ wizard.mainnet.label }}">
-                            <svg class="phantom-icon">
-                                <use href="assets/icons/sprite.svg#icon-{{ wizard.mainnet.icon }}"></use>
-                            </svg>
-                            <span>{{ wizard.mainnet.label }}</span>
-                        </a>
-
-                        <a href="{{ wizard.onion.url }}"
-                           class="wizard-btn wizard-btn-secondary"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           aria-label="{{ wizard.onion.label }}">
-                            <svg class="phantom-icon">
-                                <use href="assets/icons/sprite.svg#icon-{{ wizard.onion.icon }}"></use>
-                            </svg>
-                            <span>{{ wizard.onion.label }}</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
             <!-- Navigation Section -->
             <div class="grid-section nav-section">
                 <nav class="links-container">
@@ -255,89 +205,6 @@
         </div>
     </div>
 
-    <!-- Donate Modal -->
-    <div class="phantom-lightbox" id="donateModal">
-        <div class="lightbox-overlay"></div>
-        <div class="lightbox-content">
-            <button class="lightbox-close" aria-label="Close">
-                <span>×</span>
-            </button>
-
-            <div class="lightbox-inner">
-                <div class="donate-detail">
-                    <div class="donate-header">
-                        <h2 class="donate-title">{{ donate.title }}</h2>
-                        <p class="donate-description">
-                            {{ donate.description }}
-                        </p>
-                    </div>
-
-                    <div class="donate-body">
-                        <div class="crypto-cards">
-                            <!-- Bitcoin Card -->
-                            <div class="crypto-card">
-                                <div class="crypto-header">
-                                    <div class="crypto-icon">
-                                        <svg class="phantom-icon">
-                                            <use href="assets/icons/sprite.svg#icon-{{ donate.bitcoin.icon }}"></use>
-                                        </svg>
-                                    </div>
-                                    <div class="crypto-info">
-                                        <h3 class="crypto-name">{{ donate.bitcoin.name }}</h3>
-                                        <span class="crypto-network">{{ donate.bitcoin.network }}</span>
-                                    </div>
-                                </div>
-                                <div class="crypto-address-container">
-                                    <code class="crypto-address" id="btcAddress">{{ donate.bitcoin.address }}</code>
-                                    <button class="crypto-copy-btn" data-crypto="btc" aria-label="Copy Bitcoin address">
-                                        <svg class="phantom-icon">
-                                            <use href="assets/icons/sprite.svg#icon-copy"></use>
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="crypto-qr-container">
-                                    <!-- QR code will be added later -->
-                                    <div class="crypto-qr-placeholder">
-                                        <img src='{{ donate.bitcoin.qr_image }}' alt="BTC Donation Address QR Code">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Monero Card -->
-                            <div class="crypto-card">
-                                <div class="crypto-header">
-                                    <div class="crypto-icon">
-                                        <svg class="phantom-icon">
-                                            <use href="assets/icons/sprite.svg#icon-{{ donate.monero.icon }}"></use>
-                                        </svg>
-                                    </div>
-                                    <div class="crypto-info">
-                                        <h3 class="crypto-name">{{ donate.monero.name }}</h3>
-                                        <span class="crypto-network">{{ donate.monero.network }}</span>
-                                    </div>
-                                </div>
-                                <div class="crypto-address-container">
-                                    <code class="crypto-address" id="xmrAddress">{{ donate.monero.address }}</code>
-                                    <button class="crypto-copy-btn" data-crypto="xmr" aria-label="Copy Monero address">
-                                        <svg class="phantom-icon">
-                                            <use href="assets/icons/sprite.svg#icon-copy"></use>
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="crypto-qr-container">
-                                    <!-- QR code will be added later -->
-                                    <div class="crypto-qr-placeholder">
-                                        <img src='{{ donate.monero.qr_image }}' alt="XMR Donation Address QR Code">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Module Templates (Hidden) -->
     <div style="display: none;">
         {% for module in modules %}
@@ -359,7 +226,6 @@
     <script src="assets/js/console-branding.js"></script>
     <script src="assets/js/phantom.js"></script>
     <script src="assets/js/module-lightbox.js"></script>
-    <script src="assets/js/donate-modal.js"></script>
     <script src="assets/js/language-switcher.js"></script>
     {% if env == 'dev' %}
     <!-- Development Auto-Reload -->

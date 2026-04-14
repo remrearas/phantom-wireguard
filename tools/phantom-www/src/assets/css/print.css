@@ -72,16 +72,13 @@
     footer.footer,
     .slider-controls,
     .lightbox-close,
-    .crypto-copy-btn,
     .copy-code,
-    .wizard-section,
     .language-switcher {
         display: none !important;
     }
 
     /* Modal kapalıyken tüm modal'ları gizle */
-    body:not(.lightbox-open) .phantom-lightbox,
-    body:not(.lightbox-open) #donateModal {
+    body:not(.lightbox-open) .phantom-lightbox {
         display: none !important;
     }
 
@@ -216,13 +213,7 @@
     body.lightbox-open .container,
     body.lightbox-open footer,
     body.lightbox-open .phantom-grid,
-    body.lightbox-open .nav-section,
-    body.lightbox-open .wizard-section {
-        display: none !important;
-    }
-
-    /* Modal açıkken donate modal'ı da gizle (eğer açık değilse) */
-    body.lightbox-open #donateModal:not(.active) {
+    body.lightbox-open .nav-section {
         display: none !important;
     }
 

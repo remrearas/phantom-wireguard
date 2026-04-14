@@ -24,8 +24,6 @@ class ContentProcessor:
             'install': self.process_install(language),
             'modules': self.process_modules(language),
             'features': self.process_features(language),
-            'wizard': self.process_wizard(language),
-            'donate': self.process_donate(language),
             'footer': self.process_footer(language)
         }
 
@@ -136,35 +134,6 @@ class ContentProcessor:
             'slides': slides,
             'auto_rotate': post.metadata.get('auto_rotate', True),
             'rotation_interval': post.metadata.get('rotation_interval', 5000)
-        }
-
-    def process_donate(self, language):
-        """Process donate modal markdown"""
-        donate_file = self.content_dir / 'landing' / language / 'donate.md'
-
-        with open(donate_file, encoding='utf-8') as f:
-            post = frontmatter.load(f)
-
-        return {
-            'title': post.metadata['title'],
-            'description': post.content.strip(),
-            'bitcoin': post.metadata['bitcoin'],
-            'monero': post.metadata['monero']
-        }
-
-    def process_wizard(self, language):
-        """Process wizard section markdown"""
-        wizard_file = self.content_dir / 'landing' / language / 'wizard.md'
-
-        with open(wizard_file, encoding='utf-8') as f:
-            post = frontmatter.load(f)
-
-        return {
-            'title': post.metadata['title'],
-            'icon': post.metadata.get('icon', 'rocket'),
-            'features': post.metadata.get('features', []),
-            'mainnet': post.metadata.get('mainnet', {}),
-            'onion': post.metadata.get('onion', {})
         }
 
     def process_footer(self, language):
