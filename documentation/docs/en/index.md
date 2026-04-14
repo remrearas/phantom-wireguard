@@ -7,6 +7,9 @@ extra_javascript:
 ---
 # Phantom-WG Retro
 
+!!! warning "Deprecated"
+    Phantom-WG Retro is deprecated. Active development continues on [Phantom-WG Modern](https://github.com/ARAS-Workspace/phantom-wg). This codebase will no longer be actively developed. Updates will be rare and limited to critical fixes.
+
 <div class="ascii-demo-container">
   <pre id="phantom-ascii-pulse" class="ascii-art" data-effect="pulse"></pre>
 </div>
@@ -167,31 +170,3 @@ This software is licensed under the AGPL-3.0 license. See [LICENSE](https://raw.
 
 For third-party licenses, see [THIRD_PARTY_LICENSES](https://raw.githubusercontent.com/ARAS-Workspace/phantom-wg/refs/heads/retro/THIRD_PARTY_LICENSES).
 
----
-
-## 🎖️ Acknowledgments
-
-This project would not be possible without the following open source projects:
-
-- **[WireGuard](https://www.wireguard.com/)**
-- **[wstunnel](https://github.com/erebe/wstunnel)**
-- **[Let's Encrypt](https://letsencrypt.org/)**
-- **[Rich](https://github.com/Textualize/rich)**
-- **[TinyDB](https://github.com/msiemens/tinydb)**
-- **[qrcode](https://github.com/lincolnloop/python-qrcode)**
-
----
-
-## Support
-
-Phantom-WG is an open-source project. If you'd like to support the project:
-
-**Monero (XMR):**
-```
-84KzoZga5r7avaAqrWD4JhXaM6t69v3qe2gyCGNNxAaaJgFizt1NzAQXtYoBk1xJPXEHNi6GKV1SeDZWUX7rxzaAQeYyZwQ
-```
-
-**Bitcoin (BTC):**
-```
-bc1qnjjrsfdatnc2qtjpkzwpgxpmnj3v4tdduykz57
-```

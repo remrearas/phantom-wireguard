@@ -7,6 +7,9 @@ extra_javascript:
 ---
 # Phantom-WG Retro
 
+!!! warning "Kullanımdan Kaldırıldı"
+    Phantom-WG Retro kullanımdan kaldırılmıştır. Aktif geliştirme [Phantom-WG Modern](https://github.com/ARAS-Workspace/phantom-wg) üzerinde devam etmektedir. Bu kod tabanı aktif geliştirilmeye devam etmeyecektir. Güncellemeler nadir ve önemli düzeltmeleri içerecektir.
+
 <div class="ascii-demo-container">
   <pre id="phantom-ascii-pulse" class="ascii-art" data-effect="pulse"></pre>
 </div>
@@ -167,31 +170,3 @@ Bu yazılım AGPL-3.0 lisansı altında lisanslanmıştır. Detaylar için [LICE
 
 Üçüncü taraf lisansları için [THIRD_PARTY_LICENSES](https://raw.githubusercontent.com/ARAS-Workspace/phantom-wg/refs/heads/retro/THIRD_PARTY_LICENSES) dosyasına bakınız.
 
----
-
-## 🎖️ Teşekkürler
-
-Bu proje, aşağıdaki açık kaynak projeler olmadan mümkün olamazdı:
-
-- **[WireGuard](https://www.wireguard.com/)**
-- **[wstunnel](https://github.com/erebe/wstunnel)**
-- **[Let's Encrypt](https://letsencrypt.org/)**
-- **[Rich](https://github.com/Textualize/rich)**
-- **[TinyDB](https://github.com/msiemens/tinydb)**
-- **[qrcode](https://github.com/lincolnloop/python-qrcode)**
-
----
-
-## Destek
-
-Phantom-WG açık kaynak bir projedir. Projeyi desteklemek isterseniz:
-
-**Monero (XMR):**
-```
-84KzoZga5r7avaAqrWD4JhXaM6t69v3qe2gyCGNNxAaaJgFizt1NzAQXtYoBk1xJPXEHNi6GKV1SeDZWUX7rxzaAQeYyZwQ
-```
-
-**Bitcoin (BTC):**
-```
-bc1qnjjrsfdatnc2qtjpkzwpgxpmnj3v4tdduykz57
-```

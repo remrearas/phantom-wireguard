@@ -1,5 +1,8 @@
 # Phantom-WG Retro
 
+> [!WARNING]
+> Phantom-WG Retro kullanımdan kaldırılmıştır. Aktif geliştirme [Phantom-WG Modern](https://github.com/ARAS-Workspace/phantom-wg) üzerinde devam etmektedir. Bu kod tabanı aktif geliştirilmeye devam etmeyecektir. Güncellemeler nadir ve önemli düzeltmeleri içerecektir.
+
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/ARAS-Workspace/phantom-wg/actions/runs/24055068105)
 
 > [🇬🇧 English](README.md) | 🇹🇷 **Türkçe** | [🇸🇦 العربية](README_AR.md)
@@ -151,12 +154,12 @@ phantom-api multihop enable_multihop exit_name="vpn-exit"
 
 ## Erişim Yöntemleri
 
-| Yöntem                   | Komut                          | Açıklama                           |
-|--------------------------|--------------------------------|------------------------------------|
-| **İnteraktif CLI**       | `phantom-wg`                   | Rich TUI tabanlı kullanıcı arayüzü |
-| **API**                  | `phantom-api <modül> <eylem>`  | Programatik erişim, JSON çıktı     |
-| **Ghost Export**         | `phantom-casper <istemci>`     | Ghost Mode istemci yapılandırması  |
-| **Ghost Export for iOS** | `phantom-casper-ios <istemci>` | Ghost Mode iOS JSON yapılandırması |
+| Yöntem                   | Komut                          | Açıklama                                |
+|--------------------------|--------------------------------|-----------------------------------------|
+| **İnteraktif CLI**       | `phantom-wg`                   | Rich TUI tabanlı kullanıcı arayüzü      |
+| **API**                  | `phantom-api <modül> <eylem>`  | Programatik erişim, JSON çıktı          |
+| **Ghost Export**         | `phantom-casper <istemci>`     | Ghost Mode istemci yapılandırması       |
+| **Ghost Export (.conf)** | `phantom-casper-app <istemci>` | Ghost Mode .conf istemci yapılandırması |
 
 ---
 
@@ -166,7 +169,6 @@ phantom-api multihop enable_multihop exit_name="vpn-exit"
 |--------------------------------------------------------------------------------------------------|-----------------------------------------|
 | [API Dökümanı (TR)](https://retro-docs.phantom.tc/tr/api/)                                       | Tüm API eylemlerinin detaylı açıklaması |
 | [Modül Mimarisi](phantom/modules/README_TR.md)                                                   | Teknik mimari ve veri modelleri         |
-| [macOS İstemcisi](https://github.com/ARAS-Workspace/phantom-wg/releases/tag/mac-v1.0.0)         | Phantom-WG Retro Mac İstemcisi v1.0.0  |
 
 ---
 
@@ -187,35 +189,6 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Bu yazılım AGPL-3.0 lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakınız.
 
 Üçüncü taraf lisansları için [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) dosyasına bakınız.
-
----
-
-## 🎖️ Teşekkürler
-
-Bu proje, aşağıdaki açık kaynak projeler olmadan mümkün olamazdı:
-
-- **[WireGuard](https://www.wireguard.com/)** 
-- **[wstunnel](https://github.com/erebe/wstunnel)** 
-- **[Let's Encrypt](https://letsencrypt.org/)** 
-- **[Rich](https://github.com/Textualize/rich)**
-- **[TinyDB](https://github.com/msiemens/tinydb)** 
-- **[qrcode](https://github.com/lincolnloop/python-qrcode)** 
-
----
-
-## Destek
-
-Phantom-WG açık kaynak bir projedir. Projeyi desteklemek isterseniz:
-
-**Monero (XMR):**
-```
-84KzoZga5r7avaAqrWD4JhXaM6t69v3qe2gyCGNNxAaaJgFizt1NzAQXtYoBk1xJPXEHNi6GKV1SeDZWUX7rxzaAQeYyZwQ
-```
-
-**Bitcoin (BTC):**
-```
-bc1qnjjrsfdatnc2qtjpkzwpgxpmnj3v4tdduykz57
-```
 
 ---
 

@@ -6,6 +6,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Phantom-WG Retro
 
+> [!WARNING]
+> تم إيقاف تطوير Phantom-WG Retro. يستمر التطوير النشط على [Phantom-WG Modern](https://github.com/ARAS-Workspace/phantom-wg). لن يستمر تطوير هذا الكود بشكل نشط. ستكون التحديثات نادرة ومقتصرة على الإصلاحات الحرجة.
+
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/ARAS-Workspace/phantom-wg/actions/runs/24055068105)
 
 > [🇬🇧 English](README.md) | [🇹🇷 Türkçe](README_TR.md) | 🇸🇦 **العربية**
@@ -161,17 +164,16 @@ phantom-api multihop enable_multihop exit_name="vpn-exit"
 | **CLI التفاعلي**         | `phantom-wg`                    | واجهة مستخدم غنية قائمة على TUI      |
 | **API**                  | `phantom-api <module> <action>` | وصول برمجي، خرج بصيغة JSON           |
 | **Ghost Export**         | `phantom-casper <client>`       | إعدادات عميل Ghost Mode              |
-| **Ghost Export for iOS** | `phantom-casper-ios <client>`   | إعدادات Ghost Mode بصيغة JSON لـ iOS |
+| **Ghost Export (.conf)** | `phantom-casper-app <client>`   | Ghost Mode .conf إعدادات العميل |
 
 ---
 
 ## الوثائق
 
-| الوثيقة                                                                                          | الوصف                          |
-|--------------------------------------------------------------------------------------------------|--------------------------------|
-| [API Documentation](https://retro-docs.phantom.tc/api)                                           | مرجع تفصيلي لجميع إجراءات API  |
-| [Module Architecture](phantom/modules/README.md)                                                 | البنية التقنية ونماذج البيانات |
-| [macOS Client](https://github.com/ARAS-Workspace/phantom-wg/releases/tag/mac-v1.0.0)            | Phantom-WG Retro Mac Client v1.0.0 |
+| الوثيقة                                                                              | الوصف                              |
+|--------------------------------------------------------------------------------------|------------------------------------|
+| [API Documentation](https://retro-docs.phantom.tc/api)                               | مرجع تفصيلي لجميع إجراءات API      |
+| [Module Architecture](phantom/modules/README.md)                                     | البنية التقنية ونماذج البيانات     |
 
 ---
 
@@ -192,35 +194,6 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 هذا البرنامج مرخص بموجب رخصة AGPL-3.0. للتفاصيل، راجع ملف [LICENSE](LICENSE).
 
 لتراخيص الأطراف الثالثة، راجع [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
-
----
-
-## 🎖️ شكر وتقدير
-
-لم يكن هذا المشروع ممكنًا بدون المشاريع مفتوحة المصدر التالية:
-
-- **[WireGuard](https://www.wireguard.com/)**
-- **[wstunnel](https://github.com/erebe/wstunnel)**
-- **[Let's Encrypt](https://letsencrypt.org/)**
-- **[Rich](https://github.com/Textualize/rich)**
-- **[TinyDB](https://github.com/msiemens/tinydb)**
-- **[qrcode](https://github.com/lincolnloop/python-qrcode)**
-
----
-
-## الدعم
-
-Phantom-WG مشروع مفتوح المصدر. إذا كنت ترغب في دعم المشروع:
-
-**Monero (XMR):**
-```
-84KzoZga5r7avaAqrWD4JhXaM6t69v3qe2gyCGNNxAaaJgFizt1NzAQXtYoBk1xJPXEHNi6GKV1SeDZWUX7rxzaAQeYyZwQ
-```
-
-**Bitcoin (BTC):**
-```
-bc1qnjjrsfdatnc2qtjpkzwpgxpmnj3v4tdduykz57
-```
 
 ---
 

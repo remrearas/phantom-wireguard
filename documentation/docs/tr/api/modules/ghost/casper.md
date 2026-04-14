@@ -86,3 +86,15 @@ NOT: Bağlı iken wstunnel komutunu çalışır durumda tutun!
 - Ghost Mode'da yapılandırılan herhangi bir alan adı ile çalışır (sslip.io/nip.io dahil)
 - Endpoint 127.0.0.1:51820 olarak ayarlanır; trafik yerel wstunnel istemcisi üzerinden
   uzak sunucuya iletilir
+
+---
+
+**.conf olarak dışa aktarma (Phantom-WG Mac / iOS istemcileri için):**
+
+`phantom-casper-app` aracı Ghost Mode yapılandırmasını `[Wstunnel]` bloğu dahil `.conf`
+dosyası olarak dışa aktarır. Bu format Phantom-WG Mac ve iOS istemci uygulamalarına
+doğrudan aktarılabilir.
+
+```bash
+phantom-casper-app [kullanıcıadı]
+```

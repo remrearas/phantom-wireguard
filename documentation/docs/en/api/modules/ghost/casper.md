@@ -86,3 +86,15 @@ NOTE: Keep the wstunnel command running while connected!
 - Works with any domain configured in Ghost Mode (including sslip.io/nip.io)
 - Endpoint is set to 127.0.0.1:51820; traffic is forwarded to the remote server
   through the local wstunnel client
+
+---
+
+**Exporting as .conf (for Phantom-WG Mac / iOS clients):**
+
+The `phantom-casper-app` tool exports the Ghost Mode configuration as a `.conf` file
+that includes the `[Wstunnel]` block. This format is directly importable by the
+Phantom-WG Mac and iOS client applications.
+
+```bash
+phantom-casper-app [username]
+```

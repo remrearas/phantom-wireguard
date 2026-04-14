@@ -1,5 +1,8 @@
 # Phantom-WG Retro
 
+> [!WARNING]
+> Phantom-WG Retro is deprecated. Active development continues on [Phantom-WG Modern](https://github.com/ARAS-Workspace/phantom-wg). This codebase will no longer be actively developed. Updates will be rare and limited to critical fixes.
+
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/ARAS-Workspace/phantom-wg/actions/runs/24055068105)
 
 > 🇬🇧 **English** | [🇹🇷 Türkçe](README_TR.md) | [🇸🇦 العربية](README_AR.md)
@@ -150,22 +153,21 @@ phantom-api multihop enable_multihop exit_name="vpn-exit"
 
 ## Access Methods
 
-| Method                   | Command                         | Description                       |
-|--------------------------|---------------------------------|-----------------------------------|
-| **Interactive CLI**      | `phantom-wg`                    | Rich TUI-based user interface     |
-| **API**                  | `phantom-api <module> <action>` | Programmatic access, JSON output  |
-| **Ghost Export**         | `phantom-casper <client>`       | Ghost Mode client configuration   |
-| **Ghost Export for iOS** | `phantom-casper-ios <client>`   | Ghost Mode iOS JSON configuration |
+| Method                   | Command                         | Description                           |
+|--------------------------|---------------------------------|---------------------------------------|
+| **Interactive CLI**      | `phantom-wg`                    | Rich TUI-based user interface         |
+| **API**                  | `phantom-api <module> <action>` | Programmatic access, JSON output      |
+| **Ghost Export**         | `phantom-casper <client>`       | Ghost Mode client configuration       |
+| **Ghost Export (.conf)** | `phantom-casper-app <client>`   | Ghost Mode .conf client configuration |
 
 ---
 
 ## Documentation
 
-| Document                                                                                              | Description                            |
-|-------------------------------------------------------------------------------------------------------|----------------------------------------|
-| [API Documentation](https://retro-docs.phantom.tc/api)                                               | Detailed reference for all API actions |
-| [Module Architecture](phantom/modules/README.md)                                                      | Technical architecture and data models |
-| [macOS Client](https://github.com/ARAS-Workspace/phantom-wg/releases/tag/mac-v1.0.0)                 | Phantom-WG Retro Mac Client v1.0.0     |
+| Document                                                                             | Description                            |
+|--------------------------------------------------------------------------------------|----------------------------------------|
+| [API Documentation](https://retro-docs.phantom.tc/api)                               | Detailed reference for all API actions |
+| [Module Architecture](phantom/modules/README.md)                                     | Technical architecture and data models |
 
 ---
 
@@ -187,35 +189,6 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 This software is licensed under the AGPL-3.0 license. See [LICENSE](LICENSE) for details.
 
 For third-party licenses, see [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
-
----
-
-## 🎖️ Acknowledgments
-
-This project would not be possible without the following open source projects:
-
-- **[WireGuard](https://www.wireguard.com/)**
-- **[wstunnel](https://github.com/erebe/wstunnel)**
-- **[Let's Encrypt](https://letsencrypt.org/)**
-- **[Rich](https://github.com/Textualize/rich)**
-- **[TinyDB](https://github.com/msiemens/tinydb)**
-- **[qrcode](https://github.com/lincolnloop/python-qrcode)**
-
----
-
-## Support
-
-Phantom-WG is an open-source project. If you'd like to support the project:
-
-**Monero (XMR):**
-```
-84KzoZga5r7avaAqrWD4JhXaM6t69v3qe2gyCGNNxAaaJgFizt1NzAQXtYoBk1xJPXEHNi6GKV1SeDZWUX7rxzaAQeYyZwQ
-```
-
-**Bitcoin (BTC):**
-```
-bc1qnjjrsfdatnc2qtjpkzwpgxpmnj3v4tdduykz57
-```
 
 ---
 
