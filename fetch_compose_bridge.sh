@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Fetch compose-bridge for current platform
+# Fetch compose-bridge for the current platform from the latest
+# successful run of the publish-compose-bridge workflow. No run id or
+# version hardcoded here — the script always tracks whatever shipped
+# last.
+#
 # Usage: bash fetch_compose_bridge.sh
 
 set -euo pipefail
 
 REPO="ARAS-Workspace/phantom-wg"
-RUN_ID="22726661393"
-VERSION="1.0.0"
+WORKFLOW="publish-compose-bridge.yml"
 DEST="lib/compose_bridge"
 
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -18,8 +21,6 @@ case "$ARCH" in
     *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
-ARTIFACT_NAME="compose-bridge-${VERSION}-${OS}-${ARCH}"
-
 if ! command -v gh &>/dev/null; then
     echo "GitHub CLI (gh) required: brew install gh"
     exit 1
@@ -30,7 +31,35 @@ if ! gh auth status &>/dev/null; then
     exit 1
 fi
 
-echo "Fetching ${ARTIFACT_NAME}..."
+# Resolve the latest successful publish run.
+echo "Locating latest successful ${WORKFLOW}..."
+RUN_ID="$(gh run list \
+    --repo "$REPO" \
+    --workflow "$WORKFLOW" \
+    --status success \
+    --limit 1 \
+    --json databaseId \
+    --jq '.[0].databaseId')"
+
+if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+    echo "No successful run found for ${WORKFLOW}" >&2
+    exit 1
+fi
+
+# Resolve the per-platform artifact within that run. Artifact naming
+# is compose-bridge-<version>-<os>-<arch>; we match by suffix so the
+# version never has to be known client-side.
+echo "Resolving artifact for ${OS}-${ARCH} in run ${RUN_ID}..."
+ARTIFACT_NAME="$(gh api "/repos/${REPO}/actions/runs/${RUN_ID}/artifacts" \
+    --jq ".artifacts[] | select(.name | endswith(\"-${OS}-${ARCH}\")) | .name" \
+    | head -1)"
+
+if [ -z "$ARTIFACT_NAME" ]; then
+    echo "No artifact matching *-${OS}-${ARCH} in run ${RUN_ID}" >&2
+    exit 1
+fi
+
+echo "Fetching ${ARTIFACT_NAME} (run ${RUN_ID})..."
 
 rm -rf "$DEST"
 mkdir -p "$DEST"
