@@ -10,7 +10,7 @@ Copyright (c) 2025 Rıza Emre ARAS <r.emrearas@proton.me>
 Licensed under AGPL-3.0 - see LICENSE file for details
 WireGuard® is a registered trademark of Jason A. Donenfeld.
 
-wireguard_go_bridge v2.1.2 — Python FFI bindings for wireguard-go-bridge.
+wireguard_go_bridge — Python FFI bindings for wireguard-go-bridge.
 PersistentDevice with automatic IPC state persistence + key generation.
 """
 
