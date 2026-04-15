@@ -1,0 +1,116 @@
+wireguard-go-bridge
+
+Python FFI bindings for wireguard-go. PersistentDevice with automatic
+IPC state persistence and key generation.
+
+
+v2.1.2 - 2026-03-24
+-------------------
+
+  Maintenance release covering publish infrastructure, log hygiene,
+  and the first written documentation for the bridge.
+
+  * Vendor artifact hosting moved from Cloudflare Pages
+    (vendor-artifacts.phantom.tc, served from the dev/vendor branch)
+    to R2 direct upload, after the Pages setup ran into its service
+    limits.
+  * Publish workflow switched to dispatch-only (no automatic publish
+    on push).
+  * Suppressed "no known endpoint" log noise emitted by peers that
+    have not yet established connectivity.
+  * Publish workflow handles idempotent vendor pushes — re-running
+    the same version no longer fails the job.
+  * Added README and Turkish README with architecture diagrams.
+  * __version__ bumped to 2.1.2.
+
+
+v2.1.0 - 2026-03-02
+-------------------
+
+  The actual thinning. Breaking change relative to v2.0.
+
+  v2.0 had replaced the v1 concept-per-file layout with a
+  centralized state machine plus an SQLite persistence layer on
+  the Go side — more ambitious, not less. v2.1 throws that out.
+  Roughly 6,000 lines of Go are deleted (bridge/, db/, multihop/
+  packages gone) and all high-level logic moves to Python:
+  state, DB management, client wallet. The Go side is reduced to
+  PersistentDevice — a long-lived handle that wraps wireguard-go
+  and auto-persists on every IpcSet — plus key generation and
+  utility entry points. Nothing else.
+
+  * PersistentDevice introduced on the Go side: owns the tunnel
+    handle across calls, auto-persists state to an SQLite file on
+    every IpcSet, restores from DB on startup.
+  * FFI exports rewritten down to PersistentDevice + Key + a small
+    set of utility entry points. filterIpcDump strips five
+    read-only fields so the dump is safely round-trippable.
+  * bridge/, db/, and multihop/ packages removed from the Go side
+    (~6,092 lines deleted).
+  * Python layer filled out: WireGuardBridge class (typed,
+    __slots__, context manager), keys module (generate private
+    key, derive public key, hex ↔ base64), native BridgeError
+    exception hierarchy.
+  * Test infrastructure rebuilt. netns-test/ retired in favour of
+    a 3-container Docker topology — bridge, exit-server, client —
+    driven by a parameterless test_runner.py that builds images
+    and syncs code automatically. 52 tests (51 unit + 1
+    integration) at 99% coverage; the integration test walks
+    tunnel-up, crash recovery, and client multihop in three
+    phases.
+  * _ffi library discovery fixed to look beside the package
+    instead of in dist/ (matters once installed as a wheel).
+
+
+v2.0.0 - 2026-03-01
+-------------------
+
+  Bridge-db rewrite. Breaking change. Short-lived.
+
+  v1.0 split the Go surface across one file per WireGuard concept
+  — allowed IPs, cookies, crypto, device, keys, logger, misc,
+  peer, UAPI. That concept-per-file layout was collapsed here
+  into a centralized design: a single state machine
+  (bridge/state.go, ~1k lines, Status lifecycle from
+  Uninitialized → NeedsSetup → Ready → Running → Error), an
+  SQLite persistence layer (db/ — client, server, multihop,
+  stats, schema), and a multihop config package.
+
+  The intent was to give the bridge a coherent state model
+  instead of a pile of wrappers. In practice it just moved the
+  weight around: the bridge still owned too much of the product's
+  semantics, and keeping it aligned with upstream wireguard-go
+  was no easier than before. v2.1 retires most of this layer one
+  day later.
+
+  * Centralized bridge state machine replaces the v1 per-concept
+    files.
+  * SQLite-backed persistence layer added (client, server,
+    multihop, stats, schema).
+  * Multihop configuration added as a first-class concern.
+  * Publish workflow split into separate test, build, and publish
+    stages (previously one monolithic job).
+  * Publish target moved to dev/vendor as a flat directory with a
+    VERSION file, replacing GitHub Release artifact hosting.
+  * Removed auto-generated release notes from the publish step.
+
+
+v1.0.0 - 2026-02-28
+-------------------
+
+  Initial release. Reorganized in v2.0 and again in v2.1;
+  documented here for historical continuity.
+
+  First cut of the native FFI bridge for wireguard-go. The Go
+  surface was split by WireGuard concept — one file per concern
+  (allowed IPs, cookies, crypto, device, keys, logger,
+  miscellaneous, peer, UAPI) — and the Python side called into
+  those directly.
+
+  * Native FFI bridge with Python bindings over a concept-per-
+    file Go layout.
+  * UAPI/Run FFI surface with netns-based integration tests
+    (retired in v2.1 for the Docker topology).
+  * Package release workflow with build artifacts published to a
+    separate development branch (kept the source branch clean).
+  * THIRD_PARTY_LICENSES inventory.
