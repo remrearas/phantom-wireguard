@@ -1,0 +1,309 @@
+ARCHITECTURE
+
+phantom-auth is a FastAPI service that terminates user authentication
+in front of phantom-daemon. Every dashboard request from the SPA hits
+auth-service first; only authenticated, role-checked requests reach
+the daemon over its Unix domain socket.
+
+
+Position in the stack
+---------------------
+
+  Browser (dashboard SPA)
+       │
+       │  HTTPS
+       ▼
+  nginx (TLS termination)
+       │
+       │  HTTP
+       ▼
+  auth-service ── /auth/*  login, MFA, sessions, users, audit
+               ── /api/*   authenticated reverse proxy to daemon
+       │
+       │  UDS (unix:///var/run/phantom/daemon.sock)
+       ▼
+  phantom-daemon
+
+  No daemon endpoint is reachable without a valid auth-service
+  token. The daemon does not implement authentication itself.
+
+
+Process model
+-------------
+
+  Single Python process, FastAPI under uvicorn.
+
+  All long-lived state lives on app.state, populated by the lifespan
+  context manager (auth_service/app.py:lifespan) in five phases:
+
+    1. Load configuration from environment      (config.py)
+    2. Load Ed25519 signing keypair from disk   (crypto/keys.py)
+    3. Validate auth.db exists                  (db/repository.py)
+    4. Build httpx client to daemon (UDS or HTTP)
+    5. Build in-memory rate limiter             (middleware/rate_limit.py)
+
+  Startup failure is critical and fatal: sys.exit(1). The service
+  refuses to run with partially-initialised state.
+
+
+Persistence layer
+-----------------
+
+  A single SQLite file at $AUTH_DB_DIR/auth.db, opened with
+  PRAGMA journal_mode = WAL and PRAGMA foreign_keys = ON.
+
+  Schema (auth_service/db/schema.sql):
+
+    users                id, username, password_hash, role,
+                         totp_secret, timestamps.
+    totp_backup_codes    per-user one-time backup codes (hashed).
+    sessions             id, user_id, token_jti, token_hash,
+                         issued_at, expires_at, last_activity_at,
+                         revoked.
+    audit_log            every login attempt, MFA verification,
+                         password change, user-management action,
+                         and proxy request. Append-only.
+
+  The file is created once by tools/bootstrap.py during initial
+  setup; the runtime never creates or migrates schema. If the file
+  is missing, startup aborts.
+
+  Connections are per-request, not pooled. _DBMiddleware
+  (auth_service/app.py) opens a fresh sqlite3 connection on every
+  inbound request, stores it on request.state.db, and closes it
+  after the response. This eliminates the threading hazards that
+  arise from sharing a single sqlite3 connection across asyncio
+  workers — a real bug fixed in v1.1.0.
+
+
+Authentication flow
+-------------------
+
+  1. POST /auth/login            username + password → either:
+                                   - "needs_mfa": short-lived MFA
+                                     token (120s default) when TOTP
+                                     is enrolled, or
+                                   - access token + session record.
+                                 Both branches write to audit_log.
+
+  2. POST /auth/mfa/verify       MFA token + TOTP code → access
+                                 token + session.
+
+  3. POST /auth/totp/backup      MFA token + backup code → access
+                                 token. Backup code is consumed.
+
+  4. POST /auth/logout           Revokes the active session by JTI.
+
+  5. GET  /auth/me               Returns current user + role.
+
+  Access tokens default to 24h. Sessions also enforce a 30-minute
+  inactivity timeout — every authenticated call updates
+  last_activity_at; idle sessions auto-revoke on the next access
+  attempt.
+
+
+Authorization
+-------------
+
+  middleware/auth.py:require_auth
+  Steps:
+
+    1. Extract Bearer token from the Authorization header.
+    2. Verify Ed25519 signature, decode payload.
+    3. Check token_type == "access".
+    4. Look up the session by jti; reject if missing or revoked.
+    5. Check that stored token_hash matches sha256 of the raw token
+       — prevents reuse if a JTI leaks but the token does not.
+    6. Check inactivity timeout; revoke if exceeded.
+    7. Update last_activity_at.
+
+  Two roles:
+
+    admin        /auth/me, /logout, /auth/password/* (own password),
+                 /auth/totp/* (own TOTP), and the /api/* proxy.
+    superadmin   Everything admin can do, plus /auth/users/* (create,
+                 list, delete, force-change password) and /auth/audit
+                 (read audit log).
+
+  Role enforcement uses require_superadmin — a thin-wrapper around
+  require_auth that asserts payload.role == "superadmin"
+
+
+Cryptography
+------------
+
+  JWT — Ed25519, manual implementation (crypto/jwt.py)
+    No extra dependency. Header.Payload.Signature with base64url
+    parts. Algorithm is pinned to "EdDSA"; any other alg in the
+    header fails verification.
+
+    The signing keypair lives on disk as two 64-char hex files in
+    $AUTH_SECRETS_DIR (mounted as Docker secrets in production):
+    one for the private (signing) key, one for the public (verify)
+    key. Both are length- and format-validated at load time.
+
+  Passwords — Argon2id (crypto/password.py via PyNaCl)
+    Default OPSLIMIT/MEMLIMIT from libsodium. Hash + verify only;
+    no parameter tuning is exposed.
+
+  TOTP — RFC 6238, standard library (crypto/totp.py)
+    HMAC-SHA1, 6 digits, 30-second period, 160-bit secret. Emits
+    otpauth:// URIs for authenticator-app enrollment. Backup codes
+    are 8 codes of 8 characters each, stored hashed (one-time use).
+
+
+Reverse proxy
+-------------
+
+  routes/proxy.py owns /api/{path:path}. Every method
+  (GET POST PUT DELETE PATCH HEAD OPTIONS) is forwarded.
+
+  Per-request flow:
+    1. Apply require_auth (unauthenticated requests never reach the
+       daemon).
+    2. Build the target URL from config.proxy_base_url + path +
+       query.
+    3. Resolve user_id from username for audit context.
+    4. Read the request body; reject with 413 if larger than
+       AUTH_PROXY_MAX_BODY.
+    5. Strip Host / Authorization / Content-Length /
+       Transfer-Encoding from forwarded headers.
+    6. Forward via httpx AsyncClient (UDS transport in production).
+    7. Audit-log the request: method, path, query, response status.
+    8. Pass the response back, preserving content-type while
+       stripping length/encoding headers (uvicorn re-computes them).
+    9. JSON responses are re-encoded as JSONResponse; binary
+       responses pass through raw — fixed in a recent revision so
+       endpoints that return tarballs (backup export) work
+       end-to-end.
+
+
+Rate limiting
+-------------
+
+  middleware/rate_limit.py:RateLimiter — in-memory sliding window
+  per source IP, threadsafe via a single Lock. Default: 5 attempts
+  per 60 seconds. Used only on /auth/login; everything else relies
+  on the session/token model.
+
+  Successful login resets the counter for the IP.
+
+
+Configuration
+-------------
+
+  All settings are environment-driven, loaded once at startup into
+  an immutable AuthConfig (config.py — frozen=True, slots=True):
+
+    AUTH_HOST / AUTH_PORT        0.0.0.0:8443 default
+    AUTH_PROXY_URL               unix:///var/run/phantom/daemon.sock
+                                 (or http://...). UDS in production.
+    AUTH_DB_DIR                  /var/lib/phantom/auth
+    AUTH_SECRETS_DIR             /run/secrets  (Docker secrets path)
+    AUTH_TOKEN_LIFETIME          86400  (24h access token)
+    AUTH_INACTIVITY_TIMEOUT      1800   (30m sliding session)
+    AUTH_MFA_TOKEN_LIFETIME      120    (2m MFA token)
+    AUTH_TOTP_SETUP_LIFETIME     300    (5m enrollment QR window)
+    AUTH_PROXY_MAX_BODY          67108864 (64 MB — backup export)
+    AUTH_RATE_LIMIT_WINDOW/MAX   60 / 5
+
+
+Error envelope
+--------------
+
+  Every response — success or failure — uses a stable shape:
+
+    Success:  { "ok": true,  "data": ... }
+    Error:    { "ok": false, "error_code": "..." }
+
+  Error codes are stable strings (UNAUTHORIZED, TOKEN_EXPIRED,
+  SESSION_INACTIVE, MFA_REQUIRED, BODY_TOO_LARGE, …). HTTP status
+  codes remain meaningful, but the SPA branches on error_code.
+
+  Three layers:
+    auth_service/errors.py        Python-side hierarchy (AuthError →
+                                  AuthSecretsError, AuthTokenError,
+                                  AuthCredentialsError, …).
+    ApiException                  HTTP-aware exception carrying
+                                  status + error_code.
+    app.py:_register_error_handlers
+                                  Maps everything (including
+                                  FastAPI's RequestValidationError)
+                                  into the envelope.
+
+
+Bootstrap
+---------
+
+  tools/setup.sh + tools/bootstrap.py is the one-time setup. Run
+  once per host, builds an image + ad-hoc container that:
+
+    1. Generates an Ed25519 keypair via PyNaCl SigningKey.
+    2. Writes signing/verify keys as 64-char hex files into
+       $AUTH_SECRETS_DIR.
+    3. Creates auth.db with the full schema (kept in sync with
+       auth_service/db/schema.sql).
+    4. Generates a 32-character random password for the initial
+       admin user.
+    5. Hashes it with Argon2id and inserts the user with role
+       'superadmin'.
+    6. Prints the initial credentials once. They are never
+       persisted in plaintext.
+
+  After bootstrap, the runtime container only opens the
+  pre-existing DB and pre-existing keys. It never creates them.
+
+
+Container shape
+---------------
+
+  Dockerfile         python:3.12-slim + libsodium23 +
+                     requirements.txt. CMD runs
+                     `python -m auth_service`. No source COPY here
+                     — the production package built by
+                     scripts/packager.py lays the source into the
+                     daemon checkout (see DISTRIBUTION).
+  docker-compose.yml Mounts the Ed25519 keypair as Docker secrets,
+                     restart: unless-stopped. Every environment
+                     default is set explicitly so deployments can
+                     audit them at a glance.
+
+  The runtime container does not have write access to auth.db. That
+  path is owned by host-side bootstrap tooling.
+
+
+Source layout
+-------------
+
+  auth_service/
+    __init__.py           __version__ — single source of truth
+    __main__.py           uvicorn entry
+    app.py                FastAPI factory + lifespan + middleware
+    config.py             env-driven AuthConfig
+    audit.py              audit_log helper
+    errors.py             exception hierarchy
+    models.py             pydantic request/response types
+    crypto/
+      jwt.py              Ed25519 JWT encode + decode
+      keys.py             Ed25519 key load + validate
+      password.py         Argon2id hash + verify
+      totp.py             RFC 6238 + backup codes
+    db/
+      schema.sql          auth.db DDL
+      connection.py       open_auth_db helper
+      repository.py       AuthDB — every query
+    middleware/
+      auth.py             require_auth + require_superadmin
+      rate_limit.py       sliding window limiter
+    routes/
+      __init__.py         router registration
+      proxy.py            /api/* reverse proxy
+      auth/
+        __init__.py       /auth router prefix
+        login.py          /login, /mfa/verify, /totp/backup
+        session.py        /logout, /me
+        password.py       /password/verify, /password/change
+        totp.py           /totp/setup, /totp/confirm, /totp/disable
+        users.py          /users (superadmin)
+        audit.py          /audit (superadmin)
+        _helpers.py       shared route helpers
