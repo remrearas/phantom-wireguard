@@ -1,0 +1,209 @@
+DISTRIBUTION
+
+How a compose-bridge version reaches consumers — from a local version
+bump to an artifact the E2E test workflows pull at run time.
+
+compose-bridge is an internal test tool, not a published vendor
+package. Distribution lives entirely inside GitHub Actions artifacts;
+there is no R2 mirror and no public download URL.
+
+
+Pipeline overview
+-----------------
+
+  1. Bump        Local script updates both version sources and creates
+                 a single commit on dev/tests/compose-bridge.
+  2. Verify      Operator runs test_runner.py locally to confirm the
+                 FFI surface still works end-to-end.
+  3. Push        Push the bump commit. No CI fires on push — the
+                 publish workflow is the only CI entry point.
+  4. Publish     Operator runs publish.sh, which dispatches the
+                 publish workflow with no arguments.
+  5. Build       Publish workflow extracts version from source,
+                 validates the Go-side match, then builds linux-amd64,
+                 linux-arm64, and darwin-arm64 (signed + notarized).
+  6. Package     Per-platform zips attached as GitHub Actions
+                 artifacts with 90-day retention.
+  7. Consumption Consuming branches (dev/daemon, dev/firewall-bridge)
+                 pull via gh CLI targeting the latest successful run.
+
+
+Stage 1 — Bump
+--------------
+
+  .github/scripts/bump.sh [major|minor|patch]
+
+  Defaults to patch. Updates BOTH version sources atomically:
+
+      compose_bridge/__init__.py  →  __version__
+      src/version.go              →  BridgeVersionStr
+
+  Refuses to run if the two are already out of sync. Verifies the
+  post-write values, then creates a single commit:
+
+      Bump v<NEW_VERSION>
+
+
+Stage 2 — Verify
+----------------
+
+  python test_runner.py --build
+
+  Rebuilds the shared library for the host platform, then runs the
+  dogfood suite: up → ps → exec (echo, env, nonzero exit) → logs →
+  down against a trivial alpine compose file. All checks must pass
+  before trusting the bump.
+
+
+Stage 3 — Push
+--------------
+
+  git push origin dev/tests/compose-bridge
+
+  No CI test or build workflow runs on push. compose-bridge doesn't
+  maintain one — its FFI surface is exercised transitively by the
+  consuming branches' E2E jobs every time they fetch-and-run it, so
+  regressions surface there rather than here.
+
+
+Stage 4 — Publish trigger
+-------------------------
+
+  .github/scripts/publish.sh
+
+  No arguments. Reads the version from compose_bridge/__init__.py and
+  dispatches publish-compose-bridge.yml on the dev/tests/compose-bridge
+  ref via the GitHub CLI (gh workflow run).
+
+
+Stage 5 — Publish workflow
+--------------------------
+
+  publish-compose-bridge.yml runs four jobs:
+
+      extract-version  Reads compose_bridge/__init__.py. Validates
+                       that src/version.go matches. Aborts the run
+                       on mismatch.
+
+      build-linux      Matrix over amd64 and arm64. Go build with
+                       CGO_ENABLED=1, cross-compile via
+                       aarch64-linux-gnu-gcc for arm64.
+
+      build-macos      macos-26 runner. Builds darwin-arm64 then
+                       signs with the "Developer ID Application"
+                       certificate, submits to notarytool, waits for
+                       approval.
+
+      package          Assembles per-platform zips, attaches as
+                       GitHub Actions artifacts, deletes the
+                       intermediate per-arch build artifacts.
+
+
+Stage 6 — Artifact storage
+--------------------------
+
+  Location : GitHub Actions run artifacts (no R2, no public URL)
+  Retention: 90 days
+
+  Each successful publish uploads three artifacts:
+
+      compose-bridge-<VERSION>-linux-amd64
+      compose-bridge-<VERSION>-linux-arm64
+      compose-bridge-<VERSION>-darwin-arm64
+
+  Each zip contains a single top-level compose_bridge/ directory:
+
+      compose_bridge/
+        __init__.py
+        _ffi.py
+        bridge.py
+        types.py
+        VERSION
+        compose_bridge-<PLATFORM>.<ext>   (.dylib for darwin, .so for linux)
+
+  VERSION is populated from the extracted source version at package
+  time; nothing on disk in the source tree.
+
+
+Stage 7 — Consumption
+---------------------
+
+  Consumers do not fetch compose-bridge from a URL. They use the
+  GitHub CLI against the publish workflow:
+
+      # Latest successful run of publish-compose-bridge.yml
+      RUN=$(gh run list --workflow publish-compose-bridge.yml \
+          --status success --limit 1 --json databaseId \
+          --jq '.[0].databaseId')
+
+      # Per-platform artifact from that run
+      ARTIFACT=$(gh api /repos/.../actions/runs/$RUN/artifacts \
+          --jq '.artifacts[] | select(.name | endswith("-linux-amd64")) | .name' \
+          | head -1)
+
+      gh run download "$RUN" --name "$ARTIFACT"
+
+  This pattern is implemented in two places:
+
+      dev/daemon           tools/lib/test.sh::cmd_fetch_compose_bridge
+      dev/firewall-bridge  fetch_compose_bridge.sh
+
+  Both track the latest successful run — no pinned run id, no pinned
+  version. Updating is just a matter of re-running the fetch; the
+  current version lives inside the downloaded zip's VERSION file.
+
+
+End-to-end example
+------------------
+
+  $ .github/scripts/bump.sh patch
+  1.0.0 → 1.0.1
+  [dev/tests/compose-bridge abcdef0] Bump v1.0.1
+
+  $ python test_runner.py --build
+  ...
+  RESULTS: 13/13 passed, 0 failed
+
+  $ git push origin dev/tests/compose-bridge
+
+  $ .github/scripts/publish.sh
+  Version : v1.0.1
+  Workflow: publish-compose-bridge.yml
+  Ref     : dev/tests/compose-bridge
+  Triggered. Watch: gh run list --repo ARAS-Workspace/phantom-wg --workflow publish-compose-bridge.yml
+
+  # → publish workflow runs extract-version → build-linux → build-macos → package
+  #   ~20-35 min total (macOS notarization dominates).
+
+  # On dev/daemon:
+  $ ./tools/dev.sh fetch-compose-bridge
+  Locating latest successful publish-compose-bridge.yml...
+  Resolving artifact for linux-amd64 in run ...
+  Fetching compose-bridge-1.0.1-linux-amd64 (run ...)...
+  Installed to lib/compose_bridge/
+
+
+Rollback
+--------
+
+  GitHub retains 90 days of artifacts, so rollback is implicit:
+
+  1. Bump again (patch) and publish a corrected version.
+  2. Consumers' fetch scripts re-run naturally pick up the new
+     "latest successful" run.
+  3. The previous artifact remains retrievable by explicit run id
+     until it falls off the 90-day retention window.
+
+
+Notes
+-----
+
+  * compose-bridge is not in the vendor pack distributed via R2. Its
+    audience is internal CI only.
+
+  * The macOS artifact is signed and notarized even though no end
+    user downloads it — keeps dev-on-macOS equivalent to CI.
+
+  * Published artifacts use the suffix <-linux-amd64 | -linux-arm64
+    | -darwin-arm64>; consumers match by suffix so the version prefix
+    can change freely without touching the fetch scripts.
