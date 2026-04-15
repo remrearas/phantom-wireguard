@@ -1,0 +1,221 @@
+DISTRIBUTION
+
+How a wireguard-go-bridge version reaches consumers — from a local
+version bump to a public download from R2.
+
+
+Pipeline overview
+-----------------
+
+  1. Bump        Local script updates both version sources and creates
+                 a single commit on dev/wireguard-go-bridge.
+  2. Push        Push the bump commit. Two CI workflows fire
+                 automatically: test and build. They produce artifacts
+                 but do not publish.
+  3. Verify      Operator inspects the test + build artifacts on the
+                 GitHub Actions run page. No release happens until the
+                 operator is satisfied.
+  4. Publish     Operator runs publish.sh, which dispatches the publish
+                 workflow with no arguments.
+  5. R2 upload   Publish workflow re-runs test + build, validates that
+                 the Python and Go version sources agree, then uploads
+                 to R2 under both versioned and latest paths.
+  6. Consumption Downstream consumers fetch a per-arch zip from
+                 vendor.phantom.tc over HTTPS.
+
+
+Stage 1 — Bump
+--------------
+
+  .github/scripts/bump.sh [major|minor|patch]
+
+  Defaults to patch. Updates both version sources atomically:
+
+      wireguard_go_bridge/__init__.py  →  __version__
+      src/version.go                   →  BridgeVersionStr
+
+  Refuses to run if the two are already out of sync (the publish
+  workflow rejects mismatches anyway; this catches it locally).
+  Verifies the post-write values, then creates a single commit:
+
+      Bump v<NEW_VERSION>
+
+  Only the two version files are staged.
+
+
+Stage 2 — Push
+--------------
+
+  git push origin dev/wireguard-go-bridge
+
+  Two workflows fire on the bump commit (and on every push to this
+  branch that touches non-.github paths):
+
+      test-wireguard-go-bridge.yml    pytest inside Docker, 3-container
+                                      topology (bridge + exit-server +
+                                      client). 51 unit + 1 integration
+                                      test. Artifact: test-results (30d).
+
+      build-wireguard-go-bridge.yml   cgo cross-compile for linux-amd64
+                                      and linux-arm64. Artifacts:
+                                      wireguard-go-bridge-linux-amd64
+                                      and -arm64 (90d).
+
+  Neither workflow uploads to R2. They exist to give the operator a
+  pass/fail signal and downloadable artifacts for inspection.
+
+
+Stage 3 — Verify
+----------------
+
+  The operator opens the GitHub Actions run page and confirms both
+  workflows are green. If anything is wrong, follow-up commits land
+  on top of the bump commit. The bump itself is rarely amended —
+  the version stays the same and the fixes ride on top.
+
+
+Stage 4 — Publish trigger
+-------------------------
+
+  .github/scripts/publish.sh
+
+  No arguments. Reads the version from
+  wireguard_go_bridge/__init__.py and dispatches
+  publish-wireguard-go-bridge.yml on the dev/wireguard-go-bridge ref
+  via the GitHub CLI (gh workflow run).
+
+
+Stage 5 — Publish workflow
+--------------------------
+
+  publish-wireguard-go-bridge.yml runs four jobs in sequence:
+
+      version    Extracts the version from __init__.py.
+                 Validates that src/version.go matches.
+                 Aborts the entire run on mismatch.
+
+      test       Re-runs the full test suite via workflow_call.
+                 Treated as a release gate — failure stops the publish.
+
+      build      Re-runs the linux-amd64 and linux-arm64 builds via
+                 workflow_call.
+
+      publish    Self-hosted runner with rclone configured against the
+                 R2 remote. Packages each architecture into a zip,
+                 verifies sha256 checksums, uploads to R2 under both
+                 v<VERSION>/ and latest/ paths.
+
+
+Stage 6 — R2 storage
+--------------------
+
+  Bucket : phantom-vendor
+  Domain : vendor.phantom.tc
+
+  Each publish writes to two locations simultaneously:
+
+      wireguard-go-bridge/v<VERSION>/      pinned, immutable
+      wireguard-go-bridge/latest/          moves on every publish
+
+  Both contain the same three files:
+
+      linux-amd64.zip     Python package + .so for linux/amd64
+      linux-arm64.zip     Python package + .so for linux/arm64
+      VERSION             plain-text version string at the path level
+
+  Each zip contains a single top-level wireguard_go_bridge/ directory:
+
+      wireguard_go_bridge/
+        __init__.py
+        _ffi.py
+        bridge.py
+        keys.py
+        types.py
+        wireguard_go_bridge.so
+        wireguard_go_bridge.so.sha256
+        VERSION
+
+  The VERSION file is duplicated (path-level + inside the zip) so
+  consumers can tell which version they have without unzipping.
+
+
+Stage 7 — Consumption
+---------------------
+
+  Consumers download over HTTPS. Two strategies:
+
+      Pinned to a known version (recommended):
+        https://vendor.phantom.tc/wireguard-go-bridge/v<VERSION>/linux-amd64.zip
+
+      Tracking the moving latest pointer:
+        https://vendor.phantom.tc/wireguard-go-bridge/latest/linux-amd64.zip
+
+  After extraction, the runtime version can be confirmed two ways:
+
+      cat wireguard_go_bridge/VERSION
+      python -c "from wireguard_go_bridge import __version__; print(__version__)"
+
+  Both should agree with the URL the artifact came from. If they
+  disagree, the deployed copy was tampered with or the build pipeline
+  has a bug — either way, do not use it.
+
+
+End-to-end example
+------------------
+
+  $ .github/scripts/bump.sh patch
+  2.1.2 → 2.1.3
+  [dev/wireguard-go-bridge abcdef0] Bump v2.1.3
+
+  $ git push origin dev/wireguard-go-bridge
+  ...
+  # → test + build workflows fire on GitHub Actions, ~5-10 min each.
+
+  # Operator opens the run page, confirms green check on both runs.
+
+  $ .github/scripts/publish.sh
+  Version : v2.1.3
+  Workflow: publish-wireguard-go-bridge.yml
+  Ref     : dev/wireguard-go-bridge
+  Triggered. Watch: gh run list --repo ARAS-Workspace/phantom-wg --workflow publish-wireguard-go-bridge.yml
+
+  # → publish workflow runs version → test → build → publish,
+  #   ~15-25 min total. R2 receives the new artifacts.
+
+  # Consumers can now fetch:
+  #   https://vendor.phantom.tc/wireguard-go-bridge/v2.1.3/linux-amd64.zip
+  #   https://vendor.phantom.tc/wireguard-go-bridge/latest/linux-amd64.zip
+
+
+Rollback
+--------
+
+  No artifacts are deleted from R2. If a bad version goes out:
+
+  1. Bump again (patch) and publish a new fixed version. The latest/
+     path moves forward to the new build immediately.
+
+  2. Pinned consumers stay on the bad version until they update
+     their pin. Communicate the issue out-of-band.
+
+  3. Optionally rewrite latest/ manually to point at the previous
+     known-good v<VERSION>/ contents using rclone — but this leaves
+     the bad bits at v<VERSION>/, so prefer step 1.
+
+
+Notes
+-----
+
+  * Changes under .github/ do not trigger test/build on push
+    (paths-ignore on the workflows).
+
+  * The test workflow runs the same Docker topology used in local
+    development (test_runner.py) — no environment drift between
+    local and CI.
+
+  * Publish runs on a self-hosted runner because the R2 credentials
+    live there, not in GitHub Secrets.
+
+  * The standalone VERSION file at the R2 path level lets consumers
+    do a HEAD-style check ("what version is at latest/ right now?")
+    without downloading a multi-megabyte zip.
