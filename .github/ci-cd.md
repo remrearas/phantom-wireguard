@@ -25,17 +25,34 @@ Publish (workflow_dispatch):
 
 ## Version
 
-Single source of truth: `wireguard_go_bridge/__init__.py` → `__version__`
+Two sources, kept in sync:
 
-Publish workflow reads version automatically.
+| Side   | Location                          | Symbol             |
+|--------|-----------------------------------|--------------------|
+| Python | `wireguard_go_bridge/__init__.py` | `__version__`      |
+| Go     | `src/version.go`                  | `BridgeVersionStr` |
 
-## Trigger
+The publish workflow extracts the Python value, validates that the Go
+value matches, and aborts on mismatch.
+
+## Bump
+
+```bash
+.github/scripts/bump.sh [major|minor|patch]
+```
+
+Defaults to `patch`. Updates both version sources atomically and creates
+a single `Bump v<VERSION>` commit. Refuses to run if the two sources
+are already out of sync.
+
+## Publish
 
 ```bash
 .github/scripts/publish.sh
 ```
 
-No arguments — version is read from source.
+No arguments — version is read from source. Triggers
+`publish-wireguard-go-bridge.yml` via `workflow_dispatch`.
 
 ## Artifacts
 
@@ -51,7 +68,7 @@ Bucket: `phantom-vendor` — Domain: `vendor.phantom.tc`
 
 ```
 wireguard-go-bridge/
-├── v2.1.2/
+├── v<VERSION>/
 │   ├── linux-amd64.zip
 │   ├── linux-arm64.zip
 │   └── VERSION
@@ -78,7 +95,7 @@ wireguard_go_bridge/
 Download:
 
 ```
-https://vendor.phantom.tc/wireguard-go-bridge/v2.1.2/linux-amd64.zip
+https://vendor.phantom.tc/wireguard-go-bridge/v<VERSION>/linux-amd64.zip
 https://vendor.phantom.tc/wireguard-go-bridge/latest/linux-arm64.zip
 ```
 
