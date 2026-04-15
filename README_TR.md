@@ -6,6 +6,33 @@ Userspace WireGuard — Go backend, SQLite IPC state persistence, Python FFI.
 - Python katmanı: ctypes FFI binding, key generation, bridge lifecycle.
 - Kernel modülü gerektirmez — tamamen userspace.
 
+## İndirme
+
+Son sürüm:
+
+```
+https://vendor.phantom.tc/wireguard-go-bridge/latest/linux-amd64.zip
+https://vendor.phantom.tc/wireguard-go-bridge/latest/linux-arm64.zip
+```
+
+Her zip şu yapıya açılır:
+
+```
+wireguard_go_bridge/
+├── __init__.py
+├── _ffi.py
+├── bridge.py
+├── keys.py
+├── types.py
+├── wireguard_go_bridge.so
+├── wireguard_go_bridge.so.sha256
+└── VERSION
+```
+
+Belirli bir sürüm için: `latest/` yerine `v<X.Y.Z>/` kullan. Mevcut
+sürüm [`wireguard_go_bridge/__init__.py`](wireguard_go_bridge/__init__.py)
+içinde (`__version__`).
+
 ## Mimari
 
 ```mermaid
@@ -44,16 +71,16 @@ CREATE TABLE IF NOT EXISTS ipc_state (
 
 ## Katmanlar
 
-| Katman | Sorumluluk |
-|--------|-----------|
-| `bridge.py` | WireGuardBridge lifecycle — create, ipc_set, up, down, close |
-| `keys.py` | Key generation — private, public, preshared, hex↔base64 |
-| `_ffi.py` | cdylib load, ctypes binding |
-| `types.py` | Error types |
-| `persistent_device.go` | WireGuard device + automatic IPC state persistence |
-| `exports.go` | C FFI export layer — public API surface |
-| `core/keys.go` | Curve25519 key generation |
-| `core/registry.go` | Handle registry — device handle management |
+| Katman                 | Sorumluluk                                                   |
+|------------------------|--------------------------------------------------------------|
+| `bridge.py`            | WireGuardBridge lifecycle — create, ipc_set, up, down, close |
+| `keys.py`              | Key generation — private, public, preshared, hex↔base64      |
+| `_ffi.py`              | cdylib load, ctypes binding                                  |
+| `types.py`             | Error types                                                  |
+| `persistent_device.go` | WireGuard device + automatic IPC state persistence           |
+| `exports.go`           | C FFI export layer — public API surface                      |
+| `core/keys.go`         | Curve25519 key generation                                    |
+| `core/registry.go`     | Handle registry — device handle management                   |
 
 ## Yükleme
 

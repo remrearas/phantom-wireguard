@@ -6,6 +6,33 @@ Userspace WireGuard — Go backend, SQLite IPC state persistence, Python FFI.
 - Python layer: ctypes FFI binding, key generation, bridge lifecycle.
 - No kernel module required — fully userspace.
 
+## Download
+
+Latest build:
+
+```
+https://vendor.phantom.tc/wireguard-go-bridge/latest/linux-amd64.zip
+https://vendor.phantom.tc/wireguard-go-bridge/latest/linux-arm64.zip
+```
+
+Each zip extracts to:
+
+```
+wireguard_go_bridge/
+├── __init__.py
+├── _ffi.py
+├── bridge.py
+├── keys.py
+├── types.py
+├── wireguard_go_bridge.so
+├── wireguard_go_bridge.so.sha256
+└── VERSION
+```
+
+For a pinned version: replace `latest/` with `v<X.Y.Z>/`. The current
+version is in [`wireguard_go_bridge/__init__.py`](wireguard_go_bridge/__init__.py)
+(`__version__`).
+
 ## Architecture
 
 ```mermaid
