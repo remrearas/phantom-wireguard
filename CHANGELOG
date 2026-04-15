@@ -1,0 +1,100 @@
+auth-service
+
+FastAPI gateway in front of phantom-daemon. Ed25519 JWT, Argon2id
+passwords, TOTP MFA, RBAC, audit log, authenticated reverse proxy
+to the daemon UDS.
+
+
+v1.1.1 - 2026-03-16
+-------------------
+
+  Single bump from v1.0.0; everything below shipped as part of this
+  version. The work clusters into six logical milestones, written
+  between v1.0.0 (Mar 6) and the version bump (Mar 16).
+
+  RBAC, TOTP wizard, MFA hardening
+
+    Introduces admin / superadmin roles enforced by require_auth
+    and require_superadmin dependencies. The TOTP enrollment flow
+    is rebuilt as a wizard with explicit setup → confirm steps.
+    MFA paths are tightened — short-lived MFA token, backup codes
+    are one-time and consumed atomically. The /api/* proxy is
+    refactored alongside.
+
+  2-step password change with safety net
+
+    Password change splits into verify → change so the new password
+    is never sent in the same request as the credential check.
+    Setting the same password is rejected outright. A successful
+    change revokes every active session for the user, forcing
+    re-authentication across all clients.
+
+  Audit log API + per-request audit
+
+    A paginated GET /auth/audit is added (superadmin only) with
+    filters and server-side sort that drive the Carbon DataTable on
+    the dashboard side directly. Proxy requests are also
+    audit-logged, so every daemon API call is attributable to a
+    user.
+
+  Error code system + docs
+
+    The error surface is rewritten around an ApiException hierarchy
+    plus a stable success_code pattern. Routes are modularised by
+    concern (login / session / password / totp / users / audit /
+    proxy). The error and env-var contracts get dedicated
+    documentation (docs/API_CODES.md, docs/ENV_VARS.md).
+
+  Thread safety + atomic audit pagination
+
+    Audit pagination queries are first wrapped in a single read
+    transaction, then collapsed into a single atomic query using
+    COUNT(*) OVER() — eliminates the page-size race that could
+    show duplicate or missing rows under concurrent inserts.
+
+    The bigger win: SQLite connection management is rewritten as a
+    per-request connection opened by an ASGI middleware. Sharing a
+    single sqlite3 connection across asyncio workers was a real
+    bug; the new model is sharing-free by construction.
+
+  Binary response passthrough + body limit
+
+    The proxy used to assume daemon responses were always JSON.
+    Endpoints that return tarballs (backup export) now pass through
+    raw, preserving content-type. The default proxy body limit is
+    raised from 64 KB to 64 MB so the same backup endpoint can
+    also accept large uploads on the inbound side.
+
+
+v1.0.0 - 2026-03-06
+-------------------
+
+  Initial release. The complete authentication layer for
+  phantom-daemon — bootstrap, login, MFA, session management, and
+  the authenticated reverse proxy that fronts every daemon API
+  call.
+
+  * Ed25519 JWT signing and verification, manual implementation
+    (no PyJWT dependency).
+  * Argon2id password hashing via PyNaCl.
+  * RFC 6238 TOTP with hashed one-time backup codes.
+  * SQLite WAL-mode persistence for users, sessions, TOTP backup
+    codes, and audit log.
+  * tools/setup.sh + tools/bootstrap.py: one-shot Ed25519 keypair
+    generation, auth.db creation, initial superadmin user with a
+    32-char random password (printed once, never persisted in
+    plaintext).
+  * Authenticated reverse proxy for /api/{path:path} forwarding to
+    the daemon over its Unix domain socket, with per-IP
+    sliding-window rate limiting on /auth/login.
+  * Cross-branch package workflow: builds dist/phantom-auth/ and
+    commits the result into dev/daemon:services/auth-service/ as
+    github-actions[bot] (see DISTRIBUTION).
+
+  Same-day fixes folded into the release:
+
+    * Ignore chmod failure on Docker-created secrets in CI.
+    * Remove duplicate artifact upload from the package workflow.
+    * Wire the dev/daemon push end-to-end.
+    * Restore /api prefix in the proxy target URL (regression
+      caught immediately after the initial commit).
