@@ -44,7 +44,7 @@ jobs:
         env:
           VERSION: ${{ steps.extract.outputs.version }}
         run: |
-          GO_VER=$(grep 'BridgeVersionStr' src/version.go | sed 's/.*"\(.*\)"/\1/')
+          GO_VER=$(grep 'BridgeVersionStr = "' src/version.go | sed 's/.*"\(.*\)"/\1/')
           if [ "$GO_VER" != "$VERSION" ]; then
             echo "::error::Version mismatch: version.go=${GO_VER} __init__.py=${VERSION}"
             exit 1
