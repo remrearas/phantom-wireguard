@@ -5,6 +5,39 @@ Linux firewall manager — nftables + policy routing, SQLite state, YAML presets
 - Rust backend talks directly to the kernel (netlink socket + libnftables).
 - Python layer provides state machine, DB persistence and preset system.
 
+## Download
+
+Latest build:
+
+```
+https://vendor.phantom.tc/firewall-bridge/latest/linux-amd64.zip
+https://vendor.phantom.tc/firewall-bridge/latest/linux-arm64.zip
+```
+
+Each zip extracts to:
+
+```
+firewall_bridge/
+├── __init__.py
+├── _ffi.py
+├── bridge.py
+├── db.py
+├── models.py
+├── presets.py
+├── schema.py
+├── types.py
+├── schemas/
+│   └── schema.sql
+├── libfirewall_bridge_linux.so
+├── libfirewall_bridge_linux.so.sha256
+├── firewall_bridge_linux.h
+└── VERSION
+```
+
+For a pinned version: replace `latest/` with `v<X.Y.Z>/`. The current
+version is in [`firewall_bridge/__init__.py`](firewall_bridge/__init__.py)
+(`__version__`).
+
 ## Architecture
 
 ```mermaid

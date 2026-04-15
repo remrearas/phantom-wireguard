@@ -5,6 +5,39 @@ Linux firewall yöneticisi — nftables + policy routing, SQLite state, YAML pre
 - Rust backend doğrudan kernel ile konuşur (netlink socket + libnftables). 
 - Python katmanı state machine, DB persistence ve preset sistemi sağlar. 
 
+## İndirme
+
+Son sürüm:
+
+```
+https://vendor.phantom.tc/firewall-bridge/latest/linux-amd64.zip
+https://vendor.phantom.tc/firewall-bridge/latest/linux-arm64.zip
+```
+
+Her zip şu yapıya açılır:
+
+```
+firewall_bridge/
+├── __init__.py
+├── _ffi.py
+├── bridge.py
+├── db.py
+├── models.py
+├── presets.py
+├── schema.py
+├── types.py
+├── schemas/
+│   └── schema.sql
+├── libfirewall_bridge_linux.so
+├── libfirewall_bridge_linux.so.sha256
+├── firewall_bridge_linux.h
+└── VERSION
+```
+
+Belirli bir sürüm için: `latest/` yerine `v<X.Y.Z>/` kullan. Mevcut
+sürüm [`firewall_bridge/__init__.py`](firewall_bridge/__init__.py)
+içinde (`__version__`).
+
 ## Mimari
 
 ```mermaid

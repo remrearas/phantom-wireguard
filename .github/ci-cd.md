@@ -30,17 +30,37 @@ Publish (workflow_dispatch):
 
 ## Version
 
-Single source of truth: `firewall_bridge/__init__.py` → `__version__`
+Two sources, kept in sync:
 
-Publish workflow reads version automatically. `Cargo.toml` version is validated to match.
+| Side   | Location                      | Symbol              |
+|--------|-------------------------------|---------------------|
+| Python | `firewall_bridge/__init__.py` | `__version__`       |
+| Rust   | `Cargo.toml`                  | `[package] version` |
 
-## Trigger
+The publish workflow extracts the Python value, validates that the
+Cargo value matches, and aborts on mismatch.
+
+`Cargo.lock` carries the same version under the `firewall-bridge-linux`
+package entry — `bump.sh` updates it alongside the other two.
+
+## Bump
+
+```bash
+.github/scripts/bump.sh [major|minor|patch]
+```
+
+Defaults to `patch`. Updates `__init__.py`, `Cargo.toml`, and
+`Cargo.lock` atomically. Refuses to run if the three sources are out
+of sync.
+
+## Publish
 
 ```bash
 .github/scripts/publish.sh
 ```
 
-No arguments — version is read from source.
+No arguments — version is read from source. Triggers
+`publish-firewall-bridge.yml` via `workflow_dispatch`.
 
 ## Artifacts
 
@@ -55,7 +75,7 @@ Bucket: `phantom-vendor` — Domain: `vendor.phantom.tc`
 
 ```
 firewall-bridge/
-├── v2.1.3/
+├── v<VERSION>/
 │   ├── linux-amd64.zip
 │   ├── linux-arm64.zip
 │   └── VERSION
@@ -88,7 +108,7 @@ firewall_bridge/
 Download:
 
 ```
-https://vendor.phantom.tc/firewall-bridge/v2.1.3/linux-amd64.zip
+https://vendor.phantom.tc/firewall-bridge/v<VERSION>/linux-amd64.zip
 https://vendor.phantom.tc/firewall-bridge/latest/linux-arm64.zip
 ```
 

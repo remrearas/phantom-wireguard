@@ -1,0 +1,102 @@
+firewall-bridge
+
+nftables + netlink routing bridge for Linux. Python owns rules, state,
+and presets; Rust is a kernel-only FFI surface.
+
+
+v2.1.4 - 2026-03-26
+-------------------
+
+  Adds DNAT as a first-class action in the preset schema. Presets
+  can now express destination NAT rules alongside the existing
+  filter and routing actions.
+
+
+v2.1.3 - 2026-03-24
+-------------------
+
+  Schema patch riding on the v2.1.2 IPv6 work.
+
+  * Added a migration for the routing_rules.family column so
+    existing state databases gain dual-stack support without a
+    manual reset.
+
+
+v2.1.2 - 2026-03-24
+-------------------
+
+  Dual-stack release. IPv6 routing lands end-to-end and the test
+  infrastructure is rebuilt around it on the same day.
+
+  * Dual-stack IPv6 routing in the Rust FFI surface.
+  * IPv6 routing support in the Python layer (mirrors the FFI
+    additions).
+  * Unit test runner rewritten on the Docker SDK; legacy test
+    infrastructure removed in the same pass.
+  * E2E test infrastructure introduced, orchestrated through
+    compose-bridge.
+  * CI split into parallel unit + E2E jobs (later refined to
+    three parallel runners with the actions:read permission
+    needed for workflow_call).
+  * Vendor artifact hosting moved from Cloudflare Pages
+    (vendor-artifacts.phantom.tc, served from the dev/vendor branch)
+    to R2 direct upload, after the Pages setup ran into its service
+    limits. Version is read directly from Cargo.toml at publish time.
+  * Workflow push triggers ignore .github/ changes (no test/build
+    runs for CI-only edits).
+  * Added README and Turkish README with architecture diagrams.
+
+
+v2.1.0 - 2026-03-02
+-------------------
+
+  Side-of-the-house reorganization. Realizes the thinning shape
+  the wireguard-go-bridge moved toward in its own v2.1.
+
+  Python takes ownership of rules, state, and presets — anything
+  that benefits from being expressive and testable in user space.
+  Rust is reduced to the kernel-only FFI surface: applying
+  configuration to nftables and netlink, nothing more. Less code
+  on the Rust side to keep aligned with kernel APIs, more
+  flexibility on the Python side to evolve presets without
+  touching FFI.
+
+  Earlier within the v2.0 line:
+
+    * Workflow split into separate test, build, and publish
+      stages.
+    * Publish target moved to dev/vendor as a flat directory with
+      a VERSION file.
+    * Fixed _ffi library discovery to look beside the package
+      instead of in dist/ (matters once installed as a wheel).
+
+
+v2.0.0 - 2026-03-01
+-------------------
+
+  SQLite state + ghost mode. Breaking change.
+
+  v1.0 carried rule and routing state in-process. v2.0 moves
+  state into SQLite so the bridge can be restarted, inspected,
+  and reasoned about from outside the running daemon. Ghost mode
+  enters as a first-class operating mode at the same time.
+
+  * State persistence rewritten on SQLite (replaces the v1.0
+    in-process state).
+  * Ghost mode added as a first-class operating mode.
+  * Removed the redundant test job from the package workflow.
+
+
+v1.0.0 - 2026-02-28
+-------------------
+
+  Initial release. Reorganized in v2.0; documented here for
+  historical continuity.
+
+  First cut of the firewall bridge: nftables for filter and NAT,
+  netlink for routing. State held in-process.
+
+  * nftables + netlink routing bridge.
+  * Mocked _resolve_platform in discovery tests to avoid false
+    matches against dist/.
+  * LICENSE and THIRD_PARTY_LICENSES inventory.

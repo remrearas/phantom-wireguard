@@ -1,0 +1,249 @@
+DISTRIBUTION
+
+How a firewall-bridge version reaches consumers — from a local
+version bump to a public download from R2.
+
+
+Pipeline overview
+-----------------
+
+  1. Bump        Local script updates all three version sources and
+                 creates a single commit on dev/firewall-bridge.
+  2. Push        Push the bump commit. Two CI workflows fire
+                 automatically: test and build. They produce artifacts
+                 but do not publish.
+  3. Verify      Operator inspects the test + build artifacts on the
+                 GitHub Actions run page. No release happens until the
+                 operator is satisfied.
+  4. Publish     Operator runs publish.sh, which dispatches the publish
+                 workflow with no arguments.
+  5. R2 upload   Publish workflow re-runs test + build, validates that
+                 the Python and Cargo version sources agree, then
+                 uploads to R2 under both versioned and latest paths.
+  6. Consumption Downstream consumers fetch a per-arch zip from
+                 vendor.phantom.tc over HTTPS.
+
+
+Stage 1 — Bump
+--------------
+
+  .github/scripts/bump.sh [major|minor|patch]
+
+  Defaults to patch. Updates ALL three version locations atomically:
+
+      firewall_bridge/__init__.py  →  __version__
+      Cargo.toml                   →  [package] version
+      Cargo.lock                   →  [[package]] firewall-bridge-linux version
+
+  Refuses to run if the three are already out of sync. Verifies the
+  post-write values, then creates a single commit:
+
+      Bump v<NEW_VERSION>
+
+  Only the three version files are staged.
+
+
+Stage 2 — Push
+--------------
+
+  git push origin dev/firewall-bridge
+
+  Two workflows fire on the bump commit (and on every push to this
+  branch that touches non-.github paths):
+
+      test-firewall-bridge.yml     Three parallel jobs:
+                                     test-rust    cargo test inside the
+                                                  Docker dev container
+                                                  (.so + headers needed
+                                                  to link).
+                                     test-python  pytest unit suite via
+                                                  Docker SDK runner —
+                                                  195 tests across db,
+                                                  bridge, types,
+                                                  presets, schema,
+                                                  ffi-discovery.
+                                     e2e          compose-bridge driven
+                                                  multihop scenarios for
+                                                  IPv4 and IPv6 (2 e2e
+                                                  tests).
+
+      build-firewall-bridge.yml    Two native builds (no cross-compile):
+                                     build-linux-amd64   ubuntu-latest
+                                     build-linux-arm64   ubuntu-24.04-arm
+                                   Artifacts:
+                                     firewall-bridge-linux-amd64 (90d)
+                                     firewall-bridge-linux-arm64 (90d)
+                                   Each contains .so + .h + .sha256 +
+                                   firewall_bridge/*.py + schemas/.
+
+  Neither workflow uploads to R2. They exist to give the operator a
+  pass/fail signal and downloadable artifacts for inspection.
+
+
+Stage 3 — Verify
+----------------
+
+  The operator opens the GitHub Actions run page and confirms all
+  three test jobs (rust, python, e2e) and both build jobs are green.
+  If anything is wrong, follow-up commits land on top of the bump
+  commit. The bump itself is rarely amended — the version stays the
+  same and the fixes ride on top.
+
+
+Stage 4 — Publish trigger
+-------------------------
+
+  .github/scripts/publish.sh
+
+  No arguments. Reads the version from
+  firewall_bridge/__init__.py and dispatches
+  publish-firewall-bridge.yml on the dev/firewall-bridge ref via the
+  GitHub CLI (gh workflow run).
+
+
+Stage 5 — Publish workflow
+--------------------------
+
+  publish-firewall-bridge.yml runs four jobs in sequence:
+
+      version    Extracts the version from __init__.py.
+                 Validates that Cargo.toml [package] version matches.
+                 Aborts the entire run on mismatch.
+
+      test       Re-runs the full test suite via workflow_call —
+                 test-rust + test-python + e2e. Treated as a release
+                 gate; failure stops the publish.
+
+      build      Re-runs the native amd64 and arm64 builds via
+                 workflow_call.
+
+      publish    Self-hosted runner with rclone configured against the
+                 R2 remote. Packages each architecture into a zip,
+                 verifies sha256 checksums, uploads to R2 under both
+                 v<VERSION>/ and latest/ paths.
+
+
+Stage 6 — R2 storage
+--------------------
+
+  Bucket : phantom-vendor
+  Domain : vendor.phantom.tc
+
+  Each publish writes to two locations simultaneously:
+
+      firewall-bridge/v<VERSION>/      pinned, immutable
+      firewall-bridge/latest/          moves on every publish
+
+  Both contain the same three files:
+
+      linux-amd64.zip     Python package + .so + .h for linux/amd64
+      linux-arm64.zip     Python package + .so + .h for linux/arm64
+      VERSION             plain-text version string at the path level
+
+  Each zip contains a single top-level firewall_bridge/ directory:
+
+      firewall_bridge/
+        __init__.py
+        _ffi.py
+        bridge.py
+        db.py
+        models.py
+        presets.py
+        schema.py
+        types.py
+        schemas/
+          schema.sql
+        libfirewall_bridge_linux.so
+        libfirewall_bridge_linux.so.sha256
+        firewall_bridge_linux.h
+        VERSION
+
+  The VERSION file is duplicated (path-level + inside the zip) so
+  consumers can tell which version they have without unzipping.
+
+
+Stage 7 — Consumption
+---------------------
+
+  Consumers download over HTTPS. Two strategies:
+
+      Pinned to a known version (recommended):
+        https://vendor.phantom.tc/firewall-bridge/v<VERSION>/linux-amd64.zip
+
+      Tracking the moving latest pointer:
+        https://vendor.phantom.tc/firewall-bridge/latest/linux-amd64.zip
+
+  After extraction, the runtime version can be confirmed two ways:
+
+      cat firewall_bridge/VERSION
+      python -c "from firewall_bridge import __version__; print(__version__)"
+
+  Both should agree with the URL the artifact came from. If they
+  disagree, the deployed copy was tampered with or the build pipeline
+  has a bug — either way, do not use it.
+
+
+End-to-end example
+------------------
+
+  $ .github/scripts/bump.sh patch
+  2.1.4 → 2.1.5
+  [dev/firewall-bridge abcdef0] Bump v2.1.5
+
+  $ git push origin dev/firewall-bridge
+  ...
+  # → test (rust + python + e2e) and build (amd64 + arm64) workflows
+  #   fire on GitHub Actions.
+
+  # Operator opens the run page, confirms green checks across all
+  # five jobs.
+
+  $ .github/scripts/publish.sh
+  Version : v2.1.5
+  Workflow: publish-firewall-bridge.yml
+  Ref     : dev/firewall-bridge
+  Triggered. Watch: gh run list --repo ARAS-Workspace/phantom-wg --workflow publish-firewall-bridge.yml
+
+  # → publish workflow runs version → test → build → publish.
+  #   R2 receives the new artifacts.
+
+  # Consumers can now fetch:
+  #   https://vendor.phantom.tc/firewall-bridge/v2.1.5/linux-amd64.zip
+  #   https://vendor.phantom.tc/firewall-bridge/latest/linux-amd64.zip
+
+
+Rollback
+--------
+
+  No artifacts are deleted from R2. If a bad version goes out:
+
+  1. Bump again (patch) and publish a new fixed version. The latest/
+     path moves forward to the new build immediately.
+
+  2. Pinned consumers stay on the bad version until they update
+     their pin. Communicate the issue out-of-band.
+
+  3. Optionally rewrite latest/ manually to point at the previous
+     known-good v<VERSION>/ contents using rclone — but this leaves
+     the bad bits at v<VERSION>/, so prefer step 1.
+
+
+Notes
+-----
+
+  * Changes under .github/ do not trigger test/build on push
+    (paths-ignore on the workflows).
+
+  * The test workflow runs the same Docker topology used in local
+    development — no environment drift between local and CI.
+
+  * arm64 builds on a native ubuntu-24.04-arm runner (no cross-
+    compile), so the produced .so is exactly what an arm64 host
+    would see.
+
+  * Publish runs on a self-hosted runner because the R2 credentials
+    live there, not in GitHub Secrets.
+
+  * The standalone VERSION file at the R2 path level lets consumers
+    do a HEAD-style check ("what version is at latest/ right now?")
+    without downloading a multi-megabyte zip.
