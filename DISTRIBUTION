@@ -1,0 +1,207 @@
+DISTRIBUTION
+
+How an auth-service version reaches its consumer — the dev/daemon
+branch's services/auth-service/ directory.
+
+auth-service is not published as a downloadable artifact. It is built
+on its own branch (dev/auth-service) and the packager output is
+committed back to dev/daemon by GitHub Actions. This keeps the
+phantom-daemon source tree small per branch while preserving easy
+traceability of where every change in services/auth-service/ came
+from — only the github-actions[bot] account writes to that path.
+
+
+Pipeline overview
+-----------------
+
+  1. Bump         Local script bumps __version__ on dev/auth-service
+                  and creates a single commit.
+  2. Verify       Push the bump commit. The test workflow runs the
+                  full pytest suite on every push to dev/auth-service.
+  3. Package      Operator runs package.sh, which dispatches the
+                  package workflow with no arguments.
+  4. Build        Workflow extracts version from auth_service/__init__.py,
+                  then runs scripts/packager.py to produce a clean
+                  dist/phantom-auth/ tree.
+  5. Sync         Workflow checks out dev/daemon and replaces
+                  services/auth-service/ with the packager output.
+  6. Commit       Workflow commits "Build: Update auth-service to
+                  v<VERSION>" as github-actions[bot] and pushes to
+                  dev/daemon.
+  7. Consumption  phantom-daemon's Docker build picks up the updated
+                  services/auth-service/ on its next build.
+
+
+Stage 1 — Bump
+--------------
+
+  .github/scripts/bump.sh [major|minor|patch]
+
+  Defaults to patch. Reads __version__ from auth_service/__init__.py,
+  bumps the chosen segment, writes back, verifies, and creates a
+  single commit:
+
+      Bump v<NEW_VERSION>
+
+  Single source of truth — there is no Go/Rust counterpart to keep
+  in sync.
+
+
+Stage 2 — Verify
+----------------
+
+  git push origin dev/auth-service
+
+  Triggers test-auth-service.yml automatically. The full pytest
+  suite runs (auth, RBAC, audit, rate-limit, JWT, TOTP, …). Failure
+  blocks nothing automatically — but operators do not dispatch
+  package.sh on a red build.
+
+
+Stage 3 — Package trigger
+-------------------------
+
+  .github/scripts/package.sh
+
+  No arguments. Reads __version__ from auth_service/__init__.py for
+  the operator-visible header, then dispatches
+  package-auth-service.yml on the dev/auth-service ref via the
+  GitHub CLI (gh workflow run).
+
+  No version is passed — the workflow re-reads the same source file
+  at runtime so there is exactly one truth.
+
+
+Stage 4 — Package workflow
+--------------------------
+
+  package-auth-service.yml does the build + cross-branch sync in a
+  single job. Steps in order:
+
+      Checkout auth-service-src   The dev/auth-service branch as-is
+                                  (read-only credentials).
+
+      Checkout dev/daemon         The destination branch with write
+                                  credentials (persist-credentials:
+                                  true).
+
+      Setup Python 3.12
+
+      Extract version             Reads __version__ from
+                                  auth-service-src/auth_service/__init__.py
+                                  and validates X.Y.Z format. Aborts
+                                  the run on mismatch.
+
+      Build package               Runs python scripts/packager.py
+                                  --clean inside auth-service-src.
+                                  Produces dist/phantom-auth/ — a
+                                  flat tree containing auth_service/,
+                                  tools/setup.sh, tools/bootstrap.py,
+                                  Dockerfile, docker-compose.yml,
+                                  requirements.in, requirements.txt.
+                                  Tests, dev-only files, and caches
+                                  are excluded.
+
+      Sync to dev/daemon          rm -rf daemon/services/auth-service
+                                  then cp -r
+                                  auth-service-src/dist/phantom-auth
+                                  daemon/services/auth-service. The
+                                  destination directory is overwritten
+                                  in full every run so removed files
+                                  on the source side disappear from
+                                  the target too.
+
+      Commit and push             Configures git as github-actions[bot],
+                                  stages services/auth-service,
+                                  commits "Build: Update auth-service
+                                  to v<VERSION>", pushes to dev/daemon.
+                                  Gracefully no-op if the diff is
+                                  empty (re-running the same version
+                                  does not produce an empty commit).
+
+      Summary                     Job summary reports file count and
+                                  the target path.
+
+
+Stage 5 — Consumption
+---------------------
+
+  phantom-daemon (dev/daemon branch) consumes auth-service via the
+  services/auth-service/ directory, which is mounted into the
+  daemon's compose stack at runtime.
+
+  There is no fetch script, no R2 download, no artifact pull — the
+  package is committed directly into the consumer branch. Updates
+  surface on dev/daemon as "Build: Update auth-service to vX.Y.Z"
+  commits authored by github-actions[bot].
+
+
+End-to-end example
+------------------
+
+  # On dev/auth-service:
+  $ .github/scripts/bump.sh patch
+  1.1.1 → 1.1.2
+  [dev/auth-service abcdef0] Bump v1.1.2
+
+  $ git push origin dev/auth-service
+  ...
+  # → test-auth-service.yml fires; wait for green check.
+
+  $ .github/scripts/package.sh
+  Version : v1.1.2
+  Workflow: package-auth-service.yml
+  Ref     : dev/auth-service
+  Triggered.
+
+  # → package-auth-service.yml runs ~2-4 min and ends with a
+  #   github-actions[bot] commit on dev/daemon:
+  #
+  #   Build: Update auth-service to v1.1.2
+
+  # On dev/daemon: a pull surfaces the new auth-service under
+  # services/auth-service/. The next phantom-daemon Docker build
+  # picks it up automatically.
+
+
+Rollback
+--------
+
+  Two paths:
+
+  1. Bump again (patch) and re-package — fastest, leaves a clean
+     forward-only history.
+
+  2. Manually revert services/auth-service to a previous version on
+     dev/daemon:
+
+         git checkout dev/daemon
+         git revert <hash-of-Build:-Update-auth-service-to-vX.Y.Z>
+         git push
+
+     The dev/auth-service branch is unaffected.
+
+
+Notes
+-----
+
+  * services/auth-service/ on dev/daemon is owned by
+    github-actions[bot]. Operators do not edit it directly. Source
+    changes go to dev/auth-service, then ride through this pipeline.
+
+  * The packager always builds from a clean dist/ (--clean flag).
+    Stale files from a previous build cannot leak through.
+
+  * The Sync step removes the target directory before copying, so
+    files deleted from auth-service appear as deletions on dev/daemon
+    too — there is no orphaned-file drift.
+
+  * persist-credentials is intentionally true on the dev/daemon
+    checkout (the workflow needs to push back) and false on the
+    auth-service-src checkout (read-only here).
+
+  * Consumers do not pull from this branch directly. The
+    cross-branch commit pattern is what makes "where did this
+    auth-service version come from?" trivially answerable on the
+    daemon side: every change is a github-actions[bot] commit
+    referencing the version.
