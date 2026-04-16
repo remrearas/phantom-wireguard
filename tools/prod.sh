@@ -198,7 +198,7 @@ cmd_update() {
         echo "  One-shot skip applied to docker-compose.yml."
     fi
 
-    git pull
+    git pull origin main
 
     if [[ "$legacy_skip" == true && "$locked" == false ]]; then
         git update-index --no-assume-unchanged docker-compose.yml
