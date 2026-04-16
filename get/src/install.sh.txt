@@ -93,6 +93,7 @@ git sparse-checkout set --no-cone \
     '/.env.daemon.example' \
     '/.env.auth-service.example' \
     '/SETUP' \
+    '/UPDATE' \
     '/LICENSE' \
     '/THIRD_PARTY_LICENSES'
 
