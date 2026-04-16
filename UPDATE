@@ -24,7 +24,7 @@ Compose Lock:
     ./tools/prod.sh compose unlock    Release to pull upstream changes
 
   How it works:
-    Compose lock uses git update-index --skip-worktree to tell git
+    Compose lock uses git update-index --assume-unchanged to tell git
     to ignore local changes to docker-compose.yml during pull.
 
 Dependency Updates:
