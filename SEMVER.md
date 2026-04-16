@@ -2,12 +2,9 @@
 
 ## Product Versions
 
-Two product lines exist under the Phantom-WG umbrella:
-
 | Product               | Description                                   | Branch |
 |-----------------------|-----------------------------------------------|--------|
 | **Phantom-WG Modern** | Full platform (daemon + SPA + auth + bridges) | main   |
-| **Phantom-WG Retro**  | Legacy core-only release                      | retro  |
 
 ## Version Hierarchy
 
@@ -75,8 +72,3 @@ vendor.phantom.tc/
 └── wireguard-go-bridge/{version}/linux-{arch}.zip
 ```
 
-## Retro Version
-
-Phantom-WG Retro uses its own independent version line (`core-vX.Y.Z`)
-and is maintained on the `retro` branch. It does not follow the daemon
-version hierarchy described above.

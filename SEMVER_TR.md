@@ -2,12 +2,9 @@
 
 ## Ürün Versiyonları
 
-Phantom-WG çatısı altında iki ürün hattı bulunmaktadır:
-
 | Ürün                  | Açıklama                                          | Branch |
 |-----------------------|---------------------------------------------------|--------|
 | **Phantom-WG Modern** | Tam platform (daemon + SPA + auth + bridge'ler)   | main   |
-| **Phantom-WG Retro**  | Eski nesil, yalnızca çekirdek sürüm               | retro  |
 
 ## Versiyon Hiyerarşisi
 
@@ -75,8 +72,3 @@ vendor.phantom.tc/
 └── wireguard-go-bridge/{version}/linux-{arch}.zip
 ```
 
-## Retro Versiyonu
-
-Phantom-WG Retro kendi bağımsız versiyon hattını (`core-vX.Y.Z`) kullanır
-ve `retro` branch'inde yönetilir. Yukarıda açıklanan daemon versiyon
-hiyerarşisini takip etmez.
