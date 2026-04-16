@@ -63,6 +63,7 @@ TEMPLATES = ROOT / "tools" / "lib" / "templates"
 
 INCLUDE = [
     "SETUP",
+    "UPDATE",
     "LICENSE",
     "THIRD_PARTY_LICENSES",
     "Dockerfile",
