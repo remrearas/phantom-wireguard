@@ -2,9 +2,9 @@ FROM mcr.microsoft.com/playwright:v1.58.2-noble
 
 WORKDIR /app
 
-# Docker CLI — allows tests to exec into sibling containers via mounted docker.sock
-RUN apt-get update && apt-get install -y --no-install-recommends docker.io \
-    && rm -rf /var/lib/apt/lists/*
+# Docker CLI — static binary, no apt dependency on Ubuntu mirrors
+RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.5.1.tgz \
+    | tar xz --strip-components=1 -C /usr/local/bin docker/docker
 
 # Install dependencies
 COPY package.json package-lock.json ./
