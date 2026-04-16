@@ -24,6 +24,7 @@ import {
 import { useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import FormError from '@shared/components/forms/FormError';
+import LoadingSpinner from '@shared/components/ui/LoadingSpinner';
 import { formatBytes } from '@shared/utils/formatUtils';
 import './styles/BackupManager.scss';
 
@@ -430,7 +431,7 @@ const BackupManager: React.FC = () => {
       case 'importing':
         return (
           <Tile className="backup__tile">
-            <InlineLoading description={t.backup.importing} />
+            <LoadingSpinner text={t.backup.importing} />
           </Tile>
         );
 

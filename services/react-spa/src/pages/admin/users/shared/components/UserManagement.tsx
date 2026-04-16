@@ -24,6 +24,7 @@ import { useApi, useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import { formatDateTime } from '@shared/utils/dateUtils';
 import { Navigate } from 'react-router-dom';
+import TableLoader from '@shared/components/data/TableLoader';
 import CreateUserModal from './modals/CreateUserModal';
 import ChangePasswordModal from './modals/ChangePasswordModal';
 import DeleteUserModal from './modals/DeleteUserModal';
@@ -143,6 +144,9 @@ const UserManagement: React.FC = () => {
 
       {/* ── Users Table ── */}
       <Column lg={16} md={8} sm={4}>
+      {loading && users.length === 0 ? (
+        <TableLoader columnCount={5} rowCount={5} />
+      ) : (
       <DataTable rows={rows} headers={headers}>
         {({
           rows: tableRows,
@@ -271,13 +275,8 @@ const UserManagement: React.FC = () => {
           </TableContainer>
         )}
       </DataTable>
-      </Column>
-
-      {loading && (
-        <Column lg={16} md={8} sm={4}>
-          <p className="um__loading">{t.loadingSpinner.loading}</p>
-        </Column>
       )}
+      </Column>
     </Grid>
   );
 };

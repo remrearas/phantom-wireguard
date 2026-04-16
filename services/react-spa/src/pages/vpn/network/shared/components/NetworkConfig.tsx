@@ -7,6 +7,7 @@ import {
   InlineNotification,
   ProgressBar,
   Tag,
+  SkeletonText,
 } from '@carbon/react';
 import { Renew, Edit } from '@carbon/icons-react';
 import { useLocale } from '@shared/hooks';
@@ -94,11 +95,41 @@ const NetworkConfig: React.FC = () => {
   // ── Loading skeleton ──────────────────────────────────────────
   if (loading && !data) {
     return (
-      <Grid>
-        <Column lg={16} md={8} sm={4}>
-          <Tile className="network__tile network__tile--skeleton" />
-        </Column>
-      </Grid>
+      <>
+        <Grid>
+          <Column lg={8} md={4} sm={4}>
+            <Tile className="network__tile">
+              <SkeletonText heading width="30%" />
+              <div className="network__kv-grid">
+                <div className="network__kv"><SkeletonText width="80%" /><SkeletonText width="60%" /></div>
+                <div className="network__kv"><SkeletonText width="80%" /><SkeletonText width="60%" /></div>
+              </div>
+            </Tile>
+          </Column>
+          <Column lg={8} md={4} sm={4}>
+            <Tile className="network__tile">
+              <SkeletonText heading width="30%" />
+              <div className="network__kv-grid">
+                <div className="network__kv"><SkeletonText width="80%" /><SkeletonText width="60%" /></div>
+                <div className="network__kv"><SkeletonText width="80%" /><SkeletonText width="60%" /></div>
+              </div>
+            </Tile>
+          </Column>
+        </Grid>
+        <Grid>
+          <Column lg={16} md={8} sm={4}>
+            <Tile className="network__tile">
+              <SkeletonText heading width="20%" />
+              <SkeletonText width="100%" />
+              <div className="network__kv-grid network__kv-grid--pool">
+                <div className="network__kv"><SkeletonText width="60%" /><SkeletonText width="40%" /></div>
+                <div className="network__kv"><SkeletonText width="60%" /><SkeletonText width="40%" /></div>
+                <div className="network__kv"><SkeletonText width="60%" /><SkeletonText width="40%" /></div>
+              </div>
+            </Tile>
+          </Column>
+        </Grid>
+      </>
     );
   }
 

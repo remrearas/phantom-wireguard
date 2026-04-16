@@ -1,0 +1,15 @@
+.table-loader {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  .cds--data-table-container {
+    overflow: auto;
+  }
+
+  .cds--data-table-header,
+  .cds--table-toolbar,
+  .cds--pagination {
+    position: sticky;
+    left: 0;
+  }
+}

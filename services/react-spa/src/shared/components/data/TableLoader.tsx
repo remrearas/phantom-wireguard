@@ -1,5 +1,6 @@
 import React from 'react';
 import { DataTableSkeleton } from '@carbon/react';
+import './styles/TableLoader.scss';
 
 interface TableLoaderProps {
   columnCount?: number;
@@ -15,13 +16,15 @@ const TableLoader: React.FC<TableLoaderProps> = ({
   showToolbar = true,
 }) => {
   return (
-    <DataTableSkeleton
-      columnCount={columnCount}
-      rowCount={rowCount}
-      showHeader={showHeader}
-      showToolbar={showToolbar}
-      zebra={false}
-    />
+    <div className="table-loader">
+      <DataTableSkeleton
+        columnCount={columnCount}
+        rowCount={rowCount}
+        showHeader={showHeader}
+        showToolbar={showToolbar}
+        zebra={false}
+      />
+    </div>
   );
 };
 

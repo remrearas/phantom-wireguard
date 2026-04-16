@@ -24,12 +24,14 @@ import {
   StructuredListRow,
   StructuredListCell,
   StructuredListBody,
+  SkeletonText,
 } from '@carbon/react';
 import { Add, Renew } from '@carbon/icons-react';
 import { useLocale } from '@shared/hooks';
 import { translate } from '@shared/translations';
 import { apiClient } from '@shared/api/client';
 import { formatBytes, formatHandshake } from '@shared/utils/formatUtils';
+import TableLoader from '@shared/components/data/TableLoader';
 import ImportExitModal from './modals/ImportExitModal';
 import './styles/MultihopManager.scss';
 
@@ -208,11 +210,35 @@ const MultihopManager: React.FC = () => {
 
   if (loading && !status) {
     return (
-      <Grid>
-        <Column lg={16} md={8} sm={4}>
-          <Tile className="multihop__tile multihop__tile--skeleton" />
-        </Column>
-      </Grid>
+      <>
+        <Grid>
+          <Column lg={16} md={8} sm={4}>
+            <Tile className="multihop__tile">
+              <StructuredListWrapper isCondensed className="multihop__status-list">
+                <StructuredListHead>
+                  <StructuredListRow head>
+                    <StructuredListCell head><SkeletonText width="40%" /></StructuredListCell>
+                    <StructuredListCell head />
+                  </StructuredListRow>
+                </StructuredListHead>
+                <StructuredListBody>
+                  {Array.from({ length: 7 }, (_, i) => (
+                    <StructuredListRow key={i}>
+                      <StructuredListCell><SkeletonText width="60%" /></StructuredListCell>
+                      <StructuredListCell><SkeletonText width="40%" /></StructuredListCell>
+                    </StructuredListRow>
+                  ))}
+                </StructuredListBody>
+              </StructuredListWrapper>
+            </Tile>
+          </Column>
+        </Grid>
+        <Grid>
+          <Column lg={16} md={8} sm={4}>
+            <TableLoader columnCount={6} rowCount={3} />
+          </Column>
+        </Grid>
+      </>
     );
   }
 

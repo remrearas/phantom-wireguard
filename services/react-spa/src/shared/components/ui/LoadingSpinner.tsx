@@ -7,13 +7,11 @@ import './styles/LoadingSpinner.scss';
 interface LoadingSpinnerProps {
   text?: string;
   fullscreen?: boolean;
-  small?: boolean;
 }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   text,
   fullscreen = false,
-  small = false,
 }) => {
   const { locale } = useLocale();
   const t = translate(locale);
@@ -33,8 +31,11 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   }
 
   return (
-    <div className={`loading-spinner-inline ${small ? 'loading-spinner-inline--small' : ''}`}>
-      <Loading withOverlay={false} small={small} description={loadingText} />
+    <div className="loading-spinner-inline">
+      <div className="loading-spinner-content">
+        <Loading withOverlay={false} description={loadingText} />
+        <p className="loading-spinner-text">{loadingText}</p>
+      </div>
     </div>
   );
 };

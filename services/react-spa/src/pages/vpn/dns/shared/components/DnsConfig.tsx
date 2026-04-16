@@ -5,6 +5,7 @@ import {
   Tile,
   Button,
   InlineNotification,
+  SkeletonText,
 } from '@carbon/react';
 import { Edit, Renew } from '@carbon/icons-react';
 import { useLocale } from '@shared/hooks';
@@ -64,10 +65,22 @@ const DnsConfig: React.FC = () => {
     return (
       <Grid>
         <Column lg={8} md={4} sm={4}>
-          <Tile className="dns__tile dns__tile--skeleton" />
+          <Tile className="dns__tile">
+            <SkeletonText heading width="30%" />
+            <div className="dns__kv-grid">
+              <div className="dns__kv"><SkeletonText width="80%" /><SkeletonText width="60%" /></div>
+              <div className="dns__kv"><SkeletonText width="80%" /><SkeletonText width="60%" /></div>
+            </div>
+          </Tile>
         </Column>
         <Column lg={8} md={4} sm={4}>
-          <Tile className="dns__tile dns__tile--skeleton" />
+          <Tile className="dns__tile">
+            <SkeletonText heading width="30%" />
+            <div className="dns__kv-grid">
+              <div className="dns__kv"><SkeletonText width="80%" /><SkeletonText width="60%" /></div>
+              <div className="dns__kv"><SkeletonText width="80%" /><SkeletonText width="60%" /></div>
+            </div>
+          </Tile>
         </Column>
       </Grid>
     );
