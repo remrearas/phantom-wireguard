@@ -82,6 +82,8 @@ INCLUDE = [
     "tools/lib/auth.sh",
     "tools/lib/tls.sh",
     "tools/lib/compose.sh",
+    "tools/lib/certbot.sh",
+    "tools/lib/helpers/certbot",
 ]
 
 # (template_source, package_destination) pairs
