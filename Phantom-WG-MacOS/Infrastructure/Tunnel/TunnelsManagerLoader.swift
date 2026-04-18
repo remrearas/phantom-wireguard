@@ -2,10 +2,11 @@ import Foundation
 
 // MARK: - Tunnels Manager Loader
 
+@Observable
 @MainActor
-class TunnelsManagerLoader: ObservableObject {
-    @Published var manager: TunnelsManager?
-    @Published var loadError: String?
+class TunnelsManagerLoader {
+    var manager: TunnelsManager?
+    var loadError: String?
 
     func load() async {
         do {

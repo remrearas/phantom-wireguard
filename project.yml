@@ -10,6 +10,16 @@ packages:
   WireGuardKit:
     path: Libraries/WireGuardKit
 
+schemes:
+  Phantom-WG-MacOS:
+    build:
+      targets:
+        Phantom-WG-MacOS: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+
 targets:
 
   # ── Main App ──────────────────────────────────────────────

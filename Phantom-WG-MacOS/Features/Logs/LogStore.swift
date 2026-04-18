@@ -2,12 +2,13 @@ import Foundation
 
 /// Fetches logs from the tunnel extension via handleAppMessage.
 /// Logs are disposable: visible during the session, gone when tunnel stops.
+@Observable
 @MainActor
-final class LogStore: ObservableObject {
-    @Published var entries: [LogEntry] = []
+final class LogStore {
+    var entries: [LogEntry] = []
 
-    private weak var tunnel: TunnelContainer?
-    private var pollingTask: Task<Void, Never>?
+    @ObservationIgnored private weak var tunnel: TunnelContainer?
+    @ObservationIgnored private var pollingTask: Task<Void, Never>?
 
     struct LogEntry: Identifiable, Hashable {
         let id: Int

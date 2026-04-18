@@ -84,11 +84,6 @@ extension TunnelDetailView {
         }
     }
 
-    /// `isEditable` is defined as a private computed property on the
-    /// struct; actions extension re-derives it here so commit logic
-    /// doesn't need a cross-file reference.
-    private var isEditable: Bool { tunnel.status == .inactive }
-
     func copyConf() {
         // Validate-before-copy so the output is always well-formed; if
         // validation fails we fall back to whatever the user has typed.

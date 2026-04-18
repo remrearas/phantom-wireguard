@@ -6,8 +6,8 @@ import SwiftUI
 /// no detail form is shown here. Editing individual fields is done
 /// later via `TunnelDetailView`.
 struct TunnelImportView: View {
-    @EnvironmentObject var tunnelsManager: TunnelsManager
-    @EnvironmentObject var loc: LocalizationManager
+    @Environment(TunnelsManager.self) private var tunnelsManager
+    @Environment(LocalizationManager.self) private var loc
     @Environment(\.dismiss) private var dismiss
 
     @State private var name: String = ""
@@ -33,6 +33,7 @@ struct TunnelImportView: View {
                 Button(loc.t("import_button")) { submit() }
                     .fontWeight(.semibold)
                     .disabled(!canSubmit)
+                    .accessibilityIdentifier(AXID.TunnelImport.submitButton)
             }
         }
     }
@@ -43,6 +44,7 @@ struct TunnelImportView: View {
         Section {
             TextField(loc.t("import_name_placeholder"), text: $name)
                 .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier(AXID.TunnelImport.nameField)
         } header: {
             Label(loc.t("detail_name"), systemImage: "gearshape")
                 .padding(.leading, 4)
@@ -55,6 +57,7 @@ struct TunnelImportView: View {
                 .font(.system(.caption, design: .monospaced))
                 .frame(minHeight: 220)
                 .autocorrectionDisabled()
+                .accessibilityIdentifier(AXID.TunnelImport.confEditor)
 
             Button {
                 if let clipboard = NSPasteboard.general.string(forType: .string) {
@@ -63,6 +66,7 @@ struct TunnelImportView: View {
             } label: {
                 Label(loc.t("import_paste"), systemImage: "doc.on.clipboard")
             }
+            .accessibilityIdentifier(AXID.TunnelImport.pasteButton)
         } header: {
             Label(loc.t("import_configuration"), systemImage: "doc.text")
                 .padding(.leading, 4)
@@ -89,6 +93,8 @@ struct TunnelImportView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.red.gradient)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(AXID.TunnelImport.errorBanner)
     }
 
     // MARK: - Logic

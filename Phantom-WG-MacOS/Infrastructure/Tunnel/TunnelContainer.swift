@@ -1,9 +1,10 @@
 import Foundation
 import NetworkExtension
 
-class TunnelContainer: ObservableObject, Identifiable {
+@Observable
+class TunnelContainer: Identifiable {
 
-    let tunnelProvider: TunnelProviding
+    @ObservationIgnored let tunnelProvider: TunnelProviding
 
     /// Stable identity captured at init. Using the persisted `TunnelConfig.id`
     /// keeps `ForEach` diffing correct across renames — unlike the display
@@ -11,19 +12,21 @@ class TunnelContainer: ObservableObject, Identifiable {
     /// is used as fallback for transient states where no config is attached.
     let id: UUID
 
-    @Published var name: String
-    @Published var status: TunnelStatus
-    @Published var lastActivationError: TunnelActivationError?
+    var name: String
+    var status: TunnelStatus
+    var lastActivationError: TunnelActivationError?
 
     var tunnelConfig: TunnelConfig? {
         tunnelProvider.tunnelConfig
     }
 
-    // Activation tracking (used by TunnelsManager)
-    var onDeactivated: ((TunnelContainer) -> Void)?
-    var isAttemptingActivation = false
-    var activationAttemptId: String?
-    var activationTask: Task<Void, Never>?
+    // Activation tracking (used by TunnelsManager). These are internal
+    // state — excluded from observation tracking so they don't invalidate
+    // views that have no visibility into activation bookkeeping.
+    @ObservationIgnored var onDeactivated: ((TunnelContainer) -> Void)?
+    @ObservationIgnored var isAttemptingActivation = false
+    @ObservationIgnored var activationAttemptId: String?
+    @ObservationIgnored var activationTask: Task<Void, Never>?
 
     init(tunnel: TunnelProviding) {
         tunnelProvider = tunnel

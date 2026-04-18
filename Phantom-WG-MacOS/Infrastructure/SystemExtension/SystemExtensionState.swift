@@ -3,8 +3,9 @@ import SystemExtensions
 
 // MARK: - System Extension Activation State
 
+@Observable
 @MainActor
-class SystemExtensionState: NSObject, ObservableObject, OSSystemExtensionRequestDelegate {
+class SystemExtensionState: NSObject, OSSystemExtensionRequestDelegate {
 
     enum Status: Equatable {
         case unknown
@@ -15,11 +16,11 @@ class SystemExtensionState: NSObject, ObservableObject, OSSystemExtensionRequest
         case failed(String)
     }
 
-    @Published var status: Status = .unknown
+    var status: Status = .unknown
 
-    private static let extensionBundleId = "com.remrearas.Phantom-WG-MacOS.PhantomTunnel"
-    private var approvalPollTask: Task<Void, Never>?
-    private var deactivationContinuation: CheckedContinuation<Void, Error>?
+    @ObservationIgnored private static let extensionBundleId = "com.remrearas.Phantom-WG-MacOS.PhantomTunnel"
+    @ObservationIgnored private var approvalPollTask: Task<Void, Never>?
+    @ObservationIgnored private var deactivationContinuation: CheckedContinuation<Void, Error>?
 
     func activate() {
         stopApprovalPolling()

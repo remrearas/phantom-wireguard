@@ -3,8 +3,8 @@ import AppKit
 import UniformTypeIdentifiers
 
 struct LogView: View {
-    @ObservedObject var logStore: LogStore
-    @EnvironmentObject var loc: LocalizationManager
+    var logStore: LogStore
+    @Environment(LocalizationManager.self) private var loc
 
     @State private var savingError: String?
     @State private var showingSaveError = false
@@ -16,6 +16,7 @@ struct LogView: View {
             .overlay { emptyOverlay }
             .alert(loc.t("error"), isPresented: $showingSaveError) {
                 Button(loc.t("ok")) {}
+                    .accessibilityIdentifier(AXID.LogView.saveErrorOK)
             } message: {
                 Text(savingError ?? "")
             }
@@ -30,6 +31,7 @@ struct LogView: View {
                     }
                 }
                 .padding(.vertical, 8)
+                .accessibilityIdentifier(AXID.LogView.list)
             }
             .background(Color(nsColor: .controlBackgroundColor))
             .onChange(of: logStore.entries.count) { _, _ in
@@ -69,6 +71,7 @@ struct LogView: View {
                 Label(loc.t("log_save"), systemImage: "square.and.arrow.down")
             }
             .disabled(logStore.entries.isEmpty)
+            .accessibilityIdentifier(AXID.LogView.saveButton)
         }
     }
 
@@ -80,6 +83,8 @@ struct LogView: View {
                 systemImage: "text.justify.left",
                 description: Text(loc.t("log_empty_description"))
             )
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier(AXID.LogView.emptyState)
         }
     }
 

@@ -1,6 +1,7 @@
 import Foundation
 
-class LocalizationManager: ObservableObject {
+@Observable
+final class LocalizationManager {
 
     enum Language: String, CaseIterable, Identifiable {
         case tr, en
@@ -21,9 +22,9 @@ class LocalizationManager: ObservableObject {
         }
     }
 
-    static let shared = LocalizationManager()
+    @ObservationIgnored static let shared = LocalizationManager()
 
-    @Published var current: Language {
+    var current: Language {
         didSet {
             guard current != oldValue else { return }
             UserDefaults.standard.set(current.rawValue, forKey: "app_language")
@@ -31,21 +32,21 @@ class LocalizationManager: ObservableObject {
         }
     }
 
+    /// Observed so that views calling `t(_:)` re-render when the dictionary
+    /// is reloaded after a language switch. Without this, `@Observable` would
+    /// only track `current`, and callers would see stale translations because
+    /// `t(_:)` reads `strings` internally (not `current`).
     private var strings: [String: String] = [:]
 
     init() {
-        // 1. Saved preference
+        // Resolve initial language: saved preference → device locale → English.
         if let saved = UserDefaults.standard.string(forKey: "app_language"),
            let lang = Language(rawValue: saved) {
-            _current = Published(initialValue: lang)
-        }
-        // 2. Device locale
-        else if Locale.current.language.languageCode?.identifier == "tr" {
-            _current = Published(initialValue: .tr)
-        }
-        // 3. Default English
-        else {
-            _current = Published(initialValue: .en)
+            self.current = lang
+        } else if Locale.current.language.languageCode?.identifier == "tr" {
+            self.current = .tr
+        } else {
+            self.current = .en
         }
         loadStrings()
     }
