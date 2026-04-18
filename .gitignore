@@ -73,7 +73,6 @@ id_rsa*
 xcuserdata/
 DerivedData/
 build/
-Libraries/
 
 # Project exclude paths
 /phantom/reports/

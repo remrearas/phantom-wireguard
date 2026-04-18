@@ -1,5 +1,10 @@
 import SwiftUI
 
+/// Tunnel detail + editor. Orchestrates the draft/original/errors
+/// state machine — edits are staged in a `TunnelDraft`, committed via
+/// native form submit (Enter on any field), and either persisted or
+/// reverted with inline per-field errors. Ghost-mode wstunnel section
+/// appears only when the typed config carries a wstunnel block.
 struct TunnelDetailView: View {
     @ObservedObject var tunnel: TunnelContainer
     @StateObject private var logStore: LogStore
@@ -7,8 +12,14 @@ struct TunnelDetailView: View {
     @EnvironmentObject var loc: LocalizationManager
     @Environment(\.dismiss) private var dismiss
 
-    @State private var editConfig: TunnelConfig = .empty()
-    @State private var originalConfig: TunnelConfig = .empty()
+    @State private var draft: TunnelDraft = .empty()
+    @State private var originalDraft: TunnelDraft = .empty()
+    @State private var fieldErrors: [TunnelDraft.Field: FieldValidationError] = [:]
+    @State private var fieldErrorClearTask: Task<Void, Never>?
+    /// Distinguishes a programmatic revert (rejection of an invalid
+    /// commit) from a user edit. Set to `true` just before reverting
+    /// the draft; the next `onChange(of: draft)` consumes and resets it.
+    @State private var programmaticRevert: Bool = false
     @State private var showingDeleteConfirmation = false
     @State private var errorMessage: String?
     @State private var showingError = false
@@ -20,8 +31,8 @@ struct TunnelDetailView: View {
     @State private var txBytes: String = "—"
     @State private var statsPollingTask: Task<Void, Never>?
 
-    private var hasChanges: Bool { editConfig != originalConfig }
-    private var isEditable: Bool { PhantomUIEngine.canEditConfig(status: tunnel.status) }
+    /// Config fields are only editable while the tunnel is inactive.
+    private var isEditable: Bool { tunnel.status == .inactive }
 
     init(tunnel: TunnelContainer) {
         self.tunnel = tunnel
@@ -31,33 +42,51 @@ struct TunnelDetailView: View {
     var body: some View {
         List {
             statusSection
-            if PhantomUIEngine.shouldShowStats(status: tunnel.status) { statsSection }
+            statsSection
             onDemandSection
             nameSection
-            if editConfig.isGhostMode { wstunnelSection }
+            if let wstunnelBinding = Binding($draft.wstunnel) {
+                wstunnelSection(draft: wstunnelBinding)
+            }
             interfaceSection
             peerSection
             logSection
             actionsSection
         }
-        .navigationTitle(editConfig.name.isEmpty ? loc.t("detail_tunnel") : editConfig.name)
+        .navigationTitle(draft.name.isEmpty ? loc.t("detail_tunnel") : draft.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if hasChanges && isEditable {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(loc.t("save")) { saveConfig() }
-                        .fontWeight(.semibold)
-                }
+        .onChange(of: draft) { _, _ in
+            // Skip the clearing side-effect when the change originated
+            // from a programmatic revert (invalid commit rollback) so
+            // the accompanying error banner can still be seen.
+            if programmaticRevert {
+                programmaticRevert = false
+                return
+            }
+            // User edit: drop stale errors and cancel the auto-dismiss
+            // timer — the next commit re-validates the full draft.
+            if !fieldErrors.isEmpty {
+                fieldErrors = [:]
+                fieldErrorClearTask?.cancel()
+                fieldErrorClearTask = nil
             }
         }
+        .onSubmit {
+            // Native form commit: when any field's Enter fires, validate
+            // the draft and persist if it's clean. Invalid fields show
+            // their errors inline; the draft itself remains editable.
+            commitDraft()
+        }
         .onAppear {
-            loadConfig()
+            loadDraft()
             logStore.startPolling()
             if tunnel.status == .active { startStatsPolling() }
         }
         .onDisappear {
             logStore.stopPolling()
             stopStatsPolling()
+            fieldErrorClearTask?.cancel()
+            fieldErrorClearTask = nil
         }
         .confirmationDialog(loc.t("detail_delete_confirm_title"),
                             isPresented: $showingDeleteConfirmation,
@@ -85,21 +114,33 @@ struct TunnelDetailView: View {
     // MARK: - Sections
 
     private var statusSection: some View {
-        Section {
+        let color = tunnel.status.color
+        return Section {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(PhantomUIEngine.statusColor(for: tunnel.status).opacity(0.12))
+                        .fill(color.opacity(0.12))
                         .frame(width: 36, height: 36)
-                    Image(systemName: PhantomUIEngine.statusIcon(for: tunnel.status))
+                    Image(systemName: tunnel.status.iconName)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(PhantomUIEngine.statusColor(for: tunnel.status))
+                        .foregroundStyle(color)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(tunnel.status.localizedDescription)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(PhantomUIEngine.statusColor(for: tunnel.status))
+                    HStack(spacing: 6) {
+                        Text(tunnel.status.localizedDescription)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(color)
+
+                        Text(draft.wstunnel != nil ? "Ghost" : "WireGuard")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule().fill((draft.wstunnel != nil) ? Color.purple.opacity(0.15) : Color.blue.opacity(0.15))
+                            )
+                            .foregroundStyle((draft.wstunnel != nil) ? .purple : .blue)
+                    }
                     if let error = tunnel.lastActivationError {
                         Text(error.alertText)
                             .font(.caption)
@@ -109,13 +150,8 @@ struct TunnelDetailView: View {
 
                 Spacer()
 
-                Toggle("", isOn: PhantomUIEngine.tunnelToggleBinding(
-                    for: tunnel, manager: tunnelsManager))
+                Toggle("", isOn: tunnel.toggleBinding(manager: tunnelsManager))
                     .labelsHidden()
-                    .disabled(!PhantomUIEngine.canToggleTunnel(
-                        tunnelStatus: tunnel.status,
-                        allStatuses: tunnelsManager.tunnels.map(\.status)
-                    ))
             }
         } header: {
             Label(loc.t("detail_status"), systemImage: "antenna.radiowaves.left.and.right")
@@ -137,10 +173,6 @@ struct TunnelDetailView: View {
             Toggle(isOn: onDemandBinding) {
                 Label(loc.t("detail_on_demand"), systemImage: "bolt.shield")
             }
-            .disabled(!PhantomUIEngine.canToggleTunnel(
-                tunnelStatus: tunnel.status,
-                allStatuses: tunnelsManager.tunnels.map(\.status)
-            ))
         } footer: {
             Text(loc.t("detail_on_demand_footer"))
         }
@@ -148,19 +180,55 @@ struct TunnelDetailView: View {
 
     private var nameSection: some View {
         Section {
-            textField(loc.t("detail_name"), text: $editConfig.name)
+            PhantomTextField(
+                label: loc.t("detail_name"),
+                text: $draft.name,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .name)
+            )
         } header: {
             Label(loc.t("detail_general"), systemImage: "gearshape")
         }
     }
 
-    private var wstunnelSection: some View {
+    private func wstunnelSection(draft: Binding<WstunnelDraft>) -> some View {
         Section {
-            textField(loc.t("detail_server_url"), text: wstunnelBinding(\.url))
-            textField(loc.t("detail_secret"), text: wstunnelBinding(\.secret))
-            portField(loc.t("detail_local_port"), value: wstunnelPortBinding(\.localPort))
-            textField(loc.t("detail_remote_host"), text: wstunnelBinding(\.remoteHost))
-            portField(loc.t("detail_remote_port"), value: wstunnelPortBinding(\.remotePort))
+            PhantomTextField(
+                label: loc.t("detail_server_url"),
+                text: draft.url,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .wstunnelUrl)
+            )
+            PhantomTextField(
+                label: loc.t("detail_secret"),
+                text: draft.secret,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .wstunnelSecret)
+            )
+            PhantomTextField(
+                label: loc.t("detail_local_host"),
+                text: draft.localHost,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .wstunnelLocalHost)
+            )
+            PhantomStringNumericField(
+                label: loc.t("detail_local_port"),
+                text: draft.localPort,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .wstunnelLocalPort)
+            )
+            PhantomTextField(
+                label: loc.t("detail_remote_host"),
+                text: draft.remoteHost,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .wstunnelRemoteHost)
+            )
+            PhantomStringNumericField(
+                label: loc.t("detail_remote_port"),
+                text: draft.remotePort,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .wstunnelRemotePort)
+            )
         } header: {
             Label(loc.t("detail_wstunnel"), systemImage: "network.badge.shield.half.filled")
         }
@@ -168,10 +236,30 @@ struct TunnelDetailView: View {
 
     private var interfaceSection: some View {
         Section {
-            textField(loc.t("detail_private_key"), text: $editConfig.wireguard.interface.privateKey)
-            textField(loc.t("detail_address"), text: $editConfig.wireguard.interface.address)
-            textField(loc.t("detail_dns"), text: $editConfig.wireguard.interface.dns)
-            intField(loc.t("detail_mtu"), value: $editConfig.wireguard.interface.mtu)
+            PhantomTextField(
+                label: loc.t("detail_private_key"),
+                text: $draft.wireguard.interface.privateKey,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .interfacePrivateKey)
+            )
+            PhantomTextField(
+                label: loc.t("detail_address"),
+                text: $draft.wireguard.interface.addresses,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .interfaceAddresses)
+            )
+            PhantomTextField(
+                label: loc.t("detail_dns"),
+                text: $draft.wireguard.interface.dnsServers,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .interfaceDnsServers)
+            )
+            PhantomStringNumericField(
+                label: loc.t("detail_mtu"),
+                text: $draft.wireguard.interface.mtu,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .interfaceMTU)
+            )
         } header: {
             Label(loc.t("detail_interface"), systemImage: "rectangle.connected.to.line.below")
         }
@@ -179,11 +267,36 @@ struct TunnelDetailView: View {
 
     private var peerSection: some View {
         Section {
-            textField(loc.t("detail_public_key"), text: $editConfig.wireguard.peer.publicKey)
-            textField(loc.t("detail_preshared_key"), text: presharedKeyBinding)
-            textField(loc.t("detail_allowed_ips"), text: $editConfig.wireguard.peer.allowedIPs)
-            textField(loc.t("detail_endpoint"), text: $editConfig.wireguard.peer.endpoint)
-            intField(loc.t("detail_keepalive"), value: $editConfig.wireguard.peer.persistentKeepalive)
+            PhantomTextField(
+                label: loc.t("detail_public_key"),
+                text: $draft.wireguard.peer.publicKey,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerPublicKey)
+            )
+            PhantomTextField(
+                label: loc.t("detail_preshared_key"),
+                text: $draft.wireguard.peer.presharedKey,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerPresharedKey)
+            )
+            PhantomTextField(
+                label: loc.t("detail_allowed_ips"),
+                text: $draft.wireguard.peer.allowedIPs,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerAllowedIPs)
+            )
+            PhantomTextField(
+                label: loc.t("detail_endpoint"),
+                text: $draft.wireguard.peer.endpoint,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerEndpoint)
+            )
+            PhantomStringNumericField(
+                label: loc.t("detail_keepalive"),
+                text: $draft.wireguard.peer.persistentKeepalive,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerPersistentKeepalive)
+            )
         } header: {
             Label(loc.t("detail_peer"), systemImage: "point.3.connected.trianglepath.dotted")
         }
@@ -227,26 +340,19 @@ struct TunnelDetailView: View {
             } label: {
                 Label(loc.t("detail_delete_tunnel"), systemImage: "trash")
             }
-            .disabled(!PhantomUIEngine.canDeleteTunnel(status: tunnel.status))
+            .disabled(tunnel.status != .inactive)
         } header: {
             Label(loc.t("detail_actions"), systemImage: "ellipsis.circle")
         }
     }
 
-    // MARK: - Field Builders
+    // MARK: - Error Lookup
 
-    private func textField(_ label: String, text: Binding<String>) -> some View {
-        PhantomTextField(label: label, text: text, isDisabled: !isEditable)
-            .textInputAutocapitalization(.never)
+    private func message(for field: TunnelDraft.Field) -> String? {
+        fieldErrors[field]?.localizedMessage(loc)
     }
 
-    private func portField(_ label: String, value: Binding<UInt16>) -> some View {
-        PhantomNumericField(label: label, value: value, isDisabled: !isEditable)
-    }
-
-    private func intField(_ label: String, value: Binding<Int>) -> some View {
-        PhantomNumericField(label: label, value: value, isDisabled: !isEditable)
-    }
+    // MARK: - Copy Button
 
     private func copyButton(_ title: String, icon: String, id: String, action: @escaping () -> Void) -> some View {
         Button {
@@ -263,7 +369,7 @@ struct TunnelDetailView: View {
         }
     }
 
-    // MARK: - Bindings
+    // MARK: - On-Demand Binding
 
     private var onDemandBinding: Binding<Bool> {
         Binding(
@@ -280,85 +386,138 @@ struct TunnelDetailView: View {
         )
     }
 
-    private var presharedKeyBinding: Binding<String> {
-        Binding(
-            get: { editConfig.wireguard.peer.presharedKey ?? "" },
-            set: { editConfig.wireguard.peer.presharedKey = $0.isEmpty ? nil : $0 }
-        )
-    }
+    // MARK: - Draft Lifecycle
 
-    private func wstunnelBinding(_ keyPath: WritableKeyPath<WstunnelConfig, String>) -> Binding<String> {
-        Binding(
-            get: { editConfig.wstunnel?[keyPath: keyPath] ?? "" },
-            set: { editConfig.wstunnel?[keyPath: keyPath] = $0 }
-        )
-    }
-
-    private func wstunnelPortBinding(_ keyPath: WritableKeyPath<WstunnelConfig, UInt16>) -> Binding<UInt16> {
-        Binding(
-            get: { editConfig.wstunnel?[keyPath: keyPath] ?? 0 },
-            set: { editConfig.wstunnel?[keyPath: keyPath] = $0 }
-        )
-    }
-
-    // MARK: - Actions
-
-    private func loadConfig() {
+    private func loadDraft() {
         if let config = tunnel.tunnelConfig {
-            editConfig = config
-            originalConfig = config
+            let next = TunnelDraft(from: config)
+            draft = next
+            originalDraft = next
+            fieldErrors = [:]
         }
     }
 
-    private func saveConfig() {
+    /// Commits the current draft via native form submit (Enter on a
+    /// field). If the draft is unchanged or equal to the last committed
+    /// snapshot, this is a no-op. If validation fails, field errors are
+    /// surfaced inline and auto-dismiss after a short delay so the UI
+    /// returns to the default state on its own. On success the typed
+    /// config is pushed to the tunnel provider.
+    private func commitDraft() {
+        guard isEditable, draft != originalDraft else { return }
+
+        let result = draft.validate()
+
+        // Local validation failed — revert the draft immediately so the
+        // user sees the known-good value, then surface the errors for a
+        // few seconds before the banner fades out.
+        if !result.errors.isEmpty {
+            rejectCommit(with: result.errors)
+            return
+        }
+
+        guard let config = result.config else { return }
+
         Task {
             do {
-                try await tunnelsManager.modify(tunnel: tunnel, with: editConfig,
+                try await tunnelsManager.modify(tunnel: tunnel, with: config,
                                                 onDemand: tunnel.activateOnDemandSetting)
-                originalConfig = editConfig
+                originalDraft = draft
+            } catch TunnelManagementError.tunnelAlreadyExistsWithThatName {
+                rejectCommit(with: [.name: .nameAlreadyExists])
+            } catch TunnelManagementError.tunnelInvalidName {
+                rejectCommit(with: [.name: .empty])
             } catch {
+                // Genuine system-level failure (NE framework error,
+                // saving preferences, etc.) — surface via modal alert
+                // because it is not tied to any single form field.
                 errorMessage = error.localizedDescription
                 showingError = true
             }
         }
     }
 
+    /// Rolls the draft back to the last committed snapshot and marks
+    /// the offending fields with typed errors. The error banner is
+    /// scheduled to fade out on its own; the draft itself has already
+    /// returned to the known-good state.
+    private func rejectCommit(
+        with errors: [TunnelDraft.Field: FieldValidationError]
+    ) {
+        programmaticRevert = true
+        draft = originalDraft
+        fieldErrors = errors
+        scheduleFieldErrorClear()
+    }
+
+    /// Removes the inline error banner after a short grace period so
+    /// the form returns to a neutral appearance. The draft itself is
+    /// untouched here — it has already been reverted at the moment of
+    /// rejection, so the user always looks at a known-good value.
+    private func scheduleFieldErrorClear() {
+        fieldErrorClearTask?.cancel()
+        fieldErrorClearTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .seconds(3))
+            } catch {
+                return
+            }
+            withAnimation(.default) {
+                fieldErrors = [:]
+            }
+            fieldErrorClearTask = nil
+        }
+    }
+
+    // MARK: - Copy Actions
+
     private func copyConf() {
-        var lines: [String] = []
-
-        if let ws = editConfig.wstunnel {
-            lines.append("[Wstunnel]")
-            lines.append("Url = \(ws.url)")
-            lines.append("Secret = \(ws.secret)")
-            lines.append("Tunnel = udp://127.0.0.1:\(ws.localPort):\(ws.remoteHost):\(ws.remotePort)")
-            lines.append("")
-        }
-
-        let iface = editConfig.wireguard.interface
-        lines.append("[Interface]")
-        lines.append("PrivateKey = \(iface.privateKey)")
-        lines.append("Address = \(iface.address)")
-        lines.append("DNS = \(iface.dns)")
-        lines.append("MTU = \(iface.mtu)")
-        lines.append("")
-
-        let peer = editConfig.wireguard.peer
-        lines.append("[Peer]")
-        lines.append("PublicKey = \(peer.publicKey)")
-        if let psk = peer.presharedKey, !psk.isEmpty {
-            lines.append("PresharedKey = \(psk)")
-        }
-        lines.append("AllowedIPs = \(peer.allowedIPs)")
-        lines.append("Endpoint = \(peer.endpoint)")
-        lines.append("PersistentKeepalive = \(peer.persistentKeepalive)")
-
-        UIPasteboard.general.string = lines.joined(separator: "\n")
+        // Validate-before-copy so the output is always well-formed; if
+        // validation fails we fall back to whatever the user has typed.
+        let result = draft.validate()
+        let contents = result.config?.asConfString() ?? draftToBestEffortConfString()
+        UIPasteboard.general.string = contents
     }
 
     private func copyLogs() {
         let text = logStore.entries.map { $0.text }.joined(separator: "\n")
         UIPasteboard.general.string = text.isEmpty ? loc.t("detail_no_logs") : text
     }
+
+    /// Fallback serializer used when the draft has unresolved validation
+    /// errors — emits whatever the user has typed so they can still copy
+    /// partial work out for external inspection.
+    private func draftToBestEffortConfString() -> String {
+        var lines: [String] = []
+
+        if let ws = draft.wstunnel {
+            lines.append("[Wstunnel]")
+            lines.append("Url = \(ws.url)")
+            lines.append("Secret = \(ws.secret)")
+            lines.append("Tunnel = udp://\(ws.localHost):\(ws.localPort):\(ws.remoteHost):\(ws.remotePort)")
+            lines.append("")
+        }
+
+        lines.append("[Interface]")
+        lines.append("PrivateKey = \(draft.wireguard.interface.privateKey)")
+        lines.append("Address = \(draft.wireguard.interface.addresses)")
+        lines.append("DNS = \(draft.wireguard.interface.dnsServers)")
+        lines.append("MTU = \(draft.wireguard.interface.mtu)")
+        lines.append("")
+
+        lines.append("[Peer]")
+        lines.append("PublicKey = \(draft.wireguard.peer.publicKey)")
+        if !draft.wireguard.peer.presharedKey.isEmpty {
+            lines.append("PresharedKey = \(draft.wireguard.peer.presharedKey)")
+        }
+        lines.append("AllowedIPs = \(draft.wireguard.peer.allowedIPs)")
+        lines.append("Endpoint = \(draft.wireguard.peer.endpoint)")
+        lines.append("PersistentKeepalive = \(draft.wireguard.peer.persistentKeepalive)")
+
+        return lines.joined(separator: "\n")
+    }
+
+    // MARK: - Delete
 
     private func deleteTunnel() {
         if tunnel.status != .inactive {
@@ -431,5 +590,4 @@ struct TunnelDetailView: View {
             lastHandshake = "—"
         }
     }
-
 }

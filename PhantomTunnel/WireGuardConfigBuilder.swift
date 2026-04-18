@@ -4,9 +4,13 @@ import WireGuardKit
 
 enum WireGuardConfigBuilder {
 
-    /// Converts WireguardConfig + optional WstunnelConfig into WireGuardKit's TunnelConfiguration.
-    /// - Ghost mode: overrides endpoint to 127.0.0.1:localPort (wstunnel proxy)
-    /// - Standalone: uses peer endpoint directly
+    /// Converts `WireguardConfig` + optional `WstunnelConfig` into
+    /// WireGuardKit's `TunnelConfiguration`. All fields arrive already
+    /// validated via the typed model, so the work here is mainly
+    /// bridging between Phantom's types and WireGuardKit's.
+    ///
+    /// - Ghost mode: endpoint rewritten to the wstunnel loopback proxy
+    /// - Standalone: endpoint used verbatim from peer config
     static func build(wireguard: WireguardConfig, wstunnel: WstunnelConfig?) throws -> TunnelConfiguration {
         let interfaceConfig = try buildInterface(from: wireguard)
         let peerConfig = try buildPeer(from: wireguard, wstunnel: wstunnel)
@@ -18,69 +22,64 @@ enum WireGuardConfigBuilder {
         )
     }
 
-    // MARK: - Interface
+    // MARK: - Private
 
-    private static func buildInterface(from wireguard: WireguardConfig) throws -> InterfaceConfiguration {
-        guard let privateKey = PrivateKey(base64Key: wireguard.interface.privateKey) else {
+    private static func buildInterface(from config: WireguardConfig) throws -> InterfaceConfiguration {
+        guard let privateKey = PrivateKey(base64Key: config.interface.privateKey.textual) else {
             SharedLogger.log(.wireGuard, "ERROR: Invalid private key")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
 
-        var config = InterfaceConfiguration(privateKey: privateKey)
+        var iface = InterfaceConfiguration(privateKey: privateKey)
 
-        config.addresses = wireguard.interface.address
-            .components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .compactMap { IPAddressRange(from: $0) }
+        iface.addresses = config.interface.addresses.compactMap {
+            IPAddressRange(from: $0.textual)
+        }
 
-        guard !config.addresses.isEmpty else {
+        guard !iface.addresses.isEmpty else {
             SharedLogger.log(.wireGuard, "ERROR: No valid addresses")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
 
-        SharedLogger.log(.wireGuard, "Interface addresses: \(config.addresses.map { $0.stringRepresentation })")
+        SharedLogger.log(.wireGuard, "Interface addresses: \(iface.addresses.map { $0.stringRepresentation })")
 
-        config.dns = wireguard.interface.dns
-            .components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .compactMap { DNSServer(from: $0) }
-
-        if wireguard.interface.mtu > 0 {
-            config.mtu = UInt16(clamping: wireguard.interface.mtu)
+        iface.dns = config.interface.dnsServers.compactMap {
+            DNSServer(from: $0.textual)
         }
 
-        return config
+        if config.interface.mtu > 0 {
+            iface.mtu = UInt16(clamping: config.interface.mtu)
+        }
+
+        return iface
     }
 
-    // MARK: - Peer
-
-    private static func buildPeer(from wireguard: WireguardConfig, wstunnel: WstunnelConfig?) throws -> PeerConfiguration {
-        guard let publicKey = PublicKey(base64Key: wireguard.peer.publicKey) else {
+    private static func buildPeer(from config: WireguardConfig, wstunnel: WstunnelConfig?) throws -> PeerConfiguration {
+        guard let publicKey = PublicKey(base64Key: config.peer.publicKey.textual) else {
             SharedLogger.log(.wireGuard, "ERROR: Invalid public key")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
 
-        var config = PeerConfiguration(publicKey: publicKey)
+        var peer = PeerConfiguration(publicKey: publicKey)
 
-        if let psk = wireguard.peer.presharedKey, !psk.isEmpty,
-           let preSharedKey = PreSharedKey(base64Key: psk) {
-            config.preSharedKey = preSharedKey
+        if let psk = config.peer.presharedKey,
+           let preSharedKey = PreSharedKey(base64Key: psk.textual) {
+            peer.preSharedKey = preSharedKey
         }
 
-        config.allowedIPs = wireguard.peer.allowedIPs
-            .components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .compactMap { IPAddressRange(from: $0) }
+        peer.allowedIPs = config.peer.allowedIPs.compactMap {
+            IPAddressRange(from: $0.textual)
+        }
 
-        SharedLogger.log(.wireGuard, "AllowedIPs: \(config.allowedIPs.count) entries")
+        SharedLogger.log(.wireGuard, "AllowedIPs: \(peer.allowedIPs.count) entries")
 
-        // Endpoint: Ghost mode → wstunnel proxy, standalone → direct
+        // Endpoint: Ghost mode -> wstunnel loopback proxy, standalone -> direct peer
         let endpointString: String
         if let ws = wstunnel {
-            endpointString = "127.0.0.1:\(ws.localPort)"
-            SharedLogger.log(.wireGuard, "Endpoint override (Ghost): \(endpointString)")
+            endpointString = "\(ws.localHost):\(ws.localPort)"
+            SharedLogger.log(.wireGuard, "Endpoint (Ghost): \(endpointString)")
         } else {
-            endpointString = wireguard.peer.endpoint
+            endpointString = config.peer.endpoint.textual
             SharedLogger.log(.wireGuard, "Endpoint (standalone): \(endpointString)")
         }
 
@@ -88,12 +87,12 @@ enum WireGuardConfigBuilder {
             SharedLogger.log(.wireGuard, "ERROR: Invalid endpoint: \(endpointString)")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
-        config.endpoint = endpoint
+        peer.endpoint = endpoint
 
-        if wireguard.peer.persistentKeepalive > 0 {
-            config.persistentKeepAlive = UInt16(clamping: wireguard.peer.persistentKeepalive)
+        if config.peer.persistentKeepalive > 0 {
+            peer.persistentKeepAlive = UInt16(clamping: config.peer.persistentKeepalive)
         }
 
-        return config
+        return peer
     }
 }

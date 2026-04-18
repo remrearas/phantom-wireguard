@@ -5,27 +5,18 @@ enum WstunnelLifecycle {
     private static var isStarted = false
 
     /// Starts the wstunnel local UDP proxy with the given configuration.
+    /// All fields are pre-validated by `WstunnelConfig`'s typed init —
+    /// non-empty URL, resolvable host, and ports in the UInt16 range
+    /// are guaranteed at this point.
     static func start(config: WstunnelConfig) throws {
-        guard !config.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            SharedLogger.log(.wstunnel, "ERROR: empty wstunnel URL")
-            throw PacketTunnelProviderError.invalidWstunnelConfig
-        }
-        guard config.localPort > 0 else {
-            SharedLogger.log(.wstunnel, "ERROR: invalid localPort \(config.localPort)")
-            throw PacketTunnelProviderError.invalidWstunnelConfig
-        }
         guard !config.remoteHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             SharedLogger.log(.wstunnel, "ERROR: empty remoteHost")
             throw PacketTunnelProviderError.invalidWstunnelConfig
         }
-        guard config.remotePort > 0 else {
-            SharedLogger.log(.wstunnel, "ERROR: invalid remotePort \(config.remotePort)")
-            throw PacketTunnelProviderError.invalidWstunnelConfig
-        }
 
         SharedLogger.log(.wstunnel, "Starting wstunnel...")
-        SharedLogger.log(.wstunnel, "Remote: \(config.url)")
-        SharedLogger.log(.wstunnel, "Local proxy: 127.0.0.1:\(config.localPort)")
+        SharedLogger.log(.wstunnel, "Remote: \(config.url.textual)")
+        SharedLogger.log(.wstunnel, "Local proxy: \(config.localHost):\(config.localPort)")
         SharedLogger.log(.wstunnel, "Forward to: \(config.remoteHost):\(config.remotePort)")
 
         WstunnelBridge.setLogCallback { _, message in
@@ -36,7 +27,7 @@ enum WstunnelLifecycle {
 
         do {
             let wsConfig = WstunnelBridge.Config()
-            try wsConfig.setRemoteURL(config.url)
+            try wsConfig.setRemoteURL(config.url.textual)
             try wsConfig.setHTTPUpgradePathPrefix(config.secret)
             try wsConfig.addTunnelUDP(
                 localPort: config.localPort,

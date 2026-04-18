@@ -25,9 +25,19 @@ class TunnelsManager: ObservableObject {
 
     init(tunnelProviders: [TunnelProviding], providerFactory: TunnelProviderFactory = RealTunnelProviderFactory()) {
         self.providerFactory = providerFactory
-        tunnels = tunnelProviders.map { TunnelContainer(tunnel: $0) }
+        tunnels = Self.sortedByCreatedAt(tunnelProviders.map { TunnelContainer(tunnel: $0) })
         startObservingTunnelStatuses()
         startObservingTunnelConfigurations()
+    }
+
+    /// Newest first — tunnels without a persisted `createdAt` fall back
+    /// to `.distantPast` so they sort below freshly-created ones.
+    static func sortedByCreatedAt(_ list: [TunnelContainer]) -> [TunnelContainer] {
+        list.sorted {
+            let lhs = $0.tunnelConfig?.createdAt ?? .distantPast
+            let rhs = $1.tunnelConfig?.createdAt ?? .distantPast
+            return lhs > rhs
+        }
     }
 
     deinit {
@@ -46,7 +56,7 @@ class TunnelsManager: ObservableObject {
         guard !name.isEmpty else {
             throw TunnelManagementError.tunnelInvalidName
         }
-        if tunnels.contains(where: { $0.name == name }) {
+        if tunnels.contains(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
             throw TunnelManagementError.tunnelAlreadyExistsWithThatName
         }
 
@@ -71,6 +81,7 @@ class TunnelsManager: ObservableObject {
 
         let tunnel = TunnelContainer(tunnel: provider)
         tunnels.append(tunnel)
+        tunnels = Self.sortedByCreatedAt(tunnels)
         return tunnel
     }
 
@@ -80,7 +91,10 @@ class TunnelsManager: ObservableObject {
         guard !name.isEmpty else {
             throw TunnelManagementError.tunnelInvalidName
         }
-        if tunnels.contains(where: { $0.name == name && $0.id != tunnel.id }) {
+        if tunnels.contains(where: {
+            $0.id != tunnel.id
+                && $0.name.caseInsensitiveCompare(name) == .orderedSame
+        }) {
             throw TunnelManagementError.tunnelAlreadyExistsWithThatName
         }
 
@@ -368,6 +382,6 @@ class TunnelsManager: ObservableObject {
             }
         }
 
-        tunnels = newTunnels
+        tunnels = Self.sortedByCreatedAt(newTunnels)
     }
 }

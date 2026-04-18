@@ -31,7 +31,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
         // 2. Start wstunnel if Ghost mode
         if isGhostMode {
-            if let host = URL(string: config.wstunnel!.url)?.host {
+            if let host = config.wstunnel!.url.url.host {
                 wstunnelServerIPv4 = DNSResolver.resolveIPv4(host)
                 wstunnelServerIPv6 = DNSResolver.resolveIPv6(host)
                 SharedLogger.log(.tunnel, "Wstunnel server resolved: \(host) \u{2192} v4:\(wstunnelServerIPv4) v6:\(wstunnelServerIPv6)")

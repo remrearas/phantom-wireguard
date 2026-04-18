@@ -36,7 +36,7 @@ extension NETunnelProviderProtocol {
 
         providerBundleIdentifier = "com.remrearas.Phantom-WG.PhantomTunnel"
         providerConfiguration = ["keychainRef": newRef]
-        serverAddress = config.wstunnel?.url ?? config.wireguard.peer.endpoint
+        serverAddress = config.wstunnel?.url.textual ?? config.wireguard.peer.endpoint.textual
     }
 
     /// Delete the config data from Keychain when tunnel is removed.

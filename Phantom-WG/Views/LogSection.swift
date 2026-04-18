@@ -13,7 +13,7 @@ struct LogView: View {
                             Text(entry.tag)
                                 .font(.system(.caption2, design: .monospaced))
                                 .fontWeight(.bold)
-                                .foregroundStyle(PhantomUIEngine.logTagColor(entry.tag))
+                                .foregroundStyle(colorForTag(entry.tag))
                                 .frame(width: 28, alignment: .leading)
 
                             Text(entry.text)
@@ -50,4 +50,12 @@ struct LogView: View {
         }
     }
 
+    private func colorForTag(_ tag: String) -> Color {
+        switch tag {
+        case "WS":  return .orange
+        case "WG":  return .green
+        case "TUN": return .blue
+        default:    return .secondary
+        }
+    }
 }

@@ -7,12 +7,6 @@ struct TunnelListView: View {
     @State private var errorMessage: String?
     @State private var showingError = false
 
-    private var canModifyList: Bool {
-        PhantomUIEngine.canModifyTunnelList(
-            statuses: tunnelsManager.tunnels.map(\.status)
-        )
-    }
-
     var body: some View {
         NavigationStack {
             Group {
@@ -26,7 +20,6 @@ struct TunnelListView: View {
                             }
                         }
                         .onDelete { offsets in deleteTunnels(at: offsets) }
-                        .deleteDisabled(!canModifyList)
 
                         aboutSection
                     }
@@ -49,10 +42,6 @@ struct TunnelListView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
-                    .disabled(!PhantomUIEngine.canAddTunnel(
-                        tunnelCount: tunnelsManager.tunnels.count,
-                        statuses: tunnelsManager.tunnels.map(\.status)
-                    ))
                 }
             }
             .sheet(isPresented: $showingImport) {
@@ -98,10 +87,6 @@ struct TunnelListView: View {
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
-            .disabled(!PhantomUIEngine.canAddTunnel(
-                tunnelCount: tunnelsManager.tunnels.count,
-                statuses: tunnelsManager.tunnels.map(\.status)
-            ))
 
             Spacer()
 
@@ -171,24 +156,19 @@ struct TunnelRow: View {
 
             Spacer()
 
-            Toggle("", isOn: PhantomUIEngine.tunnelToggleBinding(
-                for: tunnel, manager: tunnelsManager))
+            Toggle("", isOn: tunnel.toggleBinding(manager: tunnelsManager))
                 .labelsHidden()
-                .disabled(!PhantomUIEngine.canToggleTunnel(
-                    tunnelStatus: tunnel.status,
-                    allStatuses: tunnelsManager.tunnels.map(\.status)
-                ))
         }
         .padding(.vertical, 2)
     }
 
     private var statusIndicator: some View {
-        let color = PhantomUIEngine.statusColor(for: tunnel.status)
+        let color = tunnel.status.color
         return ZStack {
             Circle()
                 .fill(color.opacity(0.15))
                 .frame(width: 32, height: 32)
-            Image(systemName: PhantomUIEngine.statusIcon(for: tunnel.status))
+            Image(systemName: tunnel.status.iconName)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(color)
         }
