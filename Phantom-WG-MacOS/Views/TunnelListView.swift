@@ -1,71 +1,127 @@
 import SwiftUI
+import AppKit
 
 struct TunnelListView: View {
     @EnvironmentObject var tunnelsManager: TunnelsManager
     @EnvironmentObject var loc: LocalizationManager
+    @EnvironmentObject var extensionState: SystemExtensionState
     @State private var showingImport = false
     @State private var errorMessage: String?
     @State private var showingError = false
 
-    private var canModifyList: Bool {
-        PhantomUIEngine.canModifyTunnelList(statuses: tunnelsManager.tunnels.map(\.status))
-    }
+    @State private var showingUninstallConfirm = false
+    @State private var uninstalling = false
 
-    private var canAdd: Bool {
-        PhantomUIEngine.canAddTunnel(
-            tunnelCount: tunnelsManager.tunnels.count,
-            statuses: tunnelsManager.tunnels.map(\.status)
-        )
+    /// Display order: non-inactive tunnels pinned to the top (preserves
+    /// their mutual order — already newest-first via `TunnelsManager`);
+    /// inactive tunnels follow in the same newest-first order. When a
+    /// tunnel transitions back to inactive it slots into its natural
+    /// `createdAt`-based position in the lower group.
+    private var displayTunnels: [TunnelContainer] {
+        let active = tunnelsManager.tunnels.filter { $0.status != .inactive }
+        let inactive = tunnelsManager.tunnels.filter { $0.status == .inactive }
+        return active + inactive
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if tunnelsManager.tunnels.isEmpty {
-                    emptyState
-                } else {
-                    List {
-                        ForEach(tunnelsManager.tunnels) { tunnel in
-                            NavigationLink(destination: TunnelDetailView(tunnel: tunnel)) {
-                                TunnelRow(tunnel: tunnel)
-                            }
-                        }
-                        .onDelete { offsets in deleteTunnels(at: offsets) }
-                        .deleteDisabled(!canModifyList)
+            listContent
+                .navigationTitle(loc.t("app_title"))
+                .toolbar { toolbarContent }
+                .navigationDestination(isPresented: $showingImport) {
+                    TunnelImportView()
+                }
+                .modifier(UninstallAlerts(
+                    loc: loc,
+                    errorMessage: $errorMessage,
+                    showingError: $showingError,
+                    showingUninstallConfirm: $showingUninstallConfirm,
+                    onConfirm: runUninstall
+                ))
+                .disabled(uninstalling)
+        }
+    }
 
-                        aboutSection
-                    }
-                    .listStyle(.inset)
-                }
-            }
-            .navigationTitle(loc.t("app_title"))
-            .toolbar {
-                ToolbarItem(placement: .navigation) {
-                    Button {
-                        loc.current = loc.current == .tr ? .en : .tr
-                    } label: {
-                        Text(loc.current == .tr ? LocalizationManager.Language.en.flag : LocalizationManager.Language.tr.flag)
-                            .font(.title2)
+    @ViewBuilder
+    private var listContent: some View {
+        if tunnelsManager.tunnels.isEmpty {
+            emptyState
+        } else {
+            List {
+                ForEach(displayTunnels) { tunnel in
+                    NavigationLink(destination: TunnelDetailView(tunnel: tunnel)) {
+                        TunnelRow(tunnel: tunnel)
                     }
                 }
+                .onDelete { offsets in deleteTunnels(at: offsets) }
 
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingImport = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .disabled(!canAdd)
+                aboutSection
+            }
+            .listStyle(.inset)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            settingsMenu
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                showingImport = true
+            } label: {
+                Image(systemName: "plus")
+            }
+        }
+    }
+
+    // MARK: - Settings Menu
+
+    private var settingsMenu: some View {
+        Menu {
+            Menu {
+                Button {
+                    loc.current = .en
+                } label: {
+                    languageRow(language: .en, isSelected: loc.current == .en)
                 }
+                Button {
+                    loc.current = .tr
+                } label: {
+                    languageRow(language: .tr, isSelected: loc.current == .tr)
+                }
+            } label: {
+                Label(loc.t("settings_language"), systemImage: "globe.badge.chevron.backward")
             }
-            .sheet(isPresented: $showingImport) {
-                TunnelImportView()
+
+            Divider()
+
+            Link(destination: URL(string: "https://www.phantom.tc/docs")!) {
+                Label(loc.t("documentation"), systemImage: "book")
             }
-            .alert(loc.t("error"), isPresented: $showingError) {
-                Button(loc.t("ok")) {}
-            } message: {
-                Text(errorMessage ?? "")
+            Link(destination: URL(string: "https://www.phantom.tc")!) {
+                Label(loc.t("website"), systemImage: "globe")
             }
+
+            Divider()
+
+            Button(role: .destructive) {
+                showingUninstallConfirm = true
+            } label: {
+                Label(loc.t("settings_uninstall"), systemImage: "trash")
+            }
+            .disabled(uninstalling)
+        } label: {
+            Image(systemName: "gearshape")
+        }
+    }
+
+    @ViewBuilder
+    private func languageRow(language: LocalizationManager.Language, isSelected: Bool) -> some View {
+        if isSelected {
+            Label("\(language.flag) \(language.displayName)", systemImage: "checkmark")
+        } else {
+            Text("\(language.flag) \(language.displayName)")
         }
     }
 
@@ -101,7 +157,6 @@ struct TunnelListView: View {
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
-            .disabled(!canModifyList)
 
             Spacer()
 
@@ -132,8 +187,29 @@ struct TunnelListView: View {
         }
     }
 
+    // MARK: - Uninstall
+
+    private func runUninstall() {
+        uninstalling = true
+        Task {
+            do {
+                try await tunnelsManager.removeAll()
+                try await extensionState.deactivate()
+                uninstalling = false
+                // On success, extensionState.status transitions to .deactivated
+                // and PhantomApp swaps the root view to extensionDeactivatedView;
+                // no further work is needed here.
+            } catch {
+                uninstalling = false
+                errorMessage = error.localizedDescription
+                showingError = true
+            }
+        }
+    }
+
     private func deleteTunnels(at offsets: IndexSet) {
-        let tunnelsToDelete = offsets.map { tunnelsManager.tunnels[$0] }
+        let visible = displayTunnels
+        let tunnelsToDelete = offsets.map { visible[$0] }
         for tunnel in tunnelsToDelete {
             if tunnel.status != .inactive {
                 tunnelsManager.startDeactivation(of: tunnel)
@@ -147,6 +223,33 @@ struct TunnelListView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Uninstall Alerts
+
+private struct UninstallAlerts: ViewModifier {
+    let loc: LocalizationManager
+    @Binding var errorMessage: String?
+    @Binding var showingError: Bool
+    @Binding var showingUninstallConfirm: Bool
+    let onConfirm: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .alert(loc.t("error"), isPresented: $showingError) {
+                Button(loc.t("ok")) {}
+            } message: {
+                Text(errorMessage ?? "")
+            }
+            .alert(loc.t("uninstall_confirm_title"), isPresented: $showingUninstallConfirm) {
+                Button(loc.t("cancel"), role: .cancel) {}
+                Button(loc.t("uninstall_confirm_action"), role: .destructive) {
+                    onConfirm()
+                }
+            } message: {
+                Text(loc.t("uninstall_confirm_message"))
+            }
     }
 }
 
@@ -171,24 +274,20 @@ struct TunnelRow: View {
 
             Spacer()
 
-            Toggle("", isOn: PhantomUIEngine.tunnelToggleBinding(for: tunnel, manager: tunnelsManager))
+            Toggle("", isOn: tunnel.toggleBinding(manager: tunnelsManager))
                 .toggleStyle(.switch)
                 .labelsHidden()
-                .disabled(!PhantomUIEngine.canToggleTunnel(
-                    tunnelStatus: tunnel.status,
-                    allStatuses: tunnelsManager.tunnels.map(\.status)
-                ))
         }
         .padding(.vertical, 2)
     }
 
     private var statusIndicator: some View {
-        let color = PhantomUIEngine.statusColor(for: tunnel.status)
+        let color = tunnel.status.color
         return ZStack {
             Circle()
                 .fill(color.opacity(0.15))
                 .frame(width: 32, height: 32)
-            Image(systemName: PhantomUIEngine.statusIcon(for: tunnel.status))
+            Image(systemName: tunnel.status.iconName)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(color)
         }

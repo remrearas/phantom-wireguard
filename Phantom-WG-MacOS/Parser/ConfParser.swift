@@ -1,17 +1,24 @@
 import Foundation
 
-/// Parses .conf format — [Wstunnel] (optional), [Interface], [Peer].
-/// Follows WireGuardKit's key=value parse pattern.
-/// Own parser because WireGuardKit is not available in the main app target.
-
+/// Structural parser for WireGuard `.conf` text.
+///
+/// Produces a `TunnelDraft` populated from `[Wstunnel]` (optional),
+/// `[Interface]`, and `[Peer]` sections. Field-level value validation
+/// (keys, addresses, endpoint, integers) is deferred to
+/// `TunnelDraft.validate()` — the parser only rejects input it cannot
+/// structurally decompose (missing sections, missing required keys,
+/// malformed `Tunnel = udp://h:p:h:p`).
+///
+/// The draft's `name` is left empty; the caller sets it before
+/// validation.
 enum ConfParser {
 
-    enum ParseError: Error, LocalizedError {
+    enum ParseError: Error, LocalizedError, Equatable {
         case emptyInput
         case noInterfaceSection
         case noPeerSection
         case missingKey(section: String, key: String)
-        case invalidValue(section: String, key: String, detail: String)
+        case invalidTunnelFormat(section: String, key: String)
 
         var errorDescription: String? {
             switch self {
@@ -23,16 +30,15 @@ enum ConfParser {
                 return "Missing [Peer] section"
             case .missingKey(let section, let key):
                 return "[\(section)] missing required key: \(key)"
-            case .invalidValue(let section, let key, let detail):
-                return "[\(section)] invalid \(key): \(detail)"
+            case .invalidTunnelFormat(let section, let key):
+                return "[\(section)] invalid \(key): expected udp://host:port:host:port"
             }
         }
     }
 
-    /// Parses .conf string and returns TunnelConfig.
-    /// Ghost mode if [Wstunnel] present, standalone WireGuard otherwise.
-    /// Name is left empty — caller should set it before validation.
-    static func parse(_ input: String) throws -> TunnelConfig {
+    // MARK: - Entry Point
+
+    static func parse(_ input: String) throws -> TunnelDraft {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw ParseError.emptyInput }
 
@@ -45,27 +51,27 @@ enum ConfParser {
             throw ParseError.noPeerSection
         }
 
-        let wstunnel: WstunnelConfig?
+        let wstunnelDraft: WstunnelDraft?
         if let wsAttrs = sections["wstunnel"] {
-            wstunnel = try parseWstunnel(wsAttrs)
+            wstunnelDraft = try parseWstunnel(wsAttrs)
         } else {
-            wstunnel = nil
+            wstunnelDraft = nil
         }
 
-        let iface = try parseInterface(interfaceAttrs)
-        let peer = try parsePeer(peerAttrs)
+        let interfaceDraft = try parseInterface(interfaceAttrs)
+        let peerDraft = try parsePeer(peerAttrs)
 
-        return TunnelConfig(
+        return TunnelDraft(
             name: "",
-            wireguard: WireguardConfig(interface: iface, peer: peer),
-            wstunnel: wstunnel
+            wireguard: WireguardDraft(interface: interfaceDraft, peer: peerDraft),
+            wstunnel: wstunnelDraft
         )
     }
 
     // MARK: - Section Splitting
 
-    /// Splits lines into sections — collects key=value pairs.
-    /// Multi-entry keys (address, allowedips, dns) are joined with commas.
+    /// Collects key/value pairs per `[Section]`. Multi-entry keys
+    /// (Address, AllowedIPs, DNS) are merged with comma separators.
     private static func splitSections(_ input: String) -> [String: [String: String]] {
         let lines = input.components(separatedBy: .newlines)
         var result: [String: [String: String]] = [:]
@@ -104,7 +110,7 @@ enum ConfParser {
 
     // MARK: - Wstunnel
 
-    private static func parseWstunnel(_ attrs: [String: String]) throws -> WstunnelConfig {
+    private static func parseWstunnel(_ attrs: [String: String]) throws -> WstunnelDraft {
         guard let url = attrs["url"], !url.isEmpty else {
             throw ParseError.missingKey(section: "Wstunnel", key: "Url")
         }
@@ -120,24 +126,23 @@ enum ConfParser {
         if raw.lowercased().hasPrefix("udp://") { raw = String(raw.dropFirst(6)) }
 
         let parts = raw.split(separator: ":", maxSplits: 3).map(String.init)
-        guard parts.count == 4,
-              let localPort = UInt16(parts[1]),
-              let remotePort = UInt16(parts[3]) else {
-            throw ParseError.invalidValue(
-                section: "Wstunnel", key: "Tunnel",
-                detail: "expected udp://host:port:host:port"
-            )
+        guard parts.count == 4 else {
+            throw ParseError.invalidTunnelFormat(section: "Wstunnel", key: "Tunnel")
         }
 
-        return WstunnelConfig(
-            url: url, secret: secret,
-            localPort: localPort, remoteHost: parts[2], remotePort: remotePort
+        return WstunnelDraft(
+            url: url,
+            secret: secret,
+            localHost: parts[0],
+            localPort: parts[1],
+            remoteHost: parts[2],
+            remotePort: parts[3]
         )
     }
 
     // MARK: - Interface
 
-    private static func parseInterface(_ attrs: [String: String]) throws -> InterfaceConfig {
+    private static func parseInterface(_ attrs: [String: String]) throws -> InterfaceDraft {
         guard let privateKey = attrs["privatekey"], !privateKey.isEmpty else {
             throw ParseError.missingKey(section: "Interface", key: "PrivateKey")
         }
@@ -145,17 +150,17 @@ enum ConfParser {
             throw ParseError.missingKey(section: "Interface", key: "Address")
         }
 
-        return InterfaceConfig(
+        return InterfaceDraft(
             privateKey: privateKey,
-            address: address,
-            dns: attrs["dns"] ?? "1.1.1.1, 9.9.9.9",
-            mtu: Int(attrs["mtu"] ?? "1420") ?? 1420
+            addresses: address,
+            dnsServers: attrs["dns"] ?? "1.1.1.1, 9.9.9.9",
+            mtu: attrs["mtu"] ?? "1420"
         )
     }
 
     // MARK: - Peer
 
-    private static func parsePeer(_ attrs: [String: String]) throws -> PeerConfig {
+    private static func parsePeer(_ attrs: [String: String]) throws -> PeerDraft {
         guard let publicKey = attrs["publickey"], !publicKey.isEmpty else {
             throw ParseError.missingKey(section: "Peer", key: "PublicKey")
         }
@@ -163,12 +168,12 @@ enum ConfParser {
             throw ParseError.missingKey(section: "Peer", key: "Endpoint")
         }
 
-        return PeerConfig(
+        return PeerDraft(
             publicKey: publicKey,
-            presharedKey: attrs["presharedkey"],
+            presharedKey: attrs["presharedkey"] ?? "",
             allowedIPs: attrs["allowedips"] ?? "0.0.0.0/0, ::/0",
             endpoint: endpoint,
-            persistentKeepalive: Int(attrs["persistentkeepalive"] ?? "25") ?? 25
+            persistentKeepalive: attrs["persistentkeepalive"] ?? "25"
         )
     }
 }

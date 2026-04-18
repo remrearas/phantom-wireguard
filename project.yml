@@ -122,6 +122,7 @@ targets:
           - "**/.DS_Store"
       # Shared files from main app
       - path: Phantom-WG-MacOS/Models/TunnelConfig.swift
+      - path: Phantom-WG-MacOS/Models/ConfigTypes.swift
       - path: Phantom-WG-MacOS/Models/NETunnelProviderProtocol+Config.swift
       - path: Phantom-WG-MacOS/SharedConstants.swift
       - path: Phantom-WG-MacOS/WstunnelBridge.swift

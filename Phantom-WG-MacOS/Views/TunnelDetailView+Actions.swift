@@ -4,54 +4,132 @@ import SwiftUI
 
 extension TunnelDetailView {
 
-    func loadConfig() {
+    func loadDraft() {
         if let config = tunnel.tunnelConfig {
-            editConfig = config
-            originalConfig = config
+            let next = TunnelDraft(from: config)
+            draft = next
+            originalDraft = next
+            fieldErrors = [:]
         }
     }
 
-    func saveConfig() {
+    /// Commits the current draft via native form submit (Enter on a
+    /// field). If the draft is unchanged or equal to the last committed
+    /// snapshot, this is a no-op. If validation fails, field errors are
+    /// surfaced inline and auto-dismiss after a short delay so the UI
+    /// returns to the default state on its own. On success the typed
+    /// config is pushed to the tunnel provider.
+    func commitDraft() {
+        guard isEditable, draft != originalDraft else { return }
+
+        let result = draft.validate()
+
+        // Local validation failed — revert the draft immediately so the
+        // user sees the known-good value, then surface the errors for a
+        // few seconds before the banner fades out.
+        if !result.errors.isEmpty {
+            rejectCommit(with: result.errors)
+            return
+        }
+
+        guard let config = result.config else { return }
+
         Task {
             do {
-                try await tunnelsManager.modify(tunnel: tunnel, with: editConfig)
-                originalConfig = editConfig
+                try await tunnelsManager.modify(tunnel: tunnel, with: config)
+                originalDraft = draft
+            } catch TunnelManagementError.tunnelAlreadyExistsWithThatName {
+                rejectCommit(with: [.name: .nameAlreadyExists])
+            } catch TunnelManagementError.tunnelInvalidName {
+                rejectCommit(with: [.name: .empty])
             } catch {
+                // Genuine system-level failure (NE framework error,
+                // saving preferences, etc.) — surface via modal alert
+                // because it is not tied to any single form field.
                 errorMessage = error.localizedDescription
                 showingError = true
             }
         }
     }
 
+    /// Rolls the draft back to the last committed snapshot and marks
+    /// the offending fields with typed errors. The error banner is
+    /// scheduled to fade out on its own; the draft itself has already
+    /// returned to the known-good state.
+    private func rejectCommit(
+        with errors: [TunnelDraft.Field: FieldValidationError]
+    ) {
+        programmaticRevert = true
+        draft = originalDraft
+        fieldErrors = errors
+        scheduleFieldErrorClear()
+    }
+
+    /// Removes the inline error banner after a short grace period so
+    /// the form returns to a neutral appearance. The draft itself is
+    /// untouched here — it has already been reverted at the moment of
+    /// rejection, so the user always looks at a known-good value.
+    private func scheduleFieldErrorClear() {
+        fieldErrorClearTask?.cancel()
+        fieldErrorClearTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .seconds(3))
+            } catch {
+                return
+            }
+            withAnimation(.default) {
+                fieldErrors = [:]
+            }
+            fieldErrorClearTask = nil
+        }
+    }
+
+    /// `isEditable` is defined as a private computed property on the
+    /// struct; actions extension re-derives it here so commit logic
+    /// doesn't need a cross-file reference.
+    private var isEditable: Bool { tunnel.status == .inactive }
+
     func copyConf() {
+        // Validate-before-copy so the output is always well-formed; if
+        // validation fails we fall back to whatever the user has typed.
+        let result = draft.validate()
+        let contents = result.config?.asConfString() ?? draftToBestEffortConfString()
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(contents, forType: .string)
+    }
+
+    /// Fallback serializer used when the draft has unresolved validation
+    /// errors — emits whatever the user has typed so they can still copy
+    /// partial work out for external inspection.
+    private func draftToBestEffortConfString() -> String {
         var lines: [String] = []
 
-        if let ws = editConfig.wstunnel {
+        if let ws = draft.wstunnel {
             lines.append("[Wstunnel]")
             lines.append("Url = \(ws.url)")
             lines.append("Secret = \(ws.secret)")
-            lines.append("Tunnel = udp://127.0.0.1:\(ws.localPort):\(ws.remoteHost):\(ws.remotePort)")
+            lines.append("Tunnel = udp://\(ws.localHost):\(ws.localPort):\(ws.remoteHost):\(ws.remotePort)")
             lines.append("")
         }
 
         lines.append("[Interface]")
-        lines.append("PrivateKey = \(editConfig.wireguard.interface.privateKey)")
-        lines.append("Address = \(editConfig.wireguard.interface.address)")
-        lines.append("DNS = \(editConfig.wireguard.interface.dns)")
-        lines.append("MTU = \(editConfig.wireguard.interface.mtu)")
+        lines.append("PrivateKey = \(draft.wireguard.interface.privateKey)")
+        lines.append("Address = \(draft.wireguard.interface.addresses)")
+        lines.append("DNS = \(draft.wireguard.interface.dnsServers)")
+        lines.append("MTU = \(draft.wireguard.interface.mtu)")
         lines.append("")
 
         lines.append("[Peer]")
-        lines.append("PublicKey = \(editConfig.wireguard.peer.publicKey)")
-        if let psk = editConfig.wireguard.peer.presharedKey, !psk.isEmpty {
-            lines.append("PresharedKey = \(psk)")
+        lines.append("PublicKey = \(draft.wireguard.peer.publicKey)")
+        if !draft.wireguard.peer.presharedKey.isEmpty {
+            lines.append("PresharedKey = \(draft.wireguard.peer.presharedKey)")
         }
-        lines.append("AllowedIPs = \(editConfig.wireguard.peer.allowedIPs)")
-        lines.append("Endpoint = \(editConfig.wireguard.peer.endpoint)")
-        lines.append("PersistentKeepalive = \(editConfig.wireguard.peer.persistentKeepalive)")
+        lines.append("AllowedIPs = \(draft.wireguard.peer.allowedIPs)")
+        lines.append("Endpoint = \(draft.wireguard.peer.endpoint)")
+        lines.append("PersistentKeepalive = \(draft.wireguard.peer.persistentKeepalive)")
 
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+        return lines.joined(separator: "\n")
     }
 
     func deleteTunnel() {

@@ -108,7 +108,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
         isGhostMode = true
 
-        if let host = URL(string: wstunnel.url)?.host {
+        if let host = wstunnel.url.url.host {
             wstunnelServerIPv4 = DNSResolver.resolveIPv4(host)
             wstunnelServerIPv6 = DNSResolver.resolveIPv6(host)
             TunnelLogger.log(.tunnel, "DNS: \(host) -> v4:\(wstunnelServerIPv4) v6:\(wstunnelServerIPv6)")

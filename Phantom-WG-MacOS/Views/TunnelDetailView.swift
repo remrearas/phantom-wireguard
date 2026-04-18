@@ -1,5 +1,10 @@
 import SwiftUI
 
+/// Tunnel detail + editor. The user can toggle activation, read live
+/// stats, browse logs, and edit every configuration field. Edits are
+/// staged in a `TunnelDraft`; the explicit Save button validates the
+/// draft and applies the typed `TunnelConfig` to storage. Field-level
+/// errors highlight offending inputs inline.
 struct TunnelDetailView: View {
     @ObservedObject var tunnel: TunnelContainer
     @StateObject private var logStore: LogStore
@@ -7,8 +12,14 @@ struct TunnelDetailView: View {
     @EnvironmentObject var loc: LocalizationManager
     @Environment(\.dismiss) var dismiss
 
-    @State var editConfig: TunnelConfig = .empty()
-    @State var originalConfig: TunnelConfig = .empty()
+    @State var draft: TunnelDraft = .empty()
+    @State var originalDraft: TunnelDraft = .empty()
+    @State var fieldErrors: [TunnelDraft.Field: FieldValidationError] = [:]
+    @State var fieldErrorClearTask: Task<Void, Never>?
+    /// Distinguishes a programmatic revert (rejection of an invalid
+    /// commit) from a user edit. Set to `true` just before reverting
+    /// the draft; the next `onChange(of: draft)` consumes and resets it.
+    @State var programmaticRevert: Bool = false
     @State var showingDeleteConfirmation = false
     @State var errorMessage: String?
     @State var showingError = false
@@ -20,8 +31,8 @@ struct TunnelDetailView: View {
     @State var txBytes: String = "—"
     @State var statsPollingTask: Task<Void, Never>?
 
-    /// Engine'den türetilen convenience — tüm field disabled/enabled kararları buradan
-    private var isEditable: Bool { PhantomUIEngine.canEditConfig(status: tunnel.status) }
+    /// Config fields are only editable while the tunnel is inactive.
+    private var isEditable: Bool { tunnel.status == .inactive }
 
     init(tunnel: TunnelContainer) {
         self.tunnel = tunnel
@@ -33,29 +44,45 @@ struct TunnelDetailView: View {
             statusSection
             statsSection
             nameSection
-            if editConfig.isGhostMode { wstunnelSection }
+            if draft.wstunnel != nil { wstunnelSection }
             interfaceSection
             peerSection
             logSection
             actionsSection
         }
-        .navigationTitle(editConfig.name.isEmpty ? loc.t("detail_tunnel") : editConfig.name)
-        .onChange(of: editConfig) { _, newConfig in
-            if PhantomUIEngine.shouldAutoSave(
-                status: tunnel.status,
-                hasChanges: newConfig != originalConfig
-            ) {
-                saveConfig()
+        .navigationTitle(draft.name.isEmpty ? loc.t("detail_tunnel") : draft.name)
+        .onChange(of: draft) { _, _ in
+            // Skip the clearing side-effect when the change originated
+            // from a programmatic revert (invalid commit rollback) so
+            // the accompanying error banner can still be seen.
+            if programmaticRevert {
+                programmaticRevert = false
+                return
+            }
+            // User edit: drop stale errors and cancel the auto-dismiss
+            // timer — the next commit re-validates the full draft.
+            if !fieldErrors.isEmpty {
+                fieldErrors = [:]
+                fieldErrorClearTask?.cancel()
+                fieldErrorClearTask = nil
             }
         }
+        .onSubmit {
+            // Native form commit: when any field's Enter fires, validate
+            // the draft and persist if it's clean. Invalid fields show
+            // their errors inline; the draft itself remains editable.
+            commitDraft()
+        }
         .onAppear {
-            loadConfig()
+            loadDraft()
             logStore.startPolling()
             if tunnel.status == .active { startStatsPolling() }
         }
         .onDisappear {
             logStore.stopPolling()
             stopStatsPolling()
+            fieldErrorClearTask?.cancel()
+            fieldErrorClearTask = nil
         }
         .confirmationDialog(loc.t("detail_delete_confirm_title"),
                             isPresented: $showingDeleteConfirmation,
@@ -83,31 +110,32 @@ struct TunnelDetailView: View {
     // MARK: - Sections
 
     private var statusSection: some View {
-        Section {
+        let color = tunnel.status.color
+        return Section {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(PhantomUIEngine.statusColor(for: tunnel.status).opacity(0.12))
+                        .fill(color.opacity(0.12))
                         .frame(width: 36, height: 36)
-                    Image(systemName: PhantomUIEngine.statusIcon(for: tunnel.status))
+                    Image(systemName: tunnel.status.iconName)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(PhantomUIEngine.statusColor(for: tunnel.status))
+                        .foregroundStyle(color)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(tunnel.status.localizedDescription)
                             .font(.body.weight(.medium))
-                            .foregroundStyle(PhantomUIEngine.statusColor(for: tunnel.status))
+                            .foregroundStyle(color)
 
-                        Text(editConfig.isGhostMode ? "Ghost" : "WireGuard")
+                        Text(draft.wstunnel != nil ? "Ghost" : "WireGuard")
                             .font(.caption2.weight(.semibold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
-                                Capsule().fill(editConfig.isGhostMode ? Color.purple.opacity(0.15) : Color.blue.opacity(0.15))
+                                Capsule().fill((draft.wstunnel != nil) ? Color.purple.opacity(0.15) : Color.blue.opacity(0.15))
                             )
-                            .foregroundStyle(editConfig.isGhostMode ? .purple : .blue)
+                            .foregroundStyle((draft.wstunnel != nil) ? .purple : .blue)
                     }
                     if let error = tunnel.lastActivationError {
                         Text(error.alertText)
@@ -118,13 +146,9 @@ struct TunnelDetailView: View {
 
                 Spacer()
 
-                Toggle("", isOn: PhantomUIEngine.tunnelToggleBinding(for: tunnel, manager: tunnelsManager))
+                Toggle("", isOn: tunnel.toggleBinding(manager: tunnelsManager))
                     .toggleStyle(.switch)
                     .labelsHidden()
-                    .disabled(!PhantomUIEngine.canToggleTunnel(
-                        tunnelStatus: tunnel.status,
-                        allStatuses: tunnelsManager.tunnels.map(\.status)
-                    ))
             }
         } header: {
             Label(loc.t("detail_status"), systemImage: "antenna.radiowaves.left.and.right")
@@ -143,7 +167,12 @@ struct TunnelDetailView: View {
 
     private var nameSection: some View {
         Section {
-            PhantomTextField(label: loc.t("detail_name"), text: $editConfig.name, isDisabled: !isEditable)
+            PhantomTextField(
+                label: loc.t("detail_name"),
+                text: $draft.name,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .name)
+            )
         } header: {
             Label(loc.t("detail_general"), systemImage: "gearshape")
         }
@@ -151,39 +180,76 @@ struct TunnelDetailView: View {
 
     @ViewBuilder
     private var wstunnelSection: some View {
-        if editConfig.wstunnel != nil {
+        if let wstunnelBinding = Binding($draft.wstunnel) {
             Section {
-                PhantomTextField(label: loc.t("detail_server_url"), text: wstunnelBinding(\.url), isDisabled: !isEditable)
-                PhantomTextField(label: loc.t("detail_secret"), text: wstunnelBinding(\.secret), isDisabled: !isEditable)
-                PhantomNumericField(label: loc.t("detail_local_port"), value: wstunnelPortBinding(\.localPort), isDisabled: !isEditable)
-                PhantomTextField(label: loc.t("detail_remote_host"), text: wstunnelBinding(\.remoteHost), isDisabled: !isEditable)
-                PhantomNumericField(label: loc.t("detail_remote_port"), value: wstunnelPortBinding(\.remotePort), isDisabled: !isEditable)
+                PhantomTextField(
+                    label: loc.t("detail_server_url"),
+                    text: wstunnelBinding.url,
+                    isDisabled: !isEditable,
+                    errorMessage: message(for: .wstunnelUrl)
+                )
+                PhantomTextField(
+                    label: loc.t("detail_secret"),
+                    text: wstunnelBinding.secret,
+                    isDisabled: !isEditable,
+                    errorMessage: message(for: .wstunnelSecret)
+                )
+                PhantomTextField(
+                    label: loc.t("detail_local_host"),
+                    text: wstunnelBinding.localHost,
+                    isDisabled: !isEditable,
+                    errorMessage: message(for: .wstunnelLocalHost)
+                )
+                PhantomStringNumericField(
+                    label: loc.t("detail_local_port"),
+                    text: wstunnelBinding.localPort,
+                    isDisabled: !isEditable,
+                    errorMessage: message(for: .wstunnelLocalPort)
+                )
+                PhantomTextField(
+                    label: loc.t("detail_remote_host"),
+                    text: wstunnelBinding.remoteHost,
+                    isDisabled: !isEditable,
+                    errorMessage: message(for: .wstunnelRemoteHost)
+                )
+                PhantomStringNumericField(
+                    label: loc.t("detail_remote_port"),
+                    text: wstunnelBinding.remotePort,
+                    isDisabled: !isEditable,
+                    errorMessage: message(for: .wstunnelRemotePort)
+                )
             } header: {
                 Label(loc.t("detail_wstunnel"), systemImage: "network.badge.shield.half.filled")
             }
         }
     }
 
-    private func wstunnelBinding(_ keyPath: WritableKeyPath<WstunnelConfig, String>) -> Binding<String> {
-        Binding(
-            get: { editConfig.wstunnel?[keyPath: keyPath] ?? "" },
-            set: { editConfig.wstunnel?[keyPath: keyPath] = $0 }
-        )
-    }
-
-    private func wstunnelPortBinding(_ keyPath: WritableKeyPath<WstunnelConfig, UInt16>) -> Binding<UInt16> {
-        Binding(
-            get: { editConfig.wstunnel?[keyPath: keyPath] ?? 0 },
-            set: { editConfig.wstunnel?[keyPath: keyPath] = $0 }
-        )
-    }
-
     private var interfaceSection: some View {
         Section {
-            PhantomTextField(label: loc.t("detail_private_key"), text: $editConfig.wireguard.interface.privateKey, isDisabled: !isEditable)
-            PhantomTextField(label: loc.t("detail_address"), text: $editConfig.wireguard.interface.address, isDisabled: !isEditable)
-            PhantomTextField(label: loc.t("detail_dns"), text: $editConfig.wireguard.interface.dns, isDisabled: !isEditable)
-            PhantomNumericField(label: loc.t("detail_mtu"), value: $editConfig.wireguard.interface.mtu, isDisabled: !isEditable)
+            PhantomTextField(
+                label: loc.t("detail_private_key"),
+                text: $draft.wireguard.interface.privateKey,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .interfacePrivateKey)
+            )
+            PhantomTextField(
+                label: loc.t("detail_address"),
+                text: $draft.wireguard.interface.addresses,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .interfaceAddresses)
+            )
+            PhantomTextField(
+                label: loc.t("detail_dns"),
+                text: $draft.wireguard.interface.dnsServers,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .interfaceDnsServers)
+            )
+            PhantomStringNumericField(
+                label: loc.t("detail_mtu"),
+                text: $draft.wireguard.interface.mtu,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .interfaceMTU)
+            )
         } header: {
             Label(loc.t("detail_interface"), systemImage: "rectangle.connected.to.line.below")
         }
@@ -191,14 +257,35 @@ struct TunnelDetailView: View {
 
     private var peerSection: some View {
         Section {
-            PhantomTextField(label: loc.t("detail_public_key"), text: $editConfig.wireguard.peer.publicKey, isDisabled: !isEditable)
-            PhantomTextField(label: loc.t("detail_preshared_key"), text: presharedKeyBinding, isDisabled: !isEditable)
-            PhantomTextField(label: loc.t("detail_allowed_ips"), text: $editConfig.wireguard.peer.allowedIPs, isDisabled: !isEditable)
-            PhantomTextField(label: loc.t("detail_endpoint"), text: $editConfig.wireguard.peer.endpoint, isDisabled: !isEditable)
-            PhantomNumericField(
+            PhantomTextField(
+                label: loc.t("detail_public_key"),
+                text: $draft.wireguard.peer.publicKey,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerPublicKey)
+            )
+            PhantomTextField(
+                label: loc.t("detail_preshared_key"),
+                text: $draft.wireguard.peer.presharedKey,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerPresharedKey)
+            )
+            PhantomTextField(
+                label: loc.t("detail_allowed_ips"),
+                text: $draft.wireguard.peer.allowedIPs,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerAllowedIPs)
+            )
+            PhantomTextField(
+                label: loc.t("detail_endpoint"),
+                text: $draft.wireguard.peer.endpoint,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerEndpoint)
+            )
+            PhantomStringNumericField(
                 label: loc.t("detail_keepalive"),
-                value: $editConfig.wireguard.peer.persistentKeepalive,
-                isDisabled: !isEditable
+                text: $draft.wireguard.peer.persistentKeepalive,
+                isDisabled: !isEditable,
+                errorMessage: message(for: .peerPersistentKeepalive)
             )
         } header: {
             Label(loc.t("detail_peer"), systemImage: "point.3.connected.trianglepath.dotted")
@@ -238,7 +325,7 @@ struct TunnelDetailView: View {
             } label: {
                 Label(loc.t("detail_delete_tunnel"), systemImage: "trash")
             }
-            .disabled(!PhantomUIEngine.canDeleteTunnel(status: tunnel.status))
+            .disabled(tunnel.status != .inactive)
             .listRowSeparator(.hidden)
         } header: {
             Label(loc.t("detail_actions"), systemImage: "ellipsis.circle")
@@ -262,13 +349,9 @@ struct TunnelDetailView: View {
         }
     }
 
-    // MARK: - Bindings
+    // MARK: - Error Lookup
 
-    private var presharedKeyBinding: Binding<String> {
-        Binding(
-            get: { editConfig.wireguard.peer.presharedKey ?? "" },
-            set: { editConfig.wireguard.peer.presharedKey = $0.isEmpty ? nil : $0 }
-        )
+    private func message(for field: TunnelDraft.Field) -> String? {
+        fieldErrors[field]?.localizedMessage(loc)
     }
-
 }

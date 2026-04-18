@@ -4,10 +4,13 @@ import WireGuardKit
 
 enum WireGuardConfigBuilder {
 
-    /// Converts WireguardConfig + optional WstunnelConfig into WireGuardKit's TunnelConfiguration.
-    /// - Ghost mode: endpoint overridden to 127.0.0.1:localPort (wstunnel proxy)
-    /// - Standalone: endpoint used as-is from peer config
-    /// - Filters to IPv4-only addresses and AllowedIPs
+    /// Converts `WireguardConfig` + optional `WstunnelConfig` into
+    /// WireGuardKit's `TunnelConfiguration`. All fields arrive already
+    /// validated via the typed model, so the work here is mainly
+    /// bridging between Phantom's types and WireGuardKit's.
+    ///
+    /// - Ghost mode: endpoint rewritten to the wstunnel loopback proxy
+    /// - Standalone: endpoint used verbatim from peer config
     static func build(wireguard: WireguardConfig, wstunnel: WstunnelConfig?) throws -> TunnelConfiguration {
         let interfaceConfig = try buildInterface(from: wireguard)
         let peerConfig = try buildPeer(from: wireguard, wstunnel: wstunnel)
@@ -22,19 +25,16 @@ enum WireGuardConfigBuilder {
     // MARK: - Private
 
     private static func buildInterface(from config: WireguardConfig) throws -> InterfaceConfiguration {
-        guard let privateKey = PrivateKey(base64Key: config.interface.privateKey) else {
+        guard let privateKey = PrivateKey(base64Key: config.interface.privateKey.textual) else {
             TunnelLogger.log(.wireGuard, "ERROR: Invalid private key")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
 
         var iface = InterfaceConfiguration(privateKey: privateKey)
 
-        let allAddresses = config.interface.address
-            .components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .compactMap { IPAddressRange(from: $0) }
-
-        iface.addresses = allAddresses
+        iface.addresses = config.interface.addresses.compactMap {
+            IPAddressRange(from: $0.textual)
+        }
 
         guard !iface.addresses.isEmpty else {
             TunnelLogger.log(.wireGuard, "ERROR: No valid addresses")
@@ -43,10 +43,9 @@ enum WireGuardConfigBuilder {
 
         TunnelLogger.log(.wireGuard, "Interface addresses: \(iface.addresses.map { $0.stringRepresentation })")
 
-        iface.dns = config.interface.dns
-            .components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .compactMap { DNSServer(from: $0) }
+        iface.dns = config.interface.dnsServers.compactMap {
+            DNSServer(from: $0.textual)
+        }
 
         if config.interface.mtu > 0 {
             iface.mtu = UInt16(clamping: config.interface.mtu)
@@ -56,34 +55,31 @@ enum WireGuardConfigBuilder {
     }
 
     private static func buildPeer(from config: WireguardConfig, wstunnel: WstunnelConfig?) throws -> PeerConfiguration {
-        guard let publicKey = PublicKey(base64Key: config.peer.publicKey) else {
+        guard let publicKey = PublicKey(base64Key: config.peer.publicKey.textual) else {
             TunnelLogger.log(.wireGuard, "ERROR: Invalid public key")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
 
         var peer = PeerConfiguration(publicKey: publicKey)
 
-        if let psk = config.peer.presharedKey, !psk.isEmpty,
-           let preSharedKey = PreSharedKey(base64Key: psk) {
+        if let psk = config.peer.presharedKey,
+           let preSharedKey = PreSharedKey(base64Key: psk.textual) {
             peer.preSharedKey = preSharedKey
         }
 
-        let allAllowedIPs = config.peer.allowedIPs
-            .components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .compactMap { IPAddressRange(from: $0) }
-
-        peer.allowedIPs = allAllowedIPs
+        peer.allowedIPs = config.peer.allowedIPs.compactMap {
+            IPAddressRange(from: $0.textual)
+        }
 
         TunnelLogger.log(.wireGuard, "AllowedIPs: \(peer.allowedIPs.count) entries")
 
-        // Endpoint: Ghost mode -> wstunnel proxy, standalone -> direct
+        // Endpoint: Ghost mode -> wstunnel loopback proxy, standalone -> direct peer
         let endpointString: String
         if let ws = wstunnel {
-            endpointString = "127.0.0.1:\(ws.localPort)"
-            TunnelLogger.log(.wireGuard, "Endpoint override (Ghost): \(endpointString)")
+            endpointString = "\(ws.localHost):\(ws.localPort)"
+            TunnelLogger.log(.wireGuard, "Endpoint (Ghost): \(endpointString)")
         } else {
-            endpointString = config.peer.endpoint
+            endpointString = config.peer.endpoint.textual
             TunnelLogger.log(.wireGuard, "Endpoint (standalone): \(endpointString)")
         }
 

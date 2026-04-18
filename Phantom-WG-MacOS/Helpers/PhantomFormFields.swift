@@ -1,66 +1,92 @@
 import SwiftUI
 
-/// Yeniden kullanılabilir form field bileşenleri.
-///
-/// TunnelDetailView'daki textField/portField/intField builder fonksiyonlarını
-/// bağımsız, yeniden kullanılabilir SwiftUI View'lar olarak sunar.
-/// Disabled durumu ve foreground stili PhantomUIEngine'den alınır.
-///
 /// Reusable form field components.
 ///
-/// Extracts the textField/portField/intField builder functions from TunnelDetailView
-/// into independent, reusable SwiftUI Views.
-/// Disabled state and foreground style are driven by PhantomUIEngine.
+/// Independent SwiftUI views extracted from the textField / portField /
+/// intField builders that previously lived inside TunnelDetailView.
+/// Disabled state is passed by the caller (typically `tunnel.status == .inactive`).
+/// Error messages are optional — when non-nil, the label turns red and a
+/// compact description is shown directly beneath the input.
 
-/// Monospaced metin giriş alanı — label üstte, değer altta.
-/// Aktif tunnel sırasında disabled olur ve secondary renge geçer.
-///
-/// Monospaced text input field — label on top, value below.
-/// Becomes disabled during active tunnel and switches to secondary color.
+/// Monospaced text input field — label on top, value below, optional
+/// inline error beneath. Becomes disabled while the tunnel is active
+/// and switches to the secondary foreground color.
 struct PhantomTextField: View {
     let label: String
     @Binding var text: String
     let isDisabled: Bool
+    var errorMessage: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let hasError = errorMessage != nil
+        return VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(hasError ? Color.red : Color.secondary)
             TextField(label, text: $text)
                 .font(.system(.body, design: .monospaced))
                 .autocorrectionDisabled()
                 .disabled(isDisabled)
                 .foregroundStyle(isDisabled ? .secondary : .primary)
+                .padding(.leading, hasError ? 8 : 0)
+                .overlay(alignment: .leading) {
+                    if hasError {
+                        Rectangle()
+                            .fill(Color.red.opacity(0.9))
+                            .frame(width: 2)
+                            .padding(.vertical, 1)
+                    }
+                }
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+        .animation(.default, value: hasError)
         .padding(.vertical, 2)
     }
 }
 
-/// Generic sayısal giriş alanı — UInt16 (port) ve Int (MTU, keepalive) için tek bileşen.
-/// String ↔ sayı dönüşümünü dahili binding ile yönetir.
-///
-/// Generic numeric input field — single component for UInt16 (port) and Int (MTU, keepalive).
-/// Manages String ↔ number conversion through an internal binding.
-struct PhantomNumericField<T: FixedWidthInteger & LosslessStringConvertible>: View {
+/// Raw-string numeric field used for draft-backed numeric inputs
+/// (ports, MTU, keepalive). Keeps the user's text verbatim so that
+/// invalid entries remain editable; validation is the caller's
+/// responsibility (draft → `validate()`).
+struct PhantomStringNumericField: View {
     let label: String
-    @Binding var value: T
+    @Binding var text: String
     let isDisabled: Bool
+    var errorMessage: String? = nil
 
     var body: some View {
-        let stringBinding = Binding<String>(
-            get: { "\(value)" },
-            set: { if let v = T($0) { value = v } }
-        )
+        let hasError = errorMessage != nil
         return VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
-            TextField(label, text: stringBinding)
+                .foregroundStyle(hasError ? Color.red : Color.secondary)
+            TextField(label, text: $text)
                 .font(.system(.body, design: .monospaced))
+                .autocorrectionDisabled()
                 .disabled(isDisabled)
                 .foregroundStyle(isDisabled ? .secondary : .primary)
+                .padding(.leading, hasError ? 8 : 0)
+                .overlay(alignment: .leading) {
+                    if hasError {
+                        Rectangle()
+                            .fill(Color.red.opacity(0.9))
+                            .frame(width: 2)
+                            .padding(.vertical, 1)
+                    }
+                }
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+        .animation(.default, value: hasError)
         .padding(.vertical, 2)
     }
 }

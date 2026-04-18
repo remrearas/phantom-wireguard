@@ -26,10 +26,6 @@ extension TunnelsManager {
         performDeactivation(of: tunnel)
     }
 
-    func refreshStatuses() {
-        tunnels.forEach { $0.refreshStatus() }
-    }
-
     // MARK: - Private
 
     func startActivation(of tunnel: TunnelContainer, at retryIndex: Int) {

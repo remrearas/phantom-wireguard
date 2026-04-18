@@ -3,7 +3,6 @@ import SwiftUI
 @main
 struct PhantomApp: App {
 
-    /// Test ortamında system extension aktivasyonunu atlar.
     /// Skips system extension activation in the test environment.
     static var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
@@ -26,13 +25,17 @@ struct PhantomApp: App {
                 case .activated:
                     tunnelContentView
 
+                case .deactivated:
+                    extensionDeactivatedView
+
                 case .failed(let message):
                     extensionFailedView(message)
                 }
             }
             .environmentObject(loc)
+            .environmentObject(extensionState)
             .tint(Color.accentColor)
-            .frame(width: 420, height: 640)
+            .frame(width: 480, height: 720)
             .onAppear {
                 guard !PhantomApp.isRunningTests else {
                     extensionState.status = .activated
@@ -120,6 +123,33 @@ struct PhantomApp: App {
                 }
                 .task { await tunnelsManager.load() }
             }
+        }
+    }
+
+    private var extensionDeactivatedView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "checkmark.shield.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.green)
+
+            Text(loc.t("sysext_deactivated_title"))
+                .font(.headline)
+
+            Text(loc.t("sysext_deactivated_message"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            Button(loc.t("sysext_deactivated_reinstall")) {
+                extensionState.activate()
+            }
+            .buttonStyle(.borderedProminent)
+
+            Button(loc.t("sysext_deactivated_quit")) {
+                NSApp.terminate(nil)
+            }
+            .buttonStyle(.bordered)
         }
     }
 

@@ -12,6 +12,13 @@ class LocalizationManager: ObservableObject {
             case .en: return "\u{1F1FA}\u{1F1F8}"
             }
         }
+
+        var displayName: String {
+            switch self {
+            case .tr: return "Türkçe"
+            case .en: return "English"
+            }
+        }
     }
 
     static let shared = LocalizationManager()
