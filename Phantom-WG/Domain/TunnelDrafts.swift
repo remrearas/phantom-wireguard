@@ -275,60 +275,10 @@ struct PeerDraft: Equatable {
     func validate() -> (PeerConfig?, [TunnelDraft.Field: FieldValidationError]) {
         var errors: [TunnelDraft.Field: FieldValidationError] = [:]
 
-        // Public key
-        let pubKey: WireGuardKey?
-        let trimmedPub = publicKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedPub.isEmpty {
-            errors[.peerPublicKey] = .empty
-            pubKey = nil
-        } else {
-            do {
-                pubKey = try WireGuardKey(parsing: trimmedPub)
-            } catch {
-                if let err = error as? WireGuardKey.ParseError {
-                    errors[.peerPublicKey] = .wireGuardKey(err)
-                }
-                pubKey = nil
-            }
-        }
-
-        // Preshared key (optional)
-        let psk: WireGuardKey?
-        let trimmedPsk = presharedKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedPsk.isEmpty {
-            psk = nil
-        } else {
-            do {
-                psk = try WireGuardKey(parsing: trimmedPsk)
-            } catch {
-                if let err = error as? WireGuardKey.ParseError {
-                    errors[.peerPresharedKey] = .wireGuardKey(err)
-                }
-                psk = nil
-            }
-        }
-
-        // Allowed IPs
+        let pubKey = parseRequiredKey(publicKey, field: .peerPublicKey, into: &errors)
+        let psk = parseOptionalKey(presharedKey, field: .peerPresharedKey, into: &errors)
         let parsedAllowed = parseAddresses(allowedIPs, into: &errors, field: .peerAllowedIPs)
-
-        // Endpoint
-        let parsedEndpoint: IPEndpoint?
-        let trimmedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedEndpoint.isEmpty {
-            errors[.peerEndpoint] = .empty
-            parsedEndpoint = nil
-        } else {
-            do {
-                parsedEndpoint = try IPEndpoint(parsing: trimmedEndpoint)
-            } catch {
-                if let err = error as? IPEndpoint.ParseError {
-                    errors[.peerEndpoint] = .endpoint(err)
-                }
-                parsedEndpoint = nil
-            }
-        }
-
-        // Keepalive
+        let parsedEndpoint = parseEndpoint(endpoint, into: &errors)
         let parsedKeepalive = parseInt(
             persistentKeepalive, range: 0...65535, default: 25,
             into: &errors, field: .peerPersistentKeepalive
@@ -352,6 +302,62 @@ struct PeerDraft: Equatable {
             ),
             [:]
         )
+    }
+
+    private func parseRequiredKey(
+        _ raw: String,
+        field: TunnelDraft.Field,
+        into errors: inout [TunnelDraft.Field: FieldValidationError]
+    ) -> WireGuardKey? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            errors[field] = .empty
+            return nil
+        }
+        do {
+            return try WireGuardKey(parsing: trimmed)
+        } catch let err as WireGuardKey.ParseError {
+            errors[field] = .wireGuardKey(err)
+            return nil
+        } catch {
+            return nil
+        }
+    }
+
+    private func parseOptionalKey(
+        _ raw: String,
+        field: TunnelDraft.Field,
+        into errors: inout [TunnelDraft.Field: FieldValidationError]
+    ) -> WireGuardKey? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        do {
+            return try WireGuardKey(parsing: trimmed)
+        } catch let err as WireGuardKey.ParseError {
+            errors[field] = .wireGuardKey(err)
+            return nil
+        } catch {
+            return nil
+        }
+    }
+
+    private func parseEndpoint(
+        _ raw: String,
+        into errors: inout [TunnelDraft.Field: FieldValidationError]
+    ) -> IPEndpoint? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            errors[.peerEndpoint] = .empty
+            return nil
+        }
+        do {
+            return try IPEndpoint(parsing: trimmed)
+        } catch let err as IPEndpoint.ParseError {
+            errors[.peerEndpoint] = .endpoint(err)
+            return nil
+        } catch {
+            return nil
+        }
     }
 }
 

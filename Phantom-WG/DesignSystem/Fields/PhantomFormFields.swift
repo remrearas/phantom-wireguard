@@ -7,6 +7,9 @@ import SwiftUI
 /// Disabled state is passed by the caller (typically `tunnel.status == .inactive`).
 /// Error messages are optional — when non-nil, the label turns red and a
 /// compact description is shown directly beneath the input.
+///
+/// The `axIdentifier` parameter attaches a stable accessibility identifier
+/// to the underlying `TextField` so UI tests can query it by string.
 
 /// Monospaced text input field — label on top, value below, optional
 /// inline error beneath. Becomes disabled while the tunnel is active
@@ -15,7 +18,8 @@ struct PhantomTextField: View {
     let label: String
     @Binding var text: String
     let isDisabled: Bool
-    var errorMessage: String? = nil
+    var errorMessage: String?
+    var axIdentifier: String?
 
     var body: some View {
         let hasError = errorMessage != nil
@@ -38,6 +42,7 @@ struct PhantomTextField: View {
                             .padding(.vertical, 1)
                     }
                 }
+                .accessibilityIdentifier(axIdentifier ?? "")
             if let errorMessage {
                 Text(errorMessage)
                     .font(.caption2)
@@ -58,7 +63,8 @@ struct PhantomStringNumericField: View {
     let label: String
     @Binding var text: String
     let isDisabled: Bool
-    var errorMessage: String? = nil
+    var errorMessage: String?
+    var axIdentifier: String?
 
     var body: some View {
         let hasError = errorMessage != nil
@@ -81,6 +87,7 @@ struct PhantomStringNumericField: View {
                             .padding(.vertical, 1)
                     }
                 }
+                .accessibilityIdentifier(axIdentifier ?? "")
             if let errorMessage {
                 Text(errorMessage)
                     .font(.caption2)

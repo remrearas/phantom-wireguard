@@ -95,13 +95,13 @@ targets:
         excludes:
           - "**/.DS_Store"
       # Shared files from main app
-      - path: Phantom-WG/Models/TunnelConfig.swift
-      - path: Phantom-WG/Models/ConfigTypes.swift
-      - path: Phantom-WG/Models/TunnelConfig+Keychain.swift
-      - path: Phantom-WG/SharedConstants.swift
-      - path: Phantom-WG/SharedLogger.swift
-      - path: Phantom-WG/WstunnelBridge.swift
-      - path: Phantom-WG/Helpers/Keychain.swift
+      - path: Phantom-WG/Domain/TunnelConfig.swift
+      - path: Phantom-WG/Domain/ConfigTypes.swift
+      - path: Phantom-WG/Infrastructure/Persistence/TunnelConfig+Keychain.swift
+      - path: Phantom-WG/Infrastructure/Logging/SharedLogger.swift
+      - path: Phantom-WG/Shared/SharedConstants.swift
+      - path: Phantom-WG/Shared/WstunnelBridge.swift
+      - path: Phantom-WG/Shared/Keychain.swift
     dependencies:
       - package: WireGuardKit
         product: WireGuardKit

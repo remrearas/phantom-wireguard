@@ -108,7 +108,12 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     override func setTunnelNetworkSettings(_ tunnelNetworkSettings: NETunnelNetworkSettings?,
                                            completionHandler: ((Error?) -> Void)? = nil) {
         if let settings = tunnelNetworkSettings as? NEPacketTunnelNetworkSettings {
-            NetworkSettingsManager.apply(to: settings, excludedIPv4: wstunnelServerIPv4, excludedIPv6: wstunnelServerIPv6, isGhostMode: isGhostMode)
+            NetworkSettingsManager.apply(
+                to: settings,
+                excludedIPv4: wstunnelServerIPv4,
+                excludedIPv6: wstunnelServerIPv6,
+                isGhostMode: isGhostMode
+            )
         }
 
         super.setTunnelNetworkSettings(tunnelNetworkSettings, completionHandler: completionHandler)

@@ -27,6 +27,7 @@ struct LogView: View {
                     }
                 }
                 .padding(.vertical, 8)
+                .accessibilityIdentifier(AXID.LogView.list)
             }
             .background(Color(.systemGroupedBackground))
             .onChange(of: logStore.entries.count) { _, _ in
@@ -46,6 +47,8 @@ struct LogView: View {
                     systemImage: "text.justify.left",
                     description: Text(loc.t("log_empty_description"))
                 )
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier(AXID.LogView.emptyState)
             }
         }
     }

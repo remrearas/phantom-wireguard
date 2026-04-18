@@ -38,11 +38,13 @@ struct TunnelImportView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(loc.t("cancel")) { dismiss() }
+                        .accessibilityIdentifier(AXID.TunnelImport.cancelButton)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(loc.t("import_button")) { submit() }
                         .fontWeight(.semibold)
                         .disabled(!canSubmit)
+                        .accessibilityIdentifier(AXID.TunnelImport.submitButton)
                 }
             }
             .sheet(isPresented: $showingQRScanner) {
@@ -62,6 +64,7 @@ struct TunnelImportView: View {
             TextField(loc.t("import_name_placeholder"), text: $tunnelName)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
+                .accessibilityIdentifier(AXID.TunnelImport.nameField)
         } header: {
             Label(loc.t("import_name_section"), systemImage: "tag")
         }
@@ -74,6 +77,7 @@ struct TunnelImportView: View {
                 .frame(minHeight: 150)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
+                .accessibilityIdentifier(AXID.TunnelImport.confEditor)
         } header: {
             Label(loc.t("import_configuration"), systemImage: "doc.text")
         } footer: {
@@ -88,6 +92,7 @@ struct TunnelImportView: View {
             } label: {
                 Label(loc.t("import_scan_qr"), systemImage: "qrcode.viewfinder")
             }
+            .accessibilityIdentifier(AXID.TunnelImport.qrScanButton)
 
             Button {
                 if let clipboard = UIPasteboard.general.string {
@@ -97,6 +102,7 @@ struct TunnelImportView: View {
             } label: {
                 Label(loc.t("import_paste"), systemImage: "doc.on.clipboard")
             }
+            .accessibilityIdentifier(AXID.TunnelImport.pasteButton)
         } header: {
             Label(loc.t("import_quick_actions"), systemImage: "bolt")
         }
@@ -119,6 +125,8 @@ struct TunnelImportView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.red.gradient)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(AXID.TunnelImport.errorBanner)
     }
 
     // MARK: - Submit
@@ -182,22 +190,50 @@ struct TunnelImportView: View {
 
     private func localizedFieldLabel(_ field: TunnelDraft.Field) -> String {
         switch field {
-        case .name:                       return loc.t("detail_name")
-        case .interfacePrivateKey:        return loc.t("detail_private_key")
-        case .interfaceAddresses:         return loc.t("detail_address")
-        case .interfaceDnsServers:        return loc.t("detail_dns")
-        case .interfaceMTU:               return loc.t("detail_mtu")
-        case .peerPublicKey:              return loc.t("detail_public_key")
-        case .peerPresharedKey:           return loc.t("detail_preshared_key")
-        case .peerAllowedIPs:             return loc.t("detail_allowed_ips")
-        case .peerEndpoint:               return loc.t("detail_endpoint")
-        case .peerPersistentKeepalive:    return loc.t("detail_keepalive")
-        case .wstunnelUrl:                return loc.t("detail_server_url")
-        case .wstunnelSecret:             return loc.t("detail_secret")
-        case .wstunnelLocalHost:          return loc.t("detail_local_host")
-        case .wstunnelLocalPort:          return loc.t("detail_local_port")
-        case .wstunnelRemoteHost:         return loc.t("detail_remote_host")
-        case .wstunnelRemotePort:         return loc.t("detail_remote_port")
+        case .name:
+            return loc.t("detail_name")
+        case .interfacePrivateKey, .interfaceAddresses,
+             .interfaceDnsServers, .interfaceMTU:
+            return interfaceLabel(field)
+        case .peerPublicKey, .peerPresharedKey, .peerAllowedIPs,
+             .peerEndpoint, .peerPersistentKeepalive:
+            return peerLabel(field)
+        case .wstunnelUrl, .wstunnelSecret, .wstunnelLocalHost,
+             .wstunnelLocalPort, .wstunnelRemoteHost, .wstunnelRemotePort:
+            return wstunnelLabel(field)
+        }
+    }
+
+    private func interfaceLabel(_ field: TunnelDraft.Field) -> String {
+        switch field {
+        case .interfacePrivateKey:  return loc.t("detail_private_key")
+        case .interfaceAddresses:   return loc.t("detail_address")
+        case .interfaceDnsServers:  return loc.t("detail_dns")
+        case .interfaceMTU:         return loc.t("detail_mtu")
+        default:                    return ""
+        }
+    }
+
+    private func peerLabel(_ field: TunnelDraft.Field) -> String {
+        switch field {
+        case .peerPublicKey:            return loc.t("detail_public_key")
+        case .peerPresharedKey:         return loc.t("detail_preshared_key")
+        case .peerAllowedIPs:           return loc.t("detail_allowed_ips")
+        case .peerEndpoint:             return loc.t("detail_endpoint")
+        case .peerPersistentKeepalive:  return loc.t("detail_keepalive")
+        default:                        return ""
+        }
+    }
+
+    private func wstunnelLabel(_ field: TunnelDraft.Field) -> String {
+        switch field {
+        case .wstunnelUrl:          return loc.t("detail_server_url")
+        case .wstunnelSecret:       return loc.t("detail_secret")
+        case .wstunnelLocalHost:    return loc.t("detail_local_host")
+        case .wstunnelLocalPort:    return loc.t("detail_local_port")
+        case .wstunnelRemoteHost:   return loc.t("detail_remote_host")
+        case .wstunnelRemotePort:   return loc.t("detail_remote_port")
+        default:                    return ""
         }
     }
 
