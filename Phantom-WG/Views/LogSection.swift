@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct LogView: View {
-    @ObservedObject var logStore: LogStore
-    @EnvironmentObject var loc: LocalizationManager
+    var logStore: LogStore
+    @Environment(LocalizationManager.self) private var loc
 
     var body: some View {
         ScrollViewReader { proxy in

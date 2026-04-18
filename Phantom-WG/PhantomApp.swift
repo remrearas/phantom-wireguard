@@ -2,19 +2,19 @@ import SwiftUI
 
 @main
 struct PhantomApp: App {
-    @StateObject private var tunnelsManager = TunnelsManagerLoader()
-    @StateObject private var loc = LocalizationManager.shared
+    @State private var tunnelsManager = TunnelsManagerLoader()
+    @State private var loc = LocalizationManager.shared
 
     var body: some Scene {
         WindowGroup {
             Group {
                 if let manager = tunnelsManager.manager {
                     TunnelListView()
-                        .environmentObject(manager)
+                        .environment(manager)
                 } else if let error = tunnelsManager.loadError {
                     ContentUnavailableView(
                         loc.t("error"),
-                        systemImage: "Kod g.triangle",
+                        systemImage: "exclamationmark.triangle",
                         description: Text(error)
                     )
                 } else {
@@ -22,7 +22,7 @@ struct PhantomApp: App {
                         .task { await tunnelsManager.load() }
                 }
             }
-            .environmentObject(loc)
+            .environment(loc)
             .tint(Color.accentColor)
         }
     }
@@ -40,11 +40,12 @@ struct PhantomApp: App {
 }
 
 /// Wrapper to hold TunnelsManager creation state, since TunnelsManager
-/// requires async factory and can't be a direct @StateObject.
+/// requires async factory and can't be a direct @State at app launch.
+@Observable
 @MainActor
-class TunnelsManagerLoader: ObservableObject {
-    @Published var manager: TunnelsManager?
-    @Published var loadError: String?
+class TunnelsManagerLoader {
+    var manager: TunnelsManager?
+    var loadError: String?
 
     func load() async {
         do {

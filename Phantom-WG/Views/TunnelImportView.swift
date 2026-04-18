@@ -6,8 +6,8 @@ import SwiftUI
 /// banner above the inputs — no detail form is shown here. Editing
 /// individual fields is done later via `TunnelDetailView`.
 struct TunnelImportView: View {
-    @EnvironmentObject var tunnelsManager: TunnelsManager
-    @EnvironmentObject var loc: LocalizationManager
+    @Environment(TunnelsManager.self) private var tunnelsManager
+    @Environment(LocalizationManager.self) private var loc
     @Environment(\.dismiss) private var dismiss
 
     @State private var tunnelName = ""

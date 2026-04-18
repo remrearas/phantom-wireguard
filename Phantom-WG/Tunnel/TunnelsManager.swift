@@ -1,19 +1,20 @@
 import Foundation
 import NetworkExtension
 
+@Observable
 @MainActor
-class TunnelsManager: ObservableObject {
+class TunnelsManager {
 
-    @Published var tunnels: [TunnelContainer] = []
+    var tunnels: [TunnelContainer] = []
 
-    private let providerFactory: TunnelProviderFactory
-    private var statusObservationToken: AnyObject?
-    private var configObservationToken: AnyObject?
-    private var waitingTunnel: TunnelContainer?
+    @ObservationIgnored private let providerFactory: TunnelProviderFactory
+    @ObservationIgnored private var statusObservationToken: AnyObject?
+    @ObservationIgnored private var configObservationToken: AnyObject?
+    @ObservationIgnored private var waitingTunnel: TunnelContainer?
 
     // Activation parameters (overridable for tests)
-    var retryInterval: TimeInterval = 5.0
-    var maxRetries: Int = 8
+    @ObservationIgnored var retryInterval: TimeInterval = 5.0
+    @ObservationIgnored var maxRetries: Int = 8
 
     // MARK: - Factory
 
@@ -299,10 +300,6 @@ class TunnelsManager: ObservableObject {
 
     private func handleStatusChange(for tunnel: TunnelContainer) {
         let systemStatus = tunnel.tunnelProvider.connectionStatus
-
-        // Notify parent observers (e.g. TunnelListView) so computed
-        // properties like hasActiveTunnel update instantly.
-        objectWillChange.send()
 
         // If we're attempting activation, interpret the status in that context
         if tunnel.isAttemptingActivation {

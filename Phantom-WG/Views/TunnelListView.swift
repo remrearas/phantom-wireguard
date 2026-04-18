@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct TunnelListView: View {
-    @EnvironmentObject var tunnelsManager: TunnelsManager
-    @EnvironmentObject var loc: LocalizationManager
+    @Environment(TunnelsManager.self) private var tunnelsManager
+    @Environment(LocalizationManager.self) private var loc
     @State private var showingImport = false
     @State private var errorMessage: String?
     @State private var showingError = false
@@ -138,9 +138,9 @@ struct TunnelListView: View {
 // MARK: - Tunnel Row
 
 struct TunnelRow: View {
-    @ObservedObject var tunnel: TunnelContainer
-    @EnvironmentObject var tunnelsManager: TunnelsManager
-    @EnvironmentObject var loc: LocalizationManager
+    var tunnel: TunnelContainer
+    @Environment(TunnelsManager.self) private var tunnelsManager
+    @Environment(LocalizationManager.self) private var loc
 
     var body: some View {
         HStack(spacing: 12) {

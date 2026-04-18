@@ -6,10 +6,10 @@ import SwiftUI
 /// reverted with inline per-field errors. Ghost-mode wstunnel section
 /// appears only when the typed config carries a wstunnel block.
 struct TunnelDetailView: View {
-    @ObservedObject var tunnel: TunnelContainer
-    @StateObject private var logStore: LogStore
-    @EnvironmentObject var tunnelsManager: TunnelsManager
-    @EnvironmentObject var loc: LocalizationManager
+    var tunnel: TunnelContainer
+    @State private var logStore: LogStore
+    @Environment(TunnelsManager.self) private var tunnelsManager
+    @Environment(LocalizationManager.self) private var loc
     @Environment(\.dismiss) private var dismiss
 
     @State private var draft: TunnelDraft = .empty()
@@ -36,7 +36,7 @@ struct TunnelDetailView: View {
 
     init(tunnel: TunnelContainer) {
         self.tunnel = tunnel
-        _logStore = StateObject(wrappedValue: LogStore(tunnelId: tunnel.tunnelConfig?.id.uuidString))
+        _logStore = State(wrappedValue: LogStore(tunnelId: tunnel.tunnelConfig?.id.uuidString))
     }
 
     var body: some View {

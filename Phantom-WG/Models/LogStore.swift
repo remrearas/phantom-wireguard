@@ -1,12 +1,13 @@
 import Foundation
 
+@Observable
 @MainActor
-final class LogStore: ObservableObject {
-    @Published var entries: [LogEntry] = []
+final class LogStore {
+    var entries: [LogEntry] = []
 
-    let tunnelId: String?
-    private var lastSeenId: Int64 = 0
-    private var pollingTask: Task<Void, Never>?
+    @ObservationIgnored let tunnelId: String?
+    @ObservationIgnored private var lastSeenId: Int64 = 0
+    @ObservationIgnored private var pollingTask: Task<Void, Never>?
 
     init(tunnelId: String? = nil) {
         self.tunnelId = tunnelId
