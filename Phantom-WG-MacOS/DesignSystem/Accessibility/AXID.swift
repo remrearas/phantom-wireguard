@@ -1,5 +1,7 @@
 import Foundation
 
+// swiftlint:disable nesting
+
 /// Canonical accessibility identifiers attached to interactive UI
 /// elements via `.accessibilityIdentifier(...)`. UI tests consume
 /// these as their sole query surface — think of them as Playwright's
@@ -37,7 +39,7 @@ enum AXID {
         static let uninstallCancel   = "tunnel-list.uninstall-confirm.cancel"
         static let errorAlertOK      = "tunnel-list.error-alert.ok"
 
-        static func row(_ name: String) -> String       { "tunnel-row.\(name)" }
+        static func row(_ name: String) -> String { "tunnel-row.\(name)" }
         static func rowToggle(_ name: String) -> String { "tunnel-row.\(name).toggle" }
     }
 
@@ -111,3 +113,5 @@ enum AXID {
         static let saveErrorOK = "log-view.save-error.ok"
     }
 }
+
+// swiftlint:enable nesting

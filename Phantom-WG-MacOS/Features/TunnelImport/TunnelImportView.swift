@@ -163,22 +163,50 @@ struct TunnelImportView: View {
 
     private func localizedFieldLabel(_ field: TunnelDraft.Field) -> String {
         switch field {
-        case .name:                       return loc.t("detail_name")
-        case .interfacePrivateKey:        return loc.t("detail_private_key")
-        case .interfaceAddresses:         return loc.t("detail_address")
-        case .interfaceDnsServers:        return loc.t("detail_dns")
-        case .interfaceMTU:               return loc.t("detail_mtu")
-        case .peerPublicKey:              return loc.t("detail_public_key")
-        case .peerPresharedKey:           return loc.t("detail_preshared_key")
-        case .peerAllowedIPs:             return loc.t("detail_allowed_ips")
-        case .peerEndpoint:               return loc.t("detail_endpoint")
-        case .peerPersistentKeepalive:    return loc.t("detail_keepalive")
-        case .wstunnelUrl:                return loc.t("detail_server_url")
-        case .wstunnelSecret:             return loc.t("detail_secret")
-        case .wstunnelLocalHost:          return loc.t("detail_local_host")
-        case .wstunnelLocalPort:          return loc.t("detail_local_port")
-        case .wstunnelRemoteHost:         return loc.t("detail_remote_host")
-        case .wstunnelRemotePort:         return loc.t("detail_remote_port")
+        case .name:
+            return loc.t("detail_name")
+        case .interfacePrivateKey, .interfaceAddresses,
+             .interfaceDnsServers, .interfaceMTU:
+            return interfaceLabel(field)
+        case .peerPublicKey, .peerPresharedKey, .peerAllowedIPs,
+             .peerEndpoint, .peerPersistentKeepalive:
+            return peerLabel(field)
+        case .wstunnelUrl, .wstunnelSecret, .wstunnelLocalHost,
+             .wstunnelLocalPort, .wstunnelRemoteHost, .wstunnelRemotePort:
+            return wstunnelLabel(field)
+        }
+    }
+
+    private func interfaceLabel(_ field: TunnelDraft.Field) -> String {
+        switch field {
+        case .interfacePrivateKey:  return loc.t("detail_private_key")
+        case .interfaceAddresses:   return loc.t("detail_address")
+        case .interfaceDnsServers:  return loc.t("detail_dns")
+        case .interfaceMTU:         return loc.t("detail_mtu")
+        default:                    return ""
+        }
+    }
+
+    private func peerLabel(_ field: TunnelDraft.Field) -> String {
+        switch field {
+        case .peerPublicKey:            return loc.t("detail_public_key")
+        case .peerPresharedKey:         return loc.t("detail_preshared_key")
+        case .peerAllowedIPs:           return loc.t("detail_allowed_ips")
+        case .peerEndpoint:             return loc.t("detail_endpoint")
+        case .peerPersistentKeepalive:  return loc.t("detail_keepalive")
+        default:                        return ""
+        }
+    }
+
+    private func wstunnelLabel(_ field: TunnelDraft.Field) -> String {
+        switch field {
+        case .wstunnelUrl:          return loc.t("detail_server_url")
+        case .wstunnelSecret:       return loc.t("detail_secret")
+        case .wstunnelLocalHost:    return loc.t("detail_local_host")
+        case .wstunnelLocalPort:    return loc.t("detail_local_port")
+        case .wstunnelRemoteHost:   return loc.t("detail_remote_host")
+        case .wstunnelRemotePort:   return loc.t("detail_remote_port")
+        default:                    return ""
         }
     }
 

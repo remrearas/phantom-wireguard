@@ -16,23 +16,15 @@ extension FieldValidationError {
             return loc.t("field_err_name_exists")
 
         case .wireGuardKey(let err):
-            switch err {
-            case .notBase64:
-                return loc.t("field_err_key_not_base64")
-            case .wrongByteCount(let bytes):
-                return loc.t("field_err_key_wrong_length", bytes)
-            }
+            return wireGuardKeyErrorMessage(err, loc: loc)
 
         case .address(let err, let index):
             let base = addressErrorMessage(err, loc: loc)
             return loc.t("field_err_list_entry", index + 1, base)
 
         case .ipAddress(let err, let index):
-            switch err {
-            case .invalid(let raw):
-                let base = loc.t("field_err_ip_invalid", raw)
-                return loc.t("field_err_list_entry", index + 1, base)
-            }
+            let base = ipAddressErrorMessage(err, loc: loc)
+            return loc.t("field_err_list_entry", index + 1, base)
 
         case .endpoint(let err):
             return endpointErrorMessage(err, loc: loc)
@@ -49,6 +41,28 @@ extension FieldValidationError {
     }
 
     // MARK: - Per-Type Mappers
+
+    private func wireGuardKeyErrorMessage(
+        _ err: WireGuardKey.ParseError,
+        loc: LocalizationManager
+    ) -> String {
+        switch err {
+        case .notBase64:
+            return loc.t("field_err_key_not_base64")
+        case .wrongByteCount(let bytes):
+            return loc.t("field_err_key_wrong_length", bytes)
+        }
+    }
+
+    private func ipAddressErrorMessage(
+        _ err: IPAddressEntry.ParseError,
+        loc: LocalizationManager
+    ) -> String {
+        switch err {
+        case .invalid(let raw):
+            return loc.t("field_err_ip_invalid", raw)
+        }
+    }
 
     private func addressErrorMessage(
         _ err: AddressWithPrefix.ParseError,

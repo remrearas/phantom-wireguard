@@ -18,8 +18,8 @@ struct PhantomTextField: View {
     let label: String
     @Binding var text: String
     let isDisabled: Bool
-    var errorMessage: String? = nil
-    var axIdentifier: String? = nil
+    var errorMessage: String?
+    var axIdentifier: String?
 
     var body: some View {
         let hasError = errorMessage != nil
@@ -62,8 +62,8 @@ struct PhantomStringNumericField: View {
     let label: String
     @Binding var text: String
     let isDisabled: Bool
-    var errorMessage: String? = nil
-    var axIdentifier: String? = nil
+    var errorMessage: String?
+    var axIdentifier: String?
 
     var body: some View {
         let hasError = errorMessage != nil
