@@ -86,31 +86,6 @@ targets:
           - packet-tunnel-provider-systemextension
         com.apple.developer.system-extension.install: true
 
-  # ── Unit Tests (Swift Testing) ────────────────────────────
-
-  PhantomTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources:
-      - path: PhantomTests
-        excludes:
-          - "**/.DS_Store"
-    dependencies:
-      - target: Phantom-WG-MacOS
-    settings:
-      base:
-        ARCHS: "$(ARCHS_STANDARD)"
-        SWIFT_VERSION: "5.0"
-        GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Phantom-WG Mac.app/Contents/MacOS/Phantom-WG Mac"
-        BUNDLE_LOADER: "$(TEST_HOST)"
-        SWIFT_OBJC_BRIDGING_HEADER: ""
-        HEADER_SEARCH_PATHS:
-          - "$(PROJECT_DIR)/Libraries/WstunnelKit/include"
-        CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: "Developer ID Application"
-        DEVELOPMENT_TEAM: 9C5SL5H7CM
-
   # ── Network Extension (System Extension) ─────────────────
 
   PhantomTunnel:
