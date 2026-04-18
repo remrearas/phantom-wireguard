@@ -121,11 +121,11 @@ targets:
         excludes:
           - "**/.DS_Store"
       # Shared files from main app
-      - path: Phantom-WG-MacOS/Models/TunnelConfig.swift
-      - path: Phantom-WG-MacOS/Models/ConfigTypes.swift
-      - path: Phantom-WG-MacOS/Models/NETunnelProviderProtocol+Config.swift
-      - path: Phantom-WG-MacOS/SharedConstants.swift
-      - path: Phantom-WG-MacOS/WstunnelBridge.swift
+      - path: Phantom-WG-MacOS/Domain/Configuration/TunnelConfig.swift
+      - path: Phantom-WG-MacOS/Domain/Configuration/ConfigTypes.swift
+      - path: Phantom-WG-MacOS/Infrastructure/Persistence/NETunnelProviderProtocol+Config.swift
+      - path: Phantom-WG-MacOS/Shared/SharedConstants.swift
+      - path: Phantom-WG-MacOS/Shared/WstunnelBridge.swift
     dependencies:
       - package: WireGuardKit
         product: WireGuardKit

@@ -96,15 +96,6 @@ struct TunnelListView: View {
 
             Divider()
 
-            Link(destination: URL(string: "https://www.phantom.tc/docs")!) {
-                Label(loc.t("documentation"), systemImage: "book")
-            }
-            Link(destination: URL(string: "https://www.phantom.tc")!) {
-                Label(loc.t("website"), systemImage: "globe")
-            }
-
-            Divider()
-
             Button(role: .destructive) {
                 showingUninstallConfirm = true
             } label: {
