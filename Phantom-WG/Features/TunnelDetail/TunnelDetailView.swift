@@ -117,13 +117,12 @@ struct TunnelDetailView: View {
             fieldErrorClearTask?.cancel()
             fieldErrorClearTask = nil
         }
-        .confirmationDialog(loc.t("detail_delete_confirm_title"),
-                            isPresented: $showingDeleteConfirmation,
-                            titleVisibility: .visible) {
-            Button(loc.t("delete"), role: .destructive) { deleteTunnel() }
-                .accessibilityIdentifier(AXID.TunnelDetail.Actions.deleteConfirm)
+        .alert(loc.t("detail_delete_confirm_title"),
+               isPresented: $showingDeleteConfirmation) {
             Button(loc.t("cancel"), role: .cancel) {}
                 .accessibilityIdentifier(AXID.TunnelDetail.Actions.deleteCancel)
+            Button(loc.t("delete"), role: .destructive) { deleteTunnel() }
+                .accessibilityIdentifier(AXID.TunnelDetail.Actions.deleteConfirm)
         } message: {
             Text(loc.t("detail_delete_confirm_message"))
         }
