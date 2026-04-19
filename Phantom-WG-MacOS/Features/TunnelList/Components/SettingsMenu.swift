@@ -6,6 +6,7 @@ import SwiftUI
 /// hit it by accident from a primary surface.
 struct SettingsMenu: View {
     @Binding var showingUninstallConfirm: Bool
+    @Binding var showingSplitTunneling: Bool
     let isUninstalling: Bool
     @Environment(LocalizationManager.self) private var loc
 
@@ -31,6 +32,14 @@ struct SettingsMenu: View {
             .accessibilityIdentifier(AXID.TunnelList.settingsLanguage)
 
             Divider()
+
+            Button {
+                showingSplitTunneling = true
+            } label: {
+                Label(loc.t("settings_split_tunneling"), systemImage: "arrow.triangle.branch")
+            }
+            .disabled(isUninstalling)
+            .accessibilityIdentifier(AXID.TunnelList.settingsSplitTunnel)
 
             Button(role: .destructive) {
                 showingUninstallConfirm = true

@@ -8,12 +8,19 @@ import SwiftUI
 struct TunnelContentView: View {
     var loader: TunnelsManagerLoader
     @Environment(LocalizationManager.self) private var loc
+    @Environment(SplitTunnelingStore.self) private var splitTunnelingStore
 
     var body: some View {
         Group {
             if let manager = loader.manager {
                 TunnelListView()
                     .environment(manager)
+                    .onAppear {
+                        // Wire the store into the manager so activation
+                        // runs reconcile before dispatch. The reference
+                        // is weak on the manager side — no retain cycle.
+                        manager.splitTunnelingStore = splitTunnelingStore
+                    }
             } else if let error = loader.loadError {
                 ContentUnavailableView(
                     loc.t("error"),

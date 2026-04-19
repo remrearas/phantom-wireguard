@@ -16,6 +16,8 @@ on:
         required: true
       MAC_PROVISIONING_PROFILE_EXTENSION:
         required: true
+      MAC_PROVISIONING_PROFILE_EXTENSION_SPLITTUNNEL:
+        required: true
       APPLE_ID:
         required: true
       APPLE_ID_PASSWORD:
@@ -37,6 +39,7 @@ jobs:
     env:
       APP_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS
       TUNNEL_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS.PhantomTunnel
+      SPLITTUNNEL_BUNDLE_ID: com.remrearas.Phantom-WG-MacOS.PhantomSplitTunnel
       TEAM_ID: 9C5SL5H7CM
       APP_NAME: "Phantom-WG Mac"
       MAC_DIR: .
@@ -50,6 +53,7 @@ jobs:
           echo "P12_PATH=$RUNNER_TEMP/certificate.p12" >> "$GITHUB_ENV"
           echo "PP_APP_PATH=$RUNNER_TEMP/app.provisionprofile" >> "$GITHUB_ENV"
           echo "PP_TUNNEL_PATH=$RUNNER_TEMP/tunnel.provisionprofile" >> "$GITHUB_ENV"
+          echo "PP_SPLITTUNNEL_PATH=$RUNNER_TEMP/splittunnel.provisionprofile" >> "$GITHUB_ENV"
           echo "EXPORT_OPTIONS_PATH=$RUNNER_TEMP/ExportOptions.plist" >> "$GITHUB_ENV"
 
       # ── 1. Checkout ──────────────────────────────────────────
@@ -116,6 +120,7 @@ jobs:
         env:
           PROVISIONING_PROFILE_APP: ${{ secrets.MAC_PROVISIONING_PROFILE_APP }}
           PROVISIONING_PROFILE_TUNNEL: ${{ secrets.MAC_PROVISIONING_PROFILE_EXTENSION }}
+          PROVISIONING_PROFILE_SPLITTUNNEL: ${{ secrets.MAC_PROVISIONING_PROFILE_EXTENSION_SPLITTUNNEL }}
         run: |
           set -euo pipefail
 
@@ -124,6 +129,7 @@ jobs:
 
           echo -n "$PROVISIONING_PROFILE_APP" | base64 --decode -o "$PP_APP_PATH"
           echo -n "$PROVISIONING_PROFILE_TUNNEL" | base64 --decode -o "$PP_TUNNEL_PATH"
+          echo -n "$PROVISIONING_PROFILE_SPLITTUNNEL" | base64 --decode -o "$PP_SPLITTUNNEL_PATH"
 
           extract_and_install() {
             local profile_path="$1"
@@ -155,11 +161,14 @@ jobs:
 
           read -r APP_UUID APP_PROFILE_NAME <<< "$(extract_and_install "$PP_APP_PATH" "$APP_BUNDLE_ID" "App")"
           read -r TUNNEL_UUID TUNNEL_PROFILE_NAME <<< "$(extract_and_install "$PP_TUNNEL_PATH" "$TUNNEL_BUNDLE_ID" "Tunnel")"
+          read -r SPLITTUNNEL_UUID SPLITTUNNEL_PROFILE_NAME <<< "$(extract_and_install "$PP_SPLITTUNNEL_PATH" "$SPLITTUNNEL_BUNDLE_ID" "SplitTunnel")"
 
           echo "PP_APP_UUID=$APP_UUID" >> "$GITHUB_ENV"
           echo "PP_TUNNEL_UUID=$TUNNEL_UUID" >> "$GITHUB_ENV"
+          echo "PP_SPLITTUNNEL_UUID=$SPLITTUNNEL_UUID" >> "$GITHUB_ENV"
           echo "APP_PROFILE_NAME=$APP_PROFILE_NAME" >> "$GITHUB_ENV"
           echo "TUNNEL_PROFILE_NAME=$TUNNEL_PROFILE_NAME" >> "$GITHUB_ENV"
+          echo "SPLITTUNNEL_PROFILE_NAME=$SPLITTUNNEL_PROFILE_NAME" >> "$GITHUB_ENV"
 
       # ── 5. Patch project.yml with CI profile names ──────────
       - name: Patch project.yml for CI signing
@@ -168,6 +177,7 @@ jobs:
           set -euo pipefail
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Phantom-WG Mac DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${APP_PROFILE_NAME}/" project.yml
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Phantom-WG Mac Tunnel DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${TUNNEL_PROFILE_NAME}/" project.yml
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER: Phantom-WG Mac SplitTunnel DeveloperID/PROVISIONING_PROFILE_SPECIFIER: ${SPLITTUNNEL_PROFILE_NAME}/" project.yml
 
       # ── 6. Install tools ─────────────────────────────────────
       - name: Install Go & XcodeGen
@@ -194,6 +204,8 @@ jobs:
               <string>${PP_APP_UUID}</string>
               <key>${TUNNEL_BUNDLE_ID}</key>
               <string>${PP_TUNNEL_UUID}</string>
+              <key>${SPLITTUNNEL_BUNDLE_ID}</key>
+              <string>${PP_SPLITTUNNEL_UUID}</string>
             </dict>
           </dict>
           </plist>
@@ -331,5 +343,5 @@ jobs:
         if: always()
         run: |
           security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
-          rm -f "$P12_PATH" "$PP_APP_PATH" "$PP_TUNNEL_PATH"
+          rm -f "$P12_PATH" "$PP_APP_PATH" "$PP_TUNNEL_PATH" "$PP_SPLITTUNNEL_PATH"
           rm -rf "$RUNNER_TEMP"/*.xcarchive "$RUNNER_TEMP"/export-* "$EXPORT_OPTIONS_PATH"

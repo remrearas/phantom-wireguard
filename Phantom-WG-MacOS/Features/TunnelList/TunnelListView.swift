@@ -5,11 +5,14 @@ struct TunnelListView: View {
     @Environment(TunnelsManager.self) private var tunnelsManager
     @Environment(LocalizationManager.self) private var loc
     @Environment(SystemExtensionState.self) private var extensionState
+    @Environment(SplitTunnelExtensionState.self) private var splitExtensionState
+    @Environment(SplitTunnelingStore.self) private var splitTunnelingStore
 
     @State private var showingImport = false
     @State private var errorMessage: String?
     @State private var showingError = false
     @State private var showingUninstallConfirm = false
+    @State private var showingSplitTunneling = false
     @State private var uninstalling = false
 
     /// Display order: non-inactive tunnels pinned to the top (preserves
@@ -30,6 +33,11 @@ struct TunnelListView: View {
                 .toolbar { toolbarContent }
                 .navigationDestination(isPresented: $showingImport) {
                     TunnelImportView()
+                }
+                .sheet(isPresented: $showingSplitTunneling) {
+                    NavigationStack {
+                        SplitTunnelingView()
+                    }
                 }
                 .modifier(UninstallAlerts(
                     errorMessage: $errorMessage,
@@ -65,6 +73,7 @@ struct TunnelListView: View {
         ToolbarItem(placement: .navigation) {
             SettingsMenu(
                 showingUninstallConfirm: $showingUninstallConfirm,
+                showingSplitTunneling: $showingSplitTunneling,
                 isUninstalling: uninstalling
             )
         }
@@ -96,6 +105,18 @@ struct TunnelListView: View {
         Task {
             do {
                 try await tunnelsManager.removeAll()
+
+                // Bring down the split-tunnel extension first when it
+                // exists — it depends on nothing, so it can be removed
+                // independently, and leaving it behind after a full
+                // uninstall would orphan a system extension the user
+                // can no longer reach from the UI.
+                if splitExtensionState.status == .activated
+                    || splitExtensionState.status == .needsApproval {
+                    try await splitExtensionState.deactivate()
+                }
+                splitTunnelingStore.reset()
+
                 try await extensionState.deactivate()
                 uninstalling = false
                 // On success, extensionState.status transitions to .deactivated

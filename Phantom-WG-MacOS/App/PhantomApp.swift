@@ -10,8 +10,10 @@ struct PhantomApp: App {
     }
 
     @State private var extensionState = SystemExtensionState()
+    @State private var splitExtensionState = SplitTunnelExtensionState()
     @State private var tunnelsManager = TunnelsManagerLoader()
     @State private var loc = LocalizationManager.shared
+    @State private var splitTunnelingStore = SplitTunnelingStore()
 
     var body: some Scene {
         WindowGroup {
@@ -38,9 +40,16 @@ struct PhantomApp: App {
             }
             .environment(loc)
             .environment(extensionState)
+            .environment(splitExtensionState)
+            .environment(splitTunnelingStore)
             .tint(Color.accentColor)
             .frame(width: 480, height: 720)
             .onAppear {
+                // Prune split tunneling entries whose apps are no longer
+                // installed before any user interaction — keeps the list
+                // in sync with what LaunchServices currently resolves.
+                splitTunnelingStore.reconcile()
+
                 guard !PhantomApp.isRunningTests else {
                     extensionState.status = .activated
                     return

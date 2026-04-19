@@ -15,6 +15,7 @@ schemes:
     build:
       targets:
         Phantom-WG-MacOS: all
+        PhantomSplitTunnel: all
     run:
       config: Debug
     archive:
@@ -37,6 +38,9 @@ targets:
         buildPhase: resources
     dependencies:
       - target: PhantomTunnel
+        embed: true
+        codeSign: true
+      - target: PhantomSplitTunnel
         embed: true
         codeSign: true
       - framework: Libraries/WstunnelKit/libwstunnel_mac.a
@@ -94,6 +98,7 @@ targets:
           - group.com.remrearas.phantom-wg-macos
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider-systemextension
+          - app-proxy-provider-systemextension
         com.apple.developer.system-extension.install: true
 
   # ── Network Extension (System Extension) ─────────────────
@@ -108,6 +113,7 @@ targets:
       # Shared files from main app
       - path: Phantom-WG-MacOS/Domain/Configuration/TunnelConfig.swift
       - path: Phantom-WG-MacOS/Domain/Configuration/ConfigTypes.swift
+      - path: Phantom-WG-MacOS/Domain/Configuration/SplitTunnelingConfiguration.swift
       - path: Phantom-WG-MacOS/Infrastructure/Persistence/NETunnelProviderProtocol+Config.swift
       - path: Phantom-WG-MacOS/Shared/SharedConstants.swift
       - path: Phantom-WG-MacOS/Shared/WstunnelBridge.swift
@@ -175,6 +181,62 @@ targets:
       properties:
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider-systemextension
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - group.com.remrearas.phantom-wg-macos
+        com.apple.security.network.client: true
+        com.apple.security.network.server: true
+
+  # ── Split-Tunneling Extension (System Extension) ─────────
+
+  PhantomSplitTunnel:
+    type: system-extension
+    platform: macOS
+    sources:
+      - path: PhantomSplitTunnel
+        excludes:
+          - "**/.DS_Store"
+      # Shared config model so the extension can read the same
+      # JSON blob the main app writes into App Group UserDefaults.
+      - path: Phantom-WG-MacOS/Domain/Configuration/SplitTunnelingConfiguration.swift
+      - path: Phantom-WG-MacOS/Shared/SharedConstants.swift
+    dependencies:
+      - sdk: NetworkExtension.framework
+    settings:
+      base:
+        ARCHS: "$(ARCHS_STANDARD)"
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        PRODUCT_NAME: com.remrearas.Phantom-WG-MacOS.PhantomSplitTunnel
+        PRODUCT_MODULE_NAME: PhantomSplitTunnel
+        PRODUCT_BUNDLE_IDENTIFIER: com.remrearas.Phantom-WG-MacOS.PhantomSplitTunnel
+        INFOPLIST_FILE: PhantomSplitTunnel/Info.plist
+        CODE_SIGN_ENTITLEMENTS: PhantomSplitTunnel/PhantomSplitTunnel.entitlements
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "Developer ID Application"
+        DEVELOPMENT_TEAM: 9C5SL5H7CM
+        PROVISIONING_PROFILE_SPECIFIER: Phantom-WG Mac SplitTunnel DeveloperID
+        ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: YES
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "1.1.0"
+        CURRENT_PROJECT_VERSION: 1
+    info:
+      path: PhantomSplitTunnel/Info.plist
+      properties:
+        CFBundlePackageType: SYSX
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleDisplayName: PhantomSplitTunnel
+        NSSystemExtensionUsageDescription: "Phantom-WG Mac needs to install a system extension to manage per-app traffic routing for Split-Tunneling."
+        NetworkExtension:
+          NEProviderClasses:
+            com.apple.networkextension.app-proxy: $(PRODUCT_MODULE_NAME).TransparentProxyProvider
+    entitlements:
+      path: PhantomSplitTunnel/PhantomSplitTunnel.entitlements
+      properties:
+        com.apple.developer.networking.networkextension:
+          - app-proxy-provider-systemextension
         com.apple.security.app-sandbox: true
         com.apple.security.application-groups:
           - group.com.remrearas.phantom-wg-macos

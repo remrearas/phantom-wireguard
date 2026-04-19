@@ -28,19 +28,46 @@ enum AXID {
     // MARK: Tunnel List
 
     enum TunnelList {
-        static let addButton         = "tunnel-list.add-button"
-        static let emptyImportButton = "tunnel-list.empty.import-button"
-        static let settingsMenu      = "tunnel-list.settings.menu"
-        static let settingsLanguage  = "tunnel-list.settings.language"
-        static let settingsLangEN    = "tunnel-list.settings.language.en"
-        static let settingsLangTR    = "tunnel-list.settings.language.tr"
-        static let settingsUninstall = "tunnel-list.settings.uninstall"
-        static let uninstallConfirm  = "tunnel-list.uninstall-confirm.confirm"
-        static let uninstallCancel   = "tunnel-list.uninstall-confirm.cancel"
-        static let errorAlertOK      = "tunnel-list.error-alert.ok"
+        static let addButton            = "tunnel-list.add-button"
+        static let emptyImportButton    = "tunnel-list.empty.import-button"
+        static let settingsMenu         = "tunnel-list.settings.menu"
+        static let settingsLanguage     = "tunnel-list.settings.language"
+        static let settingsLangEN       = "tunnel-list.settings.language.en"
+        static let settingsLangTR       = "tunnel-list.settings.language.tr"
+        static let settingsSplitTunnel  = "tunnel-list.settings.split-tunneling"
+        static let settingsUninstall    = "tunnel-list.settings.uninstall"
+        static let uninstallConfirm     = "tunnel-list.uninstall-confirm.confirm"
+        static let uninstallCancel      = "tunnel-list.uninstall-confirm.cancel"
+        static let errorAlertOK         = "tunnel-list.error-alert.ok"
 
         static func row(_ name: String) -> String { "tunnel-row.\(name)" }
         static func rowToggle(_ name: String) -> String { "tunnel-row.\(name).toggle" }
+    }
+
+    // MARK: Split Tunneling
+
+    enum SplitTunneling {
+        static let sheet             = "split-tunneling.sheet"
+        static let closeButton       = "split-tunneling.close-button"
+        static let enableToggle      = "split-tunneling.enable-toggle"
+        static let addAppButton      = "split-tunneling.add-app-button"
+        static let emptyState        = "split-tunneling.empty-state"
+        static let resetButton       = "split-tunneling.reset-button"
+        static let resetConfirm      = "split-tunneling.reset-confirm.confirm"
+        static let resetCancel       = "split-tunneling.reset-confirm.cancel"
+        static let errorAlertOK      = "split-tunneling.error-alert.ok"
+
+        // Extension lifecycle gates
+        static let installButton     = "split-tunneling.install-button"
+        static let openSettings      = "split-tunneling.approval.open-settings"
+        static let checkAgain        = "split-tunneling.approval.check-again"
+        static let retryButton       = "split-tunneling.failed.retry"
+        static let removeExtension   = "split-tunneling.remove-extension"
+        static let removeConfirm     = "split-tunneling.remove-confirm.confirm"
+        static let removeCancel      = "split-tunneling.remove-confirm.cancel"
+
+        static func appRow(_ bundleID: String) -> String { "split-tunneling.app-row.\(bundleID)" }
+        static func appRemove(_ bundleID: String) -> String { "split-tunneling.app-remove.\(bundleID)" }
     }
 
     // MARK: Tunnel Import
