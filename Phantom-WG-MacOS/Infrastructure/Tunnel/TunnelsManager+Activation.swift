@@ -8,11 +8,6 @@ extension TunnelsManager {
     func startActivation(of tunnel: TunnelContainer) {
         guard tunnel.status == .inactive else { return }
 
-        // Fresh reconcile before any activation — drops entries whose
-        // apps have been uninstalled since the last run so the tunnel
-        // layer (once Phase 2 lands) never matches against stale data.
-        splitTunnelingStore?.reconcile()
-
         if let activeTunnel = tunnels.first(where: { $0.status != .inactive && $0.status != .waiting }) {
             if let previousWaiting = waitingTunnel, previousWaiting.id != tunnel.id {
                 previousWaiting.status = .inactive

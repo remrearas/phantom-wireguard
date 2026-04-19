@@ -14,7 +14,6 @@ enum AppBundleValidator {
         case notABundle
         case noBundleIdentifier
         case notSigned
-        case noTeamIdentifier
     }
 
     // MARK: - Entry Point
@@ -47,18 +46,30 @@ enum AppBundleValidator {
             return .failure(.notSigned)
         }
 
-        guard let teamIdentifier = info["teamid"] as? String, !teamIdentifier.isEmpty else {
-            return .failure(.noTeamIdentifier)
+        guard let csIdentifier = info["identifier"] as? String, !csIdentifier.isEmpty else {
+            return .failure(.notSigned)
+        }
+
+        // Compose the full signing identifier exactly as
+        // `NEAppProxyFlow.metaData.sourceAppSigningIdentifier` reports
+        // it at runtime: Developer-ID apps get `<teamID>.<csIdentifier>`,
+        // Apple platform-signed apps get just `<csIdentifier>` (no team
+        // prefix).
+        let signingIdentifier: String
+        if let teamID = info["teamid"] as? String, !teamID.isEmpty {
+            signingIdentifier = "\(teamID).\(csIdentifier)"
+        } else {
+            signingIdentifier = csIdentifier
         }
 
         let teamName = extractTeamName(from: info)
         let displayName = resolveDisplayName(bundle: bundle, url: url)
 
         return .success(AppEntry(
+            signingIdentifier: signingIdentifier,
             bundleIdentifier: bundleIdentifier,
-            teamIdentifier: teamIdentifier,
-            teamName: teamName,
             displayName: displayName,
+            teamName: teamName,
             lastKnownPath: url.path
         ))
     }

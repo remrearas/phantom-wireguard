@@ -18,6 +18,10 @@ schemes:
         PhantomSplitTunnel: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - PhantomTests
     archive:
       config: Release
 
@@ -114,6 +118,7 @@ targets:
       - path: Phantom-WG-MacOS/Domain/Configuration/TunnelConfig.swift
       - path: Phantom-WG-MacOS/Domain/Configuration/ConfigTypes.swift
       - path: Phantom-WG-MacOS/Domain/Configuration/SplitTunnelingConfiguration.swift
+      - path: Phantom-WG-MacOS/Domain/Configuration/FlowDecisionEngine.swift
       - path: Phantom-WG-MacOS/Infrastructure/Persistence/NETunnelProviderProtocol+Config.swift
       - path: Phantom-WG-MacOS/Shared/SharedConstants.swift
       - path: Phantom-WG-MacOS/Shared/WstunnelBridge.swift
@@ -199,6 +204,7 @@ targets:
       # Shared config model so the extension can read the same
       # JSON blob the main app writes into App Group UserDefaults.
       - path: Phantom-WG-MacOS/Domain/Configuration/SplitTunnelingConfiguration.swift
+      - path: Phantom-WG-MacOS/Domain/Configuration/FlowDecisionEngine.swift
       - path: Phantom-WG-MacOS/Shared/SharedConstants.swift
     dependencies:
       - sdk: NetworkExtension.framework
@@ -220,7 +226,7 @@ targets:
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: YES
         SWIFT_VERSION: "5.0"
         MARKETING_VERSION: "1.1.0"
-        CURRENT_PROJECT_VERSION: 1
+        CURRENT_PROJECT_VERSION: 2
     info:
       path: PhantomSplitTunnel/Info.plist
       properties:
@@ -242,3 +248,32 @@ targets:
           - group.com.remrearas.phantom-wg-macos
         com.apple.security.network.client: true
         com.apple.security.network.server: true
+
+  # ── Unit Tests ───────────────────────────────────────────
+
+  PhantomTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: PhantomTests
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - target: Phantom-WG-MacOS
+    settings:
+      base:
+        PRODUCT_NAME: PhantomTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.remrearas.Phantom-WG-MacOS.PhantomTests
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        SWIFT_OBJC_BRIDGING_HEADER: Phantom-WG-MacOS/BridgingHeader.h
+        HEADER_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/Libraries/WstunnelKit/include"
+        LIBRARY_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/Libraries/WstunnelKit"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Phantom-WG Mac.app/Contents/MacOS/Phantom-WG Mac"
+        MARKETING_VERSION: "1.1.0"
+        CURRENT_PROJECT_VERSION: 1

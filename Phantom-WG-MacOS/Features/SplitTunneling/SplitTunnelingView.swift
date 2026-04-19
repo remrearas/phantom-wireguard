@@ -1,4 +1,5 @@
 import SwiftUI
+import Network
 
 /// Sheet-hosted editor for the app-wide split tunneling configuration.
 ///
@@ -15,6 +16,9 @@ import SwiftUI
 struct SplitTunnelingView: View {
     @Environment(SplitTunnelingStore.self) private var store
     @Environment(SplitTunnelExtensionState.self) private var extensionState
+    @Environment(SplitTunnelProviderManager.self) private var providerManager
+    @Environment(PhysicalInterfaceResolver.self) private var interfaceResolver
+    @Environment(ToastCenter.self) private var toasts
     @Environment(LocalizationManager.self) private var loc
     @Environment(\.dismiss) private var dismiss
 
@@ -26,6 +30,7 @@ struct SplitTunnelingView: View {
     @State private var removingExtension = false
     @State private var showingRemoveError = false
     @State private var removeErrorMessage: String?
+    @State private var logStore: SplitTunnelLogStore?
 
     var body: some View {
         content
@@ -39,7 +44,12 @@ struct SplitTunnelingView: View {
             }
             .accessibilityIdentifier(AXID.SplitTunneling.sheet)
             .onAppear(perform: onSheetAppear)
+            .onDisappear(perform: onSheetDisappear)
             .disabled(removingExtension)
+            .onChange(of: store.configuration.interfaceSelection) { _, newSelection in
+                toasts.info(interfaceChangeToastMessage(newSelection))
+            }
+            .toastOverlay()
             .modifier(ValidationAlert(
                 showingValidationError: $showingValidationError,
                 messageProvider: { validationErrorMessage }
@@ -86,6 +96,18 @@ struct SplitTunnelingView: View {
 
     private var activatedContent: some View {
         Form {
+            if interfaceUnavailable {
+                Section {
+                    InterfaceUnavailableBanner(
+                        selectionLabel: interfaceSelectionLabel,
+                        onSwitchToAuto: { store.setInterfaceSelection(.auto) },
+                        onDisable: { store.setEnabled(false) }
+                    )
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                }
+            }
+
             SplitTunnelingEnableSection(
                 isEnabled: Binding(
                     get: { store.configuration.isEnabled },
@@ -93,12 +115,26 @@ struct SplitTunnelingView: View {
                 )
             )
 
+            SplitTunnelingInterfaceSection(
+                selection: Binding(
+                    get: { store.configuration.interfaceSelection },
+                    set: { store.setInterfaceSelection($0) }
+                ),
+                availableInterfaces: interfaceResolver.interfaces,
+                isDisabled: !store.configuration.isEnabled
+            )
+
             SplitTunnelingAppListSection(
                 apps: store.configuration.apps,
                 isDisabled: !store.configuration.isEnabled,
+                resolvedInterfaceLabel: resolvedInterfaceLabel,
                 onAddApp: handleAddApp,
                 onRemoveApp: { store.removeApp(bundleIdentifier: $0) }
             )
+
+            if let logStore {
+                SplitTunnelingLogSection(logStore: logStore)
+            }
 
             SplitTunnelingResetSection(
                 showingResetConfirm: $showingResetConfirm
@@ -110,6 +146,67 @@ struct SplitTunnelingView: View {
             )
         }
         .formStyle(.grouped)
+    }
+
+    // MARK: - Interface Resolution (UI layer)
+
+    /// The NWInterface that actually satisfies the current selection —
+    /// nil when the picker's name is no longer present in the resolver's
+    /// list (e.g. user chose Ethernet, then pulled the cable).
+    private var resolvedInterface: NWInterface? {
+        switch store.configuration.interfaceSelection {
+        case .auto:
+            return interfaceResolver.interfaces.first(where: { $0.type == .wiredEthernet })
+                ?? interfaceResolver.interfaces.first(where: { $0.type == .wifi })
+                ?? interfaceResolver.interfaces.first
+        case .explicit(let name):
+            return interfaceResolver.interfaces.first(where: { $0.name == name })
+        }
+    }
+
+    /// Human-readable label for the currently resolved interface, e.g.
+    /// "Wi-Fi (en0)". Nil when unresolved; sections fall back to generic
+    /// copy in that case.
+    private var resolvedInterfaceLabel: String? {
+        resolvedInterface?.displayLabel
+    }
+
+    /// True when the feature is enabled and the user's selection can't
+    /// be satisfied right now — either `.auto` with zero available
+    /// physical interfaces or `.explicit(name)` with no matching NIC.
+    /// Banner only appears in this state.
+    private var interfaceUnavailable: Bool {
+        guard store.configuration.isEnabled else { return false }
+        return resolvedInterface == nil
+    }
+
+    /// Label describing what the user *picked*, used in the warning
+    /// banner message. Differs from `resolvedInterfaceLabel`: the
+    /// banner runs precisely when resolution failed, so we show the
+    /// picker's intent instead.
+    private var interfaceSelectionLabel: String {
+        switch store.configuration.interfaceSelection {
+        case .auto:
+            return loc.t("split_tunneling_interface_auto")
+        case .explicit(let name):
+            return name
+        }
+    }
+
+    /// Toast text fired on `interfaceSelection` change. Describes the
+    /// new selection so the user gets immediate confirmation the picker
+    /// was applied (the routing change itself only affects new flows).
+    private func interfaceChangeToastMessage(_ selection: InterfaceSelection) -> String {
+        switch selection {
+        case .auto:
+            return loc.t("split_tunneling_toast_switched_to_auto")
+        case .explicit(let name):
+            let label = interfaceResolver.interfaces.first(where: { $0.name == name })?.displayLabel ?? name
+            return String(
+                format: loc.t("split_tunneling_toast_switched_to_interface"),
+                label
+            )
+        }
     }
 
     // MARK: - Lifecycle
@@ -124,6 +221,15 @@ struct SplitTunnelingView: View {
         if extensionState.status == .unknown {
             extensionState.activate()
         }
+        if logStore == nil {
+            let newStore = SplitTunnelLogStore(providerManager: providerManager)
+            logStore = newStore
+            newStore.startPolling()
+        }
+    }
+
+    private func onSheetDisappear() {
+        logStore?.stopPolling()
     }
 
     private func openSystemSettings() {
@@ -172,7 +278,6 @@ struct SplitTunnelingView: View {
         case .notABundle:         return loc.t("split_tunneling_err_not_a_bundle")
         case .noBundleIdentifier: return loc.t("split_tunneling_err_no_bundle_id")
         case .notSigned:          return loc.t("split_tunneling_err_not_signed")
-        case .noTeamIdentifier:   return loc.t("split_tunneling_err_no_team_id")
         }
     }
 
@@ -183,6 +288,14 @@ struct SplitTunnelingView: View {
         Task {
             do {
                 try await extensionState.deactivate()
+                // Persist the feature toggle as off alongside the removal.
+                // The extension process is gone on success; flipping the
+                // stored `isEnabled` means the next reinstall starts from
+                // an explicitly-off state instead of silently auto-arming
+                // a session the user just tore down.
+                if store.configuration.isEnabled {
+                    store.setEnabled(false)
+                }
             } catch {
                 removeErrorMessage = error.localizedDescription
                 showingRemoveError = true

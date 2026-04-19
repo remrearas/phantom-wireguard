@@ -35,9 +35,10 @@ struct AppEntryRow: View {
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
-                    Text(entry.teamIdentifier)
+                    Text(entry.signingIdentifier)
                         .font(.caption.monospaced())
                         .foregroundStyle(.tertiary)
+                        .truncationMode(.middle)
                 }
                 .lineLimit(1)
             }

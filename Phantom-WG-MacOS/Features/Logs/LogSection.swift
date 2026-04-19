@@ -3,7 +3,7 @@ import AppKit
 import UniformTypeIdentifiers
 
 struct LogView: View {
-    var logStore: LogStore
+    var logStore: any LogEntryProvider
     @Environment(LocalizationManager.self) private var loc
 
     @State private var savingError: String?
@@ -44,7 +44,7 @@ struct LogView: View {
         }
     }
 
-    private func entryRow(_ entry: LogStore.LogEntry) -> some View {
+    private func entryRow(_ entry: LogEntry) -> some View {
         HStack(alignment: .top, spacing: 6) {
             Text(entry.tag)
                 .font(.system(.caption2, design: .monospaced))

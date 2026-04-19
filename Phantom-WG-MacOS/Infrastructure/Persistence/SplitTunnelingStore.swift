@@ -4,32 +4,44 @@ import Observation
 
 /// Single source of truth for the app-wide split tunneling configuration.
 ///
-/// Persists the config as a JSON blob in the shared App Group
-/// `UserDefaults` under a single key, so the system extension can read
-/// the exact same object without any bespoke IPC. The main app owns
-/// writes and periodic reconcile; the extension will only read.
-///
-/// Reconcile drops entries whose bundle identifier no longer resolves
-/// on the system (user uninstalled the app). This keeps the state safe
-/// for the tunnel layer — activation never trips over stale data.
+/// Persists the config as a JSON blob on disk inside the shared App
+/// Group container. File-based storage instead of UserDefaults
+/// because `cfprefsd` caches per-process and detaches when the
+/// extension (sandboxed) can't talk to the daemon — we saw
+/// "reload: 0 app(s)" even after the main app wrote new entries.
+/// The file path is known to both processes via `SharedConstants`.
 @Observable
+@MainActor
 final class SplitTunnelingStore {
-
-    // MARK: - Keys
-
-    private static let defaultsKey = "split-tunneling.configuration"
 
     // MARK: - State
 
     private(set) var configuration: SplitTunnelingConfiguration
 
-    @ObservationIgnored private let defaults: UserDefaults
+    /// Wired at app startup. Every configuration mutation asks the
+    /// provider manager to fire a live reload on the extension if the
+    /// session is currently up; a no-op otherwise. Weak to avoid the
+    /// manager → store cycle since the manager doesn't need the store.
+    @ObservationIgnored weak var providerManager: SplitTunnelProviderManager?
 
     // MARK: - Init
 
-    init(defaults: UserDefaults? = UserDefaults(suiteName: SharedConstants.appGroupID)) {
-        self.defaults = defaults ?? .standard
-        self.configuration = Self.load(from: self.defaults) ?? .default
+    /// Production: no argument — persists to the App Group container
+    /// via `SharedConstants.splitTunnelingConfigurationFileURL`.
+    ///
+    /// Tests: pass an isolated `fileURL` so the persist/load cycle
+    /// stays out of the user's real container. The resolver fallback
+    /// remains `SharedConstants` so callers that don't care about
+    /// injection get the production path without noise.
+    init(fileURL: URL? = nil) {
+        self.fileURLOverride = fileURL
+        self.configuration = Self.loadFromDisk(fileURL: fileURL) ?? .default
+    }
+
+    @ObservationIgnored private let fileURLOverride: URL?
+
+    private var effectiveFileURL: URL? {
+        fileURLOverride ?? SharedConstants.splitTunnelingConfigurationFileURL
     }
 
     // MARK: - Mutation
@@ -39,6 +51,13 @@ final class SplitTunnelingStore {
     func setEnabled(_ enabled: Bool) {
         configuration.isEnabled = enabled
         persist()
+    }
+
+    /// User picked a specific physical interface (or auto).
+    func setInterfaceSelection(_ selection: InterfaceSelection) {
+        configuration.interfaceSelection = selection
+        persist()
+        scheduleReload()
     }
 
     /// Append a validated entry. Duplicates (by bundle identifier) are
@@ -51,12 +70,14 @@ final class SplitTunnelingStore {
         }
         configuration.apps.append(entry)
         persist()
+        scheduleReload()
         return true
     }
 
     func removeApp(bundleIdentifier: String) {
         configuration.apps.removeAll { $0.bundleIdentifier == bundleIdentifier }
         persist()
+        scheduleReload()
     }
 
     /// Destructive: clears every field back to the first-run baseline.
@@ -64,6 +85,18 @@ final class SplitTunnelingStore {
     func reset() {
         configuration = .default
         persist()
+        scheduleReload()
+    }
+
+    // MARK: - Private
+
+    /// Ask the extension to re-read the JSON blob. Safe to call when
+    /// the session isn't up — the manager short-circuits and the
+    /// extension picks up the fresh blob on its next `startProxy`.
+    private func scheduleReload() {
+        guard let providerManager else { return }
+        let snapshot = configuration
+        Task { await providerManager.reloadExtensionConfig(with: snapshot) }
     }
 
     // MARK: - Reconcile
@@ -106,16 +139,24 @@ final class SplitTunnelingStore {
     // MARK: - Persistence
 
     private func persist() {
+        guard let url = effectiveFileURL else { return }
         do {
             let data = try JSONEncoder().encode(configuration)
-            defaults.set(data, forKey: Self.defaultsKey)
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(to: url, options: .atomic)
         } catch {
             NSLog("[split-tunneling] persist failed: \(error)")
         }
     }
 
-    private static func load(from defaults: UserDefaults) -> SplitTunnelingConfiguration? {
-        guard let data = defaults.data(forKey: defaultsKey) else { return nil }
+    private static func loadFromDisk(fileURL: URL?) -> SplitTunnelingConfiguration? {
+        let url = fileURL ?? SharedConstants.splitTunnelingConfigurationFileURL
+        guard let url, let data = try? Data(contentsOf: url) else {
+            return nil
+        }
         return try? JSONDecoder().decode(SplitTunnelingConfiguration.self, from: data)
     }
 

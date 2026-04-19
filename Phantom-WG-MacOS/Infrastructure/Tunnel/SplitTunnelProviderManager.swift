@@ -3,17 +3,17 @@ import NetworkExtension
 
 // MARK: - Split Tunnel Provider Manager
 
-/// Thin wrapper around `NETransparentProxyManager`. Handles the
-/// "one transparent proxy per app" lifecycle: load the existing
-/// configuration from system preferences, start/stop the proxy session
-/// when the user flips the enable toggle, and remove the configuration
-/// when the user uninstalls the extension.
+/// Thin wrapper around `NETransparentProxyManager`. Owns the
+/// preference entry lifecycle: load, save-and-start when the user
+/// flips the enable toggle, stop on disable, and clear the entry
+/// entirely when the user uninstalls the extension.
 ///
-/// Phase 1 uses this in skeleton mode — starting the session exercises
-/// the full install → save → connect pipeline but the extension itself
-/// declines every flow, so traffic routing is unaffected. Phase 2 plugs
-/// the decision engine behind `handleNewFlow` and this manager becomes
-/// the live orchestration point.
+/// Config is handed to the extension through the OS-managed
+/// `providerConfiguration` dict at save time (initial boot path) and
+/// through an inline `sendProviderMessage` payload afterwards (live
+/// reload path). This avoids any cross-process file / UserDefaults
+/// sync — both channels survive sandbox user-context mismatches that
+/// App Group storage does not.
 @Observable
 @MainActor
 class SplitTunnelProviderManager {
@@ -47,14 +47,13 @@ class SplitTunnelProviderManager {
             attachStatusObserver()
             refreshSessionStatus()
         } catch {
-            NSLog("[SplitMgr] load failed: \(error)")
             lastError = error.localizedDescription
         }
     }
 
     // MARK: - Enable / Disable
 
-    func enable() async throws {
+    func enable(with configuration: SplitTunnelingConfiguration) async throws {
         guard let manager else {
             throw ManagerError.notLoaded
         }
@@ -62,6 +61,16 @@ class SplitTunnelProviderManager {
         let proto = NETunnelProviderProtocol()
         proto.providerBundleIdentifier = Self.providerBundleID
         proto.serverAddress = "127.0.0.1"
+
+        // Pack config bytes into providerConfiguration — this is the
+        // OS-managed cross-process channel. Unlike App Group files,
+        // `providerConfiguration` is visible to the extension regardless
+        // of sandbox user context (root vs. user), which is how
+        // PhantomTunnel reliably passes its tunnel config.
+        if let data = try? JSONEncoder().encode(configuration) {
+            proto.providerConfiguration = ["split_config": data]
+        }
+
         manager.protocolConfiguration = proto
         manager.localizedDescription = Self.localizedDescription
         manager.isEnabled = true
@@ -87,6 +96,59 @@ class SplitTunnelProviderManager {
         try await manager.removeFromPreferences()
         self.manager = nil
         sessionStatus = .disconnected
+    }
+
+    // MARK: - Provider Messaging
+
+    /// Opcode `0x00` — live config reload. The message payload is the
+    /// opcode byte followed by the JSON-encoded configuration, so the
+    /// extension applies the fresh bytes without touching any shared
+    /// storage. No-op if the session isn't connected; the OS will
+    /// re-read `providerConfiguration` on the next `startProxy`.
+    func reloadExtensionConfig(with configuration: SplitTunnelingConfiguration) async {
+        guard let manager,
+              let session = manager.connection as? NETunnelProviderSession,
+              session.status == .connected,
+              let configData = try? JSONEncoder().encode(configuration) else {
+            return
+        }
+
+        var message = Data([0x00])
+        message.append(configData)
+
+        _ = try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data?, Error>) in
+            do {
+                try session.sendProviderMessage(message) { ackData in
+                    continuation.resume(returning: ackData)
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
+    /// Opcode `0x01` — log snapshot. Returns the newline-joined buffer
+    /// shipped by the extension, or nil if the session isn't up.
+    /// Used by the Logs view inside the Split-Tunneling sheet.
+    func fetchLogs() async -> String? {
+        guard let manager,
+              let session = manager.connection as? NETunnelProviderSession,
+              session.status == .connected else {
+            return nil
+        }
+        return await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
+            do {
+                try session.sendProviderMessage(Data([0x01])) { data in
+                    guard let data else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    continuation.resume(returning: String(data: data, encoding: .utf8))
+                }
+            } catch {
+                continuation.resume(returning: nil)
+            }
+        }
     }
 
     // MARK: - Observation

@@ -1,21 +1,34 @@
 import Foundation
 
+/// Shared row shape so `LogView` can render either the tunnel
+/// extension's structured entries or the split-tunnel extension's
+/// plain-line dump without branching on concrete store type.
+struct LogEntry: Identifiable, Hashable {
+    let id: Int
+    let tag: String
+    let timestamp: String
+    let text: String
+}
+
+/// Read surface that both `LogStore` and `SplitTunnelLogStore`
+/// satisfy. `LogView` takes one of these and never distinguishes
+/// between the two sources.
+@MainActor
+protocol LogEntryProvider: AnyObject, Observable {
+    var entries: [LogEntry] { get }
+    func startPolling()
+    func stopPolling()
+}
+
 /// Fetches logs from the tunnel extension via handleAppMessage.
 /// Logs are disposable: visible during the session, gone when tunnel stops.
 @Observable
 @MainActor
-final class LogStore {
+final class LogStore: LogEntryProvider {
     var entries: [LogEntry] = []
 
     @ObservationIgnored private weak var tunnel: TunnelContainer?
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
-
-    struct LogEntry: Identifiable, Hashable {
-        let id: Int
-        let tag: String
-        let timestamp: String
-        let text: String
-    }
 
     init(tunnel: TunnelContainer?) {
         self.tunnel = tunnel

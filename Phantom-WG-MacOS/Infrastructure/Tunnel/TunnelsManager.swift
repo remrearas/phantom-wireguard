@@ -11,10 +11,6 @@ class TunnelsManager {
     @ObservationIgnored private var statusObservationToken: AnyObject?
     @ObservationIgnored private var configObservationToken: AnyObject?
     @ObservationIgnored var waitingTunnel: TunnelContainer?
-    /// Wired by the app root after construction. When set, the
-    /// configuration is reconciled (stale app entries pruned) before
-    /// every activation so the tunnel layer never reads stale state.
-    @ObservationIgnored weak var splitTunnelingStore: SplitTunnelingStore?
 
     // Activation parameters (overridable for tests)
     @ObservationIgnored var retryInterval: TimeInterval = 5.0

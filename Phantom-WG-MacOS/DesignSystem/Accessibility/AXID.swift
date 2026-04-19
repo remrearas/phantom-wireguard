@@ -50,6 +50,8 @@ enum AXID {
         static let sheet             = "split-tunneling.sheet"
         static let closeButton       = "split-tunneling.close-button"
         static let enableToggle      = "split-tunneling.enable-toggle"
+        static let interfacePicker   = "split-tunneling.interface.picker"
+        static let interfaceAuto     = "split-tunneling.interface.auto"
         static let addAppButton      = "split-tunneling.add-app-button"
         static let emptyState        = "split-tunneling.empty-state"
         static let resetButton       = "split-tunneling.reset-button"
@@ -65,6 +67,8 @@ enum AXID {
         static let removeExtension   = "split-tunneling.remove-extension"
         static let removeConfirm     = "split-tunneling.remove-confirm.confirm"
         static let removeCancel      = "split-tunneling.remove-confirm.cancel"
+        static let logsLink          = "split-tunneling.logs-link"
+        static let interfaceUnavailableBanner = "split-tunneling.interface-unavailable-banner"
 
         static func appRow(_ bundleID: String) -> String { "split-tunneling.app-row.\(bundleID)" }
         static func appRemove(_ bundleID: String) -> String { "split-tunneling.app-remove.\(bundleID)" }
