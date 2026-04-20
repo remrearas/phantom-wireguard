@@ -43,6 +43,7 @@
   "detail_copy_conf": "Copy Config (.conf)",
   "detail_copy_logs": "Copy Logs",
   "detail_copied": "Copied!",
+  "detail_reset_connection": "Reset Connection",
   "detail_delete_tunnel": "Delete Tunnel",
   "detail_delete_confirm_title": "Delete Tunnel?",
   "detail_delete_confirm_message": "This will permanently remove the tunnel configuration.",

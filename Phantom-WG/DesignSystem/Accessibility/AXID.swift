@@ -84,6 +84,7 @@ enum AXID {
         enum Actions {
             static let copyConf      = "tunnel-detail.actions.copy-conf"
             static let copyLogs      = "tunnel-detail.actions.copy-logs"
+            static let resetButton   = "tunnel-detail.actions.reset"
             static let deleteButton  = "tunnel-detail.actions.delete"
             static let deleteConfirm = "tunnel-detail.delete-confirm.confirm"
             static let deleteCancel  = "tunnel-detail.delete-confirm.cancel"

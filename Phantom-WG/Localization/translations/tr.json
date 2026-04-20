@@ -43,6 +43,7 @@
   "detail_copy_conf": "Yapılandırmayı Kopyala (.conf)",
   "detail_copy_logs": "Günlükleri Kopyala",
   "detail_copied": "Kopyalandı!",
+  "detail_reset_connection": "Bağlantıyı Sıfırla",
   "detail_delete_tunnel": "Tüneli Sil",
   "detail_delete_confirm_title": "Tünel Silinsin mi?",
   "detail_delete_confirm_message": "Bu, tünel yapılandırmasını kalıcı olarak kaldıracaktır.",

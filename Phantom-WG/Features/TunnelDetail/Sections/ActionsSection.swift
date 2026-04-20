@@ -11,6 +11,7 @@ struct ActionsSection: View {
     var tunnel: TunnelContainer
     let copyConfAction: () -> Void
     let copyLogsAction: () -> Void
+    let resetAction: () -> Void
     @Binding var showingDeleteConfirmation: Bool
     @State private var copiedItem: String?
     @Environment(LocalizationManager.self) private var loc
@@ -22,6 +23,12 @@ struct ActionsSection: View {
             copyButton(loc.t("detail_copy_logs"), icon: "text.quote", id: "logs") { copyLogsAction() }
                 .accessibilityIdentifier(AXID.TunnelDetail.Actions.copyLogs)
 
+            Button(action: resetAction) {
+                Label(loc.t("detail_reset_connection"), systemImage: "arrow.clockwise")
+            }
+            .disabled(!canReset)
+            .accessibilityIdentifier(AXID.TunnelDetail.Actions.resetButton)
+
             Button(role: .destructive) {
                 showingDeleteConfirmation = true
             } label: {
@@ -32,6 +39,14 @@ struct ActionsSection: View {
         } header: {
             Label(loc.t("detail_actions"), systemImage: "ellipsis.circle")
         }
+    }
+
+    /// Reset is only meaningful while the tunnel is running (or
+    /// already reasserting from a previous reset). Outside that
+    /// window the layer has no in-flight state to restart and no
+    /// `utun` surface to preserve; the button collapses to disabled.
+    private var canReset: Bool {
+        tunnel.status == .active || tunnel.status == .reasserting
     }
 
     private func copyButton(_ title: String, icon: String, id: String, action: @escaping () -> Void) -> some View {

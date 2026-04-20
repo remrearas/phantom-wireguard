@@ -13,6 +13,16 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     private var wstunnelServerIPv6: [String] = []
     private var isGhostMode = false
 
+    /// Captured at `startTunnel` so `resetConnection` can replay the
+    /// exact same layer setup without re-reading the protocol config.
+    /// The tunnel is treated as one layer — ghost mode is wstunnel +
+    /// WireGuard; standalone is WireGuard alone. Reset tears each
+    /// component down in reverse packet-flow order and rebuilds them
+    /// in forward order, never touching the provider's utun/routing
+    /// surface so packets never escape to the physical interface.
+    private var currentTunnelConfig: TunnelConfig?
+    private var currentWireGuardConfig: TunnelConfiguration?
+
     // MARK: - Tunnel Lifecycle
 
     override func startTunnel(options: [String: NSObject]? = nil) async throws {
@@ -73,6 +83,13 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             throw error
         }
 
+        // Capture the resolved layer setup so a later
+        // `resetConnection()` can replay it without hitting
+        // `startTunnel` (which would tear down utun and create
+        // a leak window).
+        currentTunnelConfig = config
+        currentWireGuardConfig = tunnelConfiguration
+
         TunnelLogger.log(.tunnel, "Tunnel active")
     }
 
@@ -116,9 +133,87 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             // maxEntries still applies; this is a manual flush.
             TunnelLogger.clear()
             completionHandler(Data([2]))
+        case 3:
+            // Reset the tunnel layer without touching utun / routing.
+            // Preserves the provider surface so no packet escapes to
+            // the physical interface during the reset window.
+            Task { [weak self] in
+                await self?.resetConnection()
+                completionHandler(Data([3]))
+            }
         default:
             completionHandler(nil)
         }
+    }
+
+    // MARK: - Layer Reset
+
+    /// Restart the tunnel layer (wstunnel + WireGuard in ghost mode,
+    /// WireGuard alone in standalone mode) without tearing the
+    /// `utun` interface or its routes down. Packets that arrive on
+    /// `utun` during the reset window are dropped inside the layer —
+    /// they never reach the physical interface — so there is no leak.
+    ///
+    /// Sequence matches the established start/stop ordering:
+    ///   STOP  (top-down):  WireGuard → wstunnel
+    ///   START (bottom-up): wstunnel → WireGuard
+    ///
+    /// Failure semantics: if any restart step fails, the layer is
+    /// left in a "no traffic flowing" state with `utun` still up. No
+    /// fallback to the physical route. The user retries via the UI
+    /// or disables the tunnel — the provider surface keeps traffic
+    /// contained until the user decides the next move.
+    private func resetConnection() async {
+        guard let config = currentTunnelConfig,
+              let wireguardConfig = currentWireGuardConfig else {
+            TunnelLogger.log(.tunnel, "Reset skipped — no active layer config")
+            return
+        }
+
+        let modeLabel = isGhostMode ? "Ghost (wstunnel + WireGuard)" : "Standalone (WireGuard)"
+        TunnelLogger.log(.tunnel, "Reset — restarting layer (\(modeLabel))")
+
+        // Signal the OS that the tunnel is transitioning but still
+        // intended to be up. Keeps `utun` anchored and keeps the
+        // session status in `.reasserting` throughout the cycle.
+        reasserting = true
+
+        // STOP PHASE — top-down
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            adapter.stop { _ in continuation.resume() }
+        }
+        TunnelLogger.log(.wireGuard, "Reset — adapter stopped")
+
+        if isGhostMode {
+            WstunnelLifecycle.stop()
+            TunnelLogger.log(.wstunnel, "Reset — wstunnel stopped")
+        }
+
+        // START PHASE — bottom-up
+        if isGhostMode, let wstunnelConfig = config.wstunnel {
+            do {
+                try WstunnelLifecycle.start(config: wstunnelConfig)
+                TunnelLogger.log(.wstunnel, "Reset — wstunnel restarted")
+            } catch {
+                TunnelLogger.log(.wstunnel, "Reset — wstunnel restart FAILED: \(error.localizedDescription)")
+                reasserting = false
+                return
+            }
+        }
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            adapter.start(tunnelConfiguration: wireguardConfig) { error in
+                if let error {
+                    TunnelLogger.log(.wireGuard, "Reset — adapter restart FAILED: \(error.localizedDescription)")
+                } else {
+                    TunnelLogger.log(.wireGuard, "Reset — adapter restarted")
+                }
+                continuation.resume()
+            }
+        }
+
+        reasserting = false
+        TunnelLogger.log(.tunnel, "Reset complete")
     }
 
     // MARK: - Network Settings Override

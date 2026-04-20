@@ -133,6 +133,23 @@ extension TunnelDetailView {
         return lines.joined(separator: "\n")
     }
 
+    // MARK: - Reset
+
+    /// Ask the extension to restart its tunnel layer in place.
+    /// No user confirmation: reset is soft — worst case the user
+    /// sees a brief disconnect and presses it again. utun / routes
+    /// are preserved across the cycle (no physical-interface leak).
+    func resetConnection() {
+        Task {
+            do {
+                try await tunnelsManager.resetConnection(of: tunnel)
+            } catch {
+                errorMessage = error.localizedDescription
+                showingError = true
+            }
+        }
+    }
+
     // MARK: - Delete
 
     func deleteTunnel() {
