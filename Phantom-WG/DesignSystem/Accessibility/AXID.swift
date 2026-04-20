@@ -84,7 +84,6 @@ enum AXID {
         enum Actions {
             static let copyConf      = "tunnel-detail.actions.copy-conf"
             static let copyLogs      = "tunnel-detail.actions.copy-logs"
-            static let clearLogs     = "tunnel-detail.actions.clear-logs"
             static let deleteButton  = "tunnel-detail.actions.delete"
             static let deleteConfirm = "tunnel-detail.delete-confirm.confirm"
             static let deleteCancel  = "tunnel-detail.delete-confirm.cancel"
@@ -94,8 +93,9 @@ enum AXID {
     // MARK: Log View
 
     enum LogView {
-        static let emptyState = "log-view.empty-state"
-        static let list       = "log-view.list"
+        static let emptyState  = "log-view.empty-state"
+        static let list        = "log-view.list"
+        static let clearButton = "log-view.clear-button"
     }
 }
 

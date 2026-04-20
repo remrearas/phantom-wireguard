@@ -1,13 +1,14 @@
 import SwiftUI
 
-/// Footer actions — copy config (.conf), copy logs, clear logs, and
-/// destructive delete. The copy buttons own their own "Copied!"
-/// feedback timer locally; log clear is routed directly into the log
-/// store; delete is routed back to the parent's confirmation dialog
+/// Footer actions — copy config (.conf), copy logs, and destructive
+/// delete. The copy buttons own their own "Copied!" feedback timer
+/// locally; delete is routed back to the parent's confirmation dialog
 /// via a binding so the destructive action lives at the view root.
+/// Log clearing now lives in `LogView`'s toolbar, symmetrical with
+/// the macOS counterpart and reachable from the same screen where
+/// the entries are shown.
 struct ActionsSection: View {
     var tunnel: TunnelContainer
-    var logStore: LogStore
     let copyConfAction: () -> Void
     let copyLogsAction: () -> Void
     @Binding var showingDeleteConfirmation: Bool
@@ -20,13 +21,6 @@ struct ActionsSection: View {
                 .accessibilityIdentifier(AXID.TunnelDetail.Actions.copyConf)
             copyButton(loc.t("detail_copy_logs"), icon: "text.quote", id: "logs") { copyLogsAction() }
                 .accessibilityIdentifier(AXID.TunnelDetail.Actions.copyLogs)
-
-            Button {
-                logStore.clear()
-            } label: {
-                Label(loc.t("detail_clear_logs"), systemImage: "trash.circle")
-            }
-            .accessibilityIdentifier(AXID.TunnelDetail.Actions.clearLogs)
 
             Button(role: .destructive) {
                 showingDeleteConfirmation = true

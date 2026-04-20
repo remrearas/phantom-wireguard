@@ -10,20 +10,20 @@ enum WstunnelLifecycle {
     /// are guaranteed at this point.
     static func start(config: WstunnelConfig) throws {
         guard !config.remoteHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            SharedLogger.log(.wstunnel, "ERROR: empty remoteHost")
+            TunnelLogger.log(.wstunnel, "ERROR: empty remoteHost")
             throw PacketTunnelProviderError.invalidWstunnelConfig
         }
 
-        SharedLogger.log(.wstunnel, "Starting wstunnel...")
-        SharedLogger.log(.wstunnel, "Remote: \(config.url.textual)")
-        SharedLogger.log(.wstunnel, "Local proxy: \(config.localHost):\(config.localPort)")
-        SharedLogger.log(.wstunnel, "Forward to: \(config.remoteHost):\(config.remotePort)")
+        TunnelLogger.log(.wstunnel, "Starting wstunnel...")
+        TunnelLogger.log(.wstunnel, "Remote: \(config.url.textual)")
+        TunnelLogger.log(.wstunnel, "Local proxy: \(config.localHost):\(config.localPort)")
+        TunnelLogger.log(.wstunnel, "Forward to: \(config.remoteHost):\(config.remotePort)")
 
         WstunnelBridge.setLogCallback { _, message in
-            SharedLogger.log(.wstunnel, message)
+            TunnelLogger.log(.wstunnel, message)
         }
         WstunnelBridge.initLogging(level: .info)
-        SharedLogger.log(.wstunnel, "Version: \(WstunnelBridge.version)")
+        TunnelLogger.log(.wstunnel, "Version: \(WstunnelBridge.version)")
 
         do {
             let wsConfig = WstunnelBridge.Config()
@@ -36,11 +36,11 @@ enum WstunnelLifecycle {
             )
             try wsConfig.start()
             isStarted = true
-            SharedLogger.log(.wstunnel, "Wstunnel started (running: \(WstunnelBridge.isRunning))")
+            TunnelLogger.log(.wstunnel, "Wstunnel started (running: \(WstunnelBridge.isRunning))")
         } catch {
-            SharedLogger.log(.wstunnel, "ERROR: \(error.localizedDescription)")
+            TunnelLogger.log(.wstunnel, "ERROR: \(error.localizedDescription)")
             if let lastErr = WstunnelBridge.lastError {
-                SharedLogger.log(.wstunnel, "Detail: \(lastErr)")
+                TunnelLogger.log(.wstunnel, "Detail: \(lastErr)")
             }
             throw PacketTunnelProviderError.couldNotStartWstunnel
         }
@@ -51,12 +51,12 @@ enum WstunnelLifecycle {
         guard isStarted else { return }
         isStarted = false
 
-        SharedLogger.log(.wstunnel, "Stopping wstunnel...")
+        TunnelLogger.log(.wstunnel, "Stopping wstunnel...")
         do {
             try WstunnelBridge.stop()
-            SharedLogger.log(.wstunnel, "Wstunnel stopped")
+            TunnelLogger.log(.wstunnel, "Wstunnel stopped")
         } catch {
-            SharedLogger.log(.wstunnel, "Stop error: \(error.localizedDescription)")
+            TunnelLogger.log(.wstunnel, "Stop error: \(error.localizedDescription)")
         }
     }
 }

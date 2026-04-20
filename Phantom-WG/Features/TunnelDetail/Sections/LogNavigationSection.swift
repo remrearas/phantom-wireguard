@@ -4,7 +4,7 @@ import SwiftUI
 /// badge so the operator knows the extension is emitting telemetry
 /// without having to open the detail pane.
 struct LogNavigationSection: View {
-    var logStore: LogStore
+    var logStore: any LogEntryProvider
     @Environment(LocalizationManager.self) private var loc
 
     var body: some View {

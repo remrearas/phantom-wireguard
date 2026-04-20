@@ -42,7 +42,6 @@
   "detail_logs": "Logs",
   "detail_copy_conf": "Copy Config (.conf)",
   "detail_copy_logs": "Copy Logs",
-  "detail_clear_logs": "Clear Logs",
   "detail_copied": "Copied!",
   "detail_delete_tunnel": "Delete Tunnel",
   "detail_delete_confirm_title": "Delete Tunnel?",
@@ -51,6 +50,7 @@
   "detail_no_logs": "(no logs)",
   "detail_actions": "Actions",
   "log_empty_description": "Logs will appear here when the tunnel is active.",
+  "log_clear": "Clear",
 
   "time_just_now": "just now",
   "time_seconds_ago": "%ds ago",

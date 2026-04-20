@@ -18,5 +18,5 @@ extension WireGuardLogLevel {
 }
 
 func wg_log(_ type: OSLogType, message: String) {
-    SharedLogger.log(.wireGuard, message)
+    TunnelLogger.log(.wireGuard, message)
 }

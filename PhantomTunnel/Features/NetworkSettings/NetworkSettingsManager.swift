@@ -14,7 +14,7 @@ enum NetworkSettingsManager {
             var excluded = ipv4Settings.excludedRoutes ?? []
             for ip in excludedIPv4 {
                 excluded.append(NEIPv4Route(destinationAddress: ip, subnetMask: "255.255.255.255"))
-                SharedLogger.log(.tunnel, "Excluded route: \(ip)/32")
+                TunnelLogger.log(.tunnel, "Excluded route: \(ip)/32")
             }
             ipv4Settings.excludedRoutes = excluded
         }
@@ -23,7 +23,7 @@ enum NetworkSettingsManager {
             var excluded = ipv6Settings.excludedRoutes ?? []
             for ip in excludedIPv6 {
                 excluded.append(NEIPv6Route(destinationAddress: ip, networkPrefixLength: 128))
-                SharedLogger.log(.tunnel, "Excluded route: \(ip)/128")
+                TunnelLogger.log(.tunnel, "Excluded route: \(ip)/128")
             }
             ipv6Settings.excludedRoutes = excluded
         }

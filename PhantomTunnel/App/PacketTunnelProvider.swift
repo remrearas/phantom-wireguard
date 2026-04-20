@@ -16,16 +16,19 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     // MARK: - Tunnel Lifecycle
 
     override func startTunnel(options: [String: NSObject]? = nil) async throws {
-        SharedLogger.log(.tunnel, "PacketTunnelProvider starting...")
+        // Flush any residue from a previous session — iOS may reuse
+        // the extension process across start/stop cycles, so static
+        // state like the ring buffer must be reset explicitly.
+        TunnelLogger.clear()
+        TunnelLogger.log(.tunnel, "PacketTunnelProvider starting...")
 
         // 1. Decode config
         guard let proto = protocolConfiguration as? NETunnelProviderProtocol,
               let config = proto.tunnelConfig else {
-            SharedLogger.log(.tunnel, "ERROR: Invalid tunnel configuration")
+            TunnelLogger.log(.tunnel, "ERROR: Invalid tunnel configuration")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
-        SharedLogger.currentTunnelId = config.id.uuidString
-        SharedLogger.log(.tunnel, "Config loaded: \(config.name) (\(config.isGhostMode ? "Ghost" : "WireGuard"))")
+        TunnelLogger.log(.tunnel, "Config loaded: \(config.name) (\(config.isGhostMode ? "Ghost" : "WireGuard"))")
 
         isGhostMode = config.isGhostMode
 
@@ -34,13 +37,13 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             if let host = config.wstunnel!.url.url.host {
                 wstunnelServerIPv4 = DNSResolver.resolveIPv4(host)
                 wstunnelServerIPv6 = DNSResolver.resolveIPv6(host)
-                SharedLogger.log(.tunnel, "Wstunnel server resolved: \(host) \u{2192} v4:\(wstunnelServerIPv4) v6:\(wstunnelServerIPv6)")
+                TunnelLogger.log(.tunnel, "Wstunnel server resolved: \(host) \u{2192} v4:\(wstunnelServerIPv4) v6:\(wstunnelServerIPv6)")
             }
             try WstunnelLifecycle.start(config: config.wstunnel!)
         }
 
         // 3. Build WireGuard config
-        SharedLogger.log(.wireGuard, "Building WireGuard config...")
+        TunnelLogger.log(.wireGuard, "Building WireGuard config...")
         let tunnelConfiguration: TunnelConfiguration
         do {
             tunnelConfiguration = try WireGuardConfigBuilder.build(
@@ -53,12 +56,12 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         }
 
         // 4. Start WireGuard adapter
-        SharedLogger.log(.wireGuard, "Starting WireGuard adapter...")
+        TunnelLogger.log(.wireGuard, "Starting WireGuard adapter...")
         do {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 adapter.start(tunnelConfiguration: tunnelConfiguration) { error in
                     if let error {
-                        SharedLogger.log(.wireGuard, "ERROR: \(error.localizedDescription)")
+                        TunnelLogger.log(.wireGuard, "ERROR: \(error.localizedDescription)")
                         continuation.resume(throwing: PacketTunnelProviderError.couldNotStartWireGuard)
                     } else {
                         continuation.resume()
@@ -70,35 +73,50 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             throw error
         }
 
-        SharedLogger.log(.tunnel, "Tunnel active")
+        TunnelLogger.log(.tunnel, "Tunnel active")
     }
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
-        SharedLogger.log(.tunnel, "Stopping tunnel (reason: \(reason.rawValue))")
+        TunnelLogger.log(.tunnel, "Stopping tunnel (reason: \(reason.rawValue))")
 
         // Stop WireGuard first
-        SharedLogger.log(.wireGuard, "Stopping WireGuard adapter...")
+        TunnelLogger.log(.wireGuard, "Stopping WireGuard adapter...")
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             adapter.stop { _ in continuation.resume() }
         }
-        SharedLogger.log(.wireGuard, "WireGuard stopped")
+        TunnelLogger.log(.wireGuard, "WireGuard stopped")
 
         // Then stop wstunnel (idempotent — safe even if standalone)
         WstunnelLifecycle.stop()
 
-        SharedLogger.log(.tunnel, "Tunnel disconnected")
+        TunnelLogger.log(.tunnel, "Tunnel disconnected")
     }
 
-    // MARK: - App Message (runtime stats)
+    // MARK: - App Message
 
     override func handleAppMessage(_ messageData: Data, completionHandler: ((Data?) -> Void)? = nil) {
         guard let completionHandler else { return }
 
-        if messageData.count == 1 && messageData[0] == 0 {
+        guard !messageData.isEmpty else {
+            completionHandler(nil)
+            return
+        }
+
+        switch messageData[0] {
+        case 0:
+            // WireGuard runtime stats
             adapter.getRuntimeConfiguration { config in
                 completionHandler(config?.data(using: .utf8))
             }
-        } else {
+        case 1:
+            // Log entries (in-memory ring buffer snapshot)
+            completionHandler(TunnelLogger.allEntriesAsData())
+        case 2:
+            // Flush the in-extension log buffer. Auto-purge at
+            // maxEntries still applies; this is a manual flush.
+            TunnelLogger.clear()
+            completionHandler(Data([2]))
+        default:
             completionHandler(nil)
         }
     }

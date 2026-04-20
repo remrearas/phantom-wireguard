@@ -26,7 +26,7 @@ enum WireGuardConfigBuilder {
 
     private static func buildInterface(from config: WireguardConfig) throws -> InterfaceConfiguration {
         guard let privateKey = PrivateKey(base64Key: config.interface.privateKey.textual) else {
-            SharedLogger.log(.wireGuard, "ERROR: Invalid private key")
+            TunnelLogger.log(.wireGuard, "ERROR: Invalid private key")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
 
@@ -37,11 +37,11 @@ enum WireGuardConfigBuilder {
         }
 
         guard !iface.addresses.isEmpty else {
-            SharedLogger.log(.wireGuard, "ERROR: No valid addresses")
+            TunnelLogger.log(.wireGuard, "ERROR: No valid addresses")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
 
-        SharedLogger.log(.wireGuard, "Interface addresses: \(iface.addresses.map { $0.stringRepresentation })")
+        TunnelLogger.log(.wireGuard, "Interface addresses: \(iface.addresses.map { $0.stringRepresentation })")
 
         iface.dns = config.interface.dnsServers.compactMap {
             DNSServer(from: $0.textual)
@@ -56,7 +56,7 @@ enum WireGuardConfigBuilder {
 
     private static func buildPeer(from config: WireguardConfig, wstunnel: WstunnelConfig?) throws -> PeerConfiguration {
         guard let publicKey = PublicKey(base64Key: config.peer.publicKey.textual) else {
-            SharedLogger.log(.wireGuard, "ERROR: Invalid public key")
+            TunnelLogger.log(.wireGuard, "ERROR: Invalid public key")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
 
@@ -71,20 +71,20 @@ enum WireGuardConfigBuilder {
             IPAddressRange(from: $0.textual)
         }
 
-        SharedLogger.log(.wireGuard, "AllowedIPs: \(peer.allowedIPs.count) entries")
+        TunnelLogger.log(.wireGuard, "AllowedIPs: \(peer.allowedIPs.count) entries")
 
         // Endpoint: Ghost mode -> wstunnel loopback proxy, standalone -> direct peer
         let endpointString: String
         if let ws = wstunnel {
             endpointString = "\(ws.localHost):\(ws.localPort)"
-            SharedLogger.log(.wireGuard, "Endpoint (Ghost): \(endpointString)")
+            TunnelLogger.log(.wireGuard, "Endpoint (Ghost): \(endpointString)")
         } else {
             endpointString = config.peer.endpoint.textual
-            SharedLogger.log(.wireGuard, "Endpoint (standalone): \(endpointString)")
+            TunnelLogger.log(.wireGuard, "Endpoint (standalone): \(endpointString)")
         }
 
         guard let endpoint = Endpoint(from: endpointString) else {
-            SharedLogger.log(.wireGuard, "ERROR: Invalid endpoint: \(endpointString)")
+            TunnelLogger.log(.wireGuard, "ERROR: Invalid endpoint: \(endpointString)")
             throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
         }
         peer.endpoint = endpoint

@@ -35,7 +35,7 @@ struct TunnelDetailView: View {
 
     init(tunnel: TunnelContainer) {
         self.tunnel = tunnel
-        _logStore = State(wrappedValue: LogStore(tunnelId: tunnel.tunnelConfig?.id.uuidString))
+        _logStore = State(wrappedValue: LogStore(tunnel: tunnel))
     }
 
     var body: some View {
@@ -76,7 +76,6 @@ struct TunnelDetailView: View {
 
             ActionsSection(
                 tunnel: tunnel,
-                logStore: logStore,
                 copyConfAction: copyConf,
                 copyLogsAction: copyLogs,
                 showingDeleteConfirmation: $showingDeleteConfirmation

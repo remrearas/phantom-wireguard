@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct LogView: View {
-    var logStore: LogStore
+    var logStore: any LogEntryProvider
     @Environment(LocalizationManager.self) private var loc
 
     var body: some View {
@@ -40,6 +40,17 @@ struct LogView: View {
         }
         .navigationTitle(loc.t("detail_logs"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await logStore.clear() }
+                } label: {
+                    Label(loc.t("log_clear"), systemImage: "trash")
+                }
+                .disabled(logStore.entries.isEmpty)
+                .accessibilityIdentifier(AXID.LogView.clearButton)
+            }
+        }
         .overlay {
             if logStore.entries.isEmpty {
                 ContentUnavailableView(

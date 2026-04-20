@@ -42,7 +42,6 @@
   "detail_logs": "Günlükler",
   "detail_copy_conf": "Yapılandırmayı Kopyala (.conf)",
   "detail_copy_logs": "Günlükleri Kopyala",
-  "detail_clear_logs": "Günlükleri Temizle",
   "detail_copied": "Kopyalandı!",
   "detail_delete_tunnel": "Tüneli Sil",
   "detail_delete_confirm_title": "Tünel Silinsin mi?",
@@ -51,6 +50,7 @@
   "detail_no_logs": "(günlük yok)",
   "detail_actions": "Eylemler",
   "log_empty_description": "Tünel aktif olduğunda günlükler burada görünecektir.",
+  "log_clear": "Temizle",
 
   "time_just_now": "az önce",
   "time_seconds_ago": "%ds önce",

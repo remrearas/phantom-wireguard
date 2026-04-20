@@ -1,29 +1,46 @@
 import Foundation
 
+/// Row shape rendered by `LogView`. Kept as a protocol surface so the
+/// view never needs to know the concrete store — matches the macOS
+/// counterpart even though iOS currently ships with a single store.
+struct LogEntry: Identifiable, Hashable {
+    let id: Int
+    let tag: String
+    let timestamp: String
+    let text: String
+}
+
+/// Read surface that `LogStore` satisfies. `LogView` takes one of
+/// these and treats the source as opaque.
+@MainActor
+protocol LogEntryProvider: AnyObject, Observable {
+    var entries: [LogEntry] { get }
+    func startPolling()
+    func stopPolling()
+    /// Flushes both the in-extension ring buffer (via opcode message)
+    /// and the main-app's mirror array. Polling keeps running — new
+    /// lines from the extension continue streaming normally.
+    func clear() async
+}
+
+/// Fetches logs from the tunnel extension via `handleAppMessage`.
+/// Logs are session-scoped: visible while the tunnel is running,
+/// absent when inactive (the extension clears its buffer on
+/// `startTunnel` entry so every session begins fresh).
 @Observable
 @MainActor
-final class LogStore {
+final class LogStore: LogEntryProvider {
     var entries: [LogEntry] = []
 
-    @ObservationIgnored let tunnelId: String?
-    @ObservationIgnored private var lastSeenId: Int64 = 0
+    @ObservationIgnored private weak var tunnel: TunnelContainer?
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
 
-    init(tunnelId: String? = nil) {
-        self.tunnelId = tunnelId
+    init(tunnel: TunnelContainer?) {
+        self.tunnel = tunnel
     }
 
-    struct LogEntry: Identifiable {
-        let id: Int64
-        let tag: String
-        let timestamp: String
-        let text: String  // formatted: "[HH:mm:ss.SSS][TAG] message"
-    }
-
-    /// Load all existing logs from DB and start polling for new ones.
     func startPolling() {
         guard pollingTask == nil else { return }
-        loadAll()
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
                 do {
@@ -31,62 +48,69 @@ final class LogStore {
                 } catch {
                     break
                 }
-                self?.pollOnce()
+                await self?.fetchLogs()
             }
         }
     }
 
-    /// Stop polling (view disappeared).
     func stopPolling() {
         pollingTask?.cancel()
         pollingTask = nil
     }
 
-    /// Explicit clear: wipe logs for this tunnel and reset view.
-    func clear() {
+    /// Opcode `2` — wipe the extension's ring buffer, then drop local
+    /// entries. Polling keeps running; fresh emissions reappear as the
+    /// tunnel continues to run.
+    func clear() async {
+        if tunnel?.status == .active || tunnel?.status == .activating {
+            _ = try? await sendMessage(Data([2]))
+        }
         entries.removeAll()
-        lastSeenId = 0
-        SharedLogger.clear(tunnelId: tunnelId)
     }
 
     // MARK: - Private
 
-    private func loadAll() {
-        entries.removeAll()
-        lastSeenId = 0
-
-        let all = SharedLogger.entriesSince(id: 0, tunnelId: tunnelId, limit: 5000)
-        for entry in all {
-            entries.append(LogEntry(
-                id: entry.id,
-                tag: entry.tag,
-                timestamp: entry.timestamp,
-                text: "[\(entry.timestamp)][\(entry.tag)] \(entry.message)"
-            ))
+    private func fetchLogs() async {
+        guard let tunnel, tunnel.status == .active || tunnel.status == .activating else {
+            if !entries.isEmpty { entries.removeAll() }
+            return
         }
-        if let last = all.last {
-            lastSeenId = last.id
+
+        do {
+            let data = try await sendMessage(Data([1]))
+            guard let data else { return }
+
+            let decoded = try JSONDecoder().decode([RemoteEntry].self, from: data)
+
+            entries = decoded.enumerated().map { index, entry in
+                LogEntry(
+                    id: index,
+                    tag: entry.tag,
+                    timestamp: entry.timestamp,
+                    text: "[\(entry.timestamp)][\(entry.tag)] \(entry.message)"
+                )
+            }
+        } catch {
+            // Extension not reachable or decode failed — ignore silently.
         }
     }
 
-    private func pollOnce() {
-        let newEntries = SharedLogger.entriesSince(id: lastSeenId, tunnelId: tunnelId)
-        guard !newEntries.isEmpty else { return }
-
-        lastSeenId = newEntries.last!.id
-
-        for entry in newEntries {
-            entries.append(LogEntry(
-                id: entry.id,
-                tag: entry.tag,
-                timestamp: entry.timestamp,
-                text: "[\(entry.timestamp)][\(entry.tag)] \(entry.message)"
-            ))
+    private func sendMessage(_ data: Data) async throws -> Data? {
+        guard let tunnel else { return nil }
+        return try await withCheckedThrowingContinuation { continuation in
+            do {
+                try tunnel.tunnelProvider.sendProviderMessage(data) { response in
+                    continuation.resume(returning: response)
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
         }
+    }
 
-        // Mirror auto-prune: if in-memory entries exceed DB max, trim oldest
-        if entries.count > 5000 {
-            entries.removeFirst(entries.count - 5000)
-        }
+    private struct RemoteEntry: Codable {
+        let timestamp: String
+        let tag: String
+        let message: String
     }
 }
