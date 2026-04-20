@@ -49,6 +49,16 @@ struct SplitTunnelingView: View {
             .onChange(of: store.configuration.interfaceSelection) { _, newSelection in
                 toasts.info(interfaceChangeToastMessage(newSelection))
             }
+            .onChange(of: store.configuration.isEnabled) { oldValue, newValue in
+                // Each enable/disable cycle starts with a fresh log
+                // surface. The extension's buffer is new per-session
+                // on enable; on disable we drop client-side entries
+                // explicitly so the sheet doesn't display stale lines
+                // from the previous session.
+                if oldValue != newValue {
+                    Task { await logStore?.clear() }
+                }
+            }
             .toastOverlay()
             .modifier(ValidationAlert(
                 showingValidationError: $showingValidationError,
@@ -136,11 +146,8 @@ struct SplitTunnelingView: View {
                 SplitTunnelingLogSection(logStore: logStore)
             }
 
-            SplitTunnelingResetSection(
-                showingResetConfirm: $showingResetConfirm
-            )
-
-            SplitTunnelingRemoveExtensionSection(
+            SplitTunnelingDestructiveActionsSection(
+                showingResetConfirm: $showingResetConfirm,
                 showingRemoveConfirm: $showingRemoveExtensionConfirm,
                 isRemoving: removingExtension
             )
