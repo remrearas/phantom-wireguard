@@ -49,6 +49,7 @@
   "detail_keepalive": "Keepalive",
   "detail_logs": "Logs",
   "detail_copy_conf": "Copy Config (.conf)",
+  "detail_reset_connection": "Reset Connection",
   "detail_copied": "Copied!",
   "detail_delete_tunnel": "Delete Tunnel",
   "detail_delete_confirm_title": "Delete Tunnel?",

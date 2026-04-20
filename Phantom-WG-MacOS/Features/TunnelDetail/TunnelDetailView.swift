@@ -75,6 +75,7 @@ struct TunnelDetailView: View {
             ActionsSection(
                 tunnel: tunnel,
                 copyAction: copyConf,
+                resetAction: resetConnection,
                 showingDeleteConfirmation: $showingDeleteConfirmation
             )
         }

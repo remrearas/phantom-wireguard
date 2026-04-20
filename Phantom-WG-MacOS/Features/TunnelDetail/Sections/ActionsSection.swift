@@ -1,12 +1,19 @@
 import SwiftUI
 
-/// Footer actions — copy-to-clipboard and delete. The copy button owns
-/// its own "Copied!" feedback timer locally; delete is routed back to
-/// the parent's confirmation dialog via a binding so the destructive
-/// action lives at the view root.
+/// Footer actions — copy-to-clipboard, reset connection, and delete.
+///
+/// - Copy owns its own "Copied!" feedback timer locally.
+/// - Reset is enabled only while the tunnel is active/reasserting;
+///   tapping it asks the extension to restart the tunnel layer in
+///   place (wstunnel + WireGuard in ghost mode, WireGuard alone in
+///   standalone) without touching utun — so no packet escapes to the
+///   physical interface during the reset window.
+/// - Delete is routed back to the parent's confirmation dialog via a
+///   binding so the destructive action lives at the view root.
 struct ActionsSection: View {
     var tunnel: TunnelContainer
     let copyAction: () -> Void
+    let resetAction: () -> Void
     @Binding var showingDeleteConfirmation: Bool
     @State private var copiedItem: String?
     @Environment(LocalizationManager.self) private var loc
@@ -16,6 +23,13 @@ struct ActionsSection: View {
             copyButton(loc.t("detail_copy_conf"), icon: "doc.text", id: "conf") { copyAction() }
                 .listRowSeparator(.hidden)
                 .accessibilityIdentifier(AXID.TunnelDetail.Actions.copyButton)
+
+            Button(action: resetAction) {
+                Label(loc.t("detail_reset_connection"), systemImage: "arrow.clockwise")
+            }
+            .disabled(!canReset)
+            .listRowSeparator(.hidden)
+            .accessibilityIdentifier(AXID.TunnelDetail.Actions.resetButton)
 
             Button(role: .destructive) {
                 showingDeleteConfirmation = true
@@ -28,6 +42,13 @@ struct ActionsSection: View {
         } header: {
             Label(loc.t("detail_actions"), systemImage: "ellipsis.circle")
         }
+    }
+
+    /// Reset only applies when the extension is holding the tunnel
+    /// surface. Inactive / deactivating states have no utun to
+    /// preserve; the button collapses to disabled.
+    private var canReset: Bool {
+        tunnel.status == .active || tunnel.status == .reasserting
     }
 
     private func copyButton(_ title: String, icon: String, id: String, action: @escaping () -> Void) -> some View {

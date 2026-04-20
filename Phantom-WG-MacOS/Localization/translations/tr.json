@@ -49,6 +49,7 @@
   "detail_keepalive": "Canlı Tutma",
   "detail_logs": "Günlükler",
   "detail_copy_conf": "Yapılandırmayı Kopyala (.conf)",
+  "detail_reset_connection": "Bağlantıyı Sıfırla",
   "detail_copied": "Kopyalandı!",
   "detail_delete_tunnel": "Tüneli Sil",
   "detail_delete_confirm_title": "Tünel Silinsin mi?",
