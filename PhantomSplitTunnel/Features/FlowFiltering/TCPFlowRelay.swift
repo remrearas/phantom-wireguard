@@ -16,6 +16,8 @@ final class TCPFlowRelay {
     private let flow: NEAppProxyTCPFlow
     private let interface: NWInterface
     private let appName: String
+    private let relayID = UUID()
+    private weak var registry: ActiveFlowRelayRegistry?
     private var connection: NWConnection?
     private var closed = false
     private let lock = NSLock()
@@ -37,16 +39,25 @@ final class TCPFlowRelay {
         category: "relay.tcp"
     )
 
-    init(flow: NEAppProxyTCPFlow, interface: NWInterface, appName: String) {
+    init(
+        flow: NEAppProxyTCPFlow,
+        interface: NWInterface,
+        appName: String,
+        registry: ActiveFlowRelayRegistry? = nil
+    ) {
         self.flow = flow
         self.interface = interface
         self.appName = appName
+        self.registry = registry
     }
 
     // MARK: - Entry Point
 
     func start() {
         selfRef = self
+        registry?.registerRelay(id: relayID) { [weak self] in
+            self?.close(error: POSIXError(.EHOSTUNREACH))
+        }
         flow.open(withLocalEndpoint: nil) { [weak self] error in
             if let error {
                 self?.close(error: error)
@@ -171,6 +182,8 @@ final class TCPFlowRelay {
                 "\(appName)  TCP  \(remoteDescription)  failed: \(error.localizedDescription)"
             )
         }
+
+        registry?.unregisterRelay(id: relayID)
 
         flow.closeReadWithError(error)
         flow.closeWriteWithError(error)

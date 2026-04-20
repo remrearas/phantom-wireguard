@@ -13,7 +13,7 @@ import os.log
 /// valid physical interface available?" If the user's chosen interface
 /// disappears we cancel the session with an error so the UI reflects
 /// the problem; the user explicitly re-picks or re-enables.
-final class TransparentProxyProvider: NETransparentProxyProvider {
+final class TransparentProxyProvider: NETransparentProxyProvider, ActiveFlowRelayRegistry {
 
     private let log = OSLog(
         subsystem: "com.remrearas.Phantom-WG-MacOS.PhantomSplitTunnel",
@@ -29,6 +29,13 @@ final class TransparentProxyProvider: NETransparentProxyProvider {
     /// processes like `com.brave.Browser.helper` (network service) which
     /// generate flows distinct from the main app.
     private var excludedApps: [AppEntry] = []
+
+    /// Live relay registry — each `TCPFlowRelay` / `UDPFlowRelay`
+    /// registers a close-closure on start and unregisters on close.
+    /// Lets us tear down every active bypass flow in one pass when the
+    /// bound interface disappears (strict mode — no tunnel fallback).
+    private var activeRelays: [UUID: () -> Void] = [:]
+    private let relaysLock = NSLock()
 
     // MARK: - Lifecycle
 
@@ -81,12 +88,73 @@ final class TransparentProxyProvider: NETransparentProxyProvider {
         }
 
         guard let targetInterface = interfaceMonitor.current else {
-            logger.log("\(matched.displayName) — bypass unavailable (no physical interface)")
-            return false
+            // Strict default: no physical interface → claim the flow
+            // and immediately reject it so it never falls back to the
+            // tunnel via the OS default route. The user sees the app
+            // fail until they take action (switch interface / toggle
+            // off), not a silent leak.
+            logger.log(
+                "\(matched.displayName) — bypass unavailable, flow rejected (strict)  \(describeFlow(flow))"
+            )
+            rejectFlow(flow, error: POSIXError(.EHOSTUNREACH))
+            return true
         }
 
         logger.log("\(matched.displayName) → \(targetInterface.name)  \(describeFlow(flow))")
-        return FlowRelay.relay(flow, appName: matched.displayName, boundTo: targetInterface)
+        return FlowRelay.relay(
+            flow,
+            appName: matched.displayName,
+            boundTo: targetInterface,
+            registry: self
+        )
+    }
+
+    /// Claim a flow just to close it with an error. Prevents the flow
+    /// from being routed via the OS default path (tunnel). The flow
+    /// must be opened first — `closeReadWithError` / `closeWriteWithError`
+    /// don't deliver an error to the app's socket until the flow has
+    /// transitioned out of its pending-open state.
+    private func rejectFlow(_ flow: NEAppProxyFlow, error: Error) {
+        if let tcp = flow as? NEAppProxyTCPFlow {
+            tcp.open(withLocalEndpoint: nil) { _ in
+                tcp.closeReadWithError(error)
+                tcp.closeWriteWithError(error)
+            }
+        } else if let udp = flow as? NEAppProxyUDPFlow {
+            udp.open(withLocalEndpoint: nil) { _ in
+                udp.closeReadWithError(error)
+                udp.closeWriteWithError(error)
+            }
+        }
+    }
+
+    // MARK: - ActiveFlowRelayRegistry
+
+    func registerRelay(id: UUID, close: @escaping () -> Void) {
+        relaysLock.lock()
+        activeRelays[id] = close
+        relaysLock.unlock()
+    }
+
+    func unregisterRelay(id: UUID) {
+        relaysLock.lock()
+        activeRelays.removeValue(forKey: id)
+        relaysLock.unlock()
+    }
+
+    /// Drain the registry and fire every close-closure. Used when the
+    /// bound interface goes away — we don't wait for per-relay
+    /// `NWConnection` to time out in `.waiting`, we actively surface
+    /// the failure to the app. Relays unregister themselves from
+    /// inside their close flow; the snapshot we iterate over is
+    /// already decoupled from the live dictionary by the lock.
+    private func forceCloseActiveRelays() {
+        relaysLock.lock()
+        let closures = Array(activeRelays.values)
+        relaysLock.unlock()
+        for close in closures {
+            close()
+        }
     }
 
     /// Per-flow summary for LogView. TCP flows carry a single remote
@@ -181,14 +249,18 @@ final class TransparentProxyProvider: NETransparentProxyProvider {
     // MARK: - Interface Loss
 
     /// The user's chosen interface (or any interface in auto mode)
-    /// went away. Log it; new flows will be rejected by
-    /// `handleNewFlow` (no interface → decline) until the interface
-    /// reappears or the user picks a different one.
+    /// went away. In strict mode we tear down every active relay —
+    /// `NWConnection.requiredInterface` would otherwise stall them in
+    /// `.waiting` until the app's own timeout fires. Fast, loud
+    /// failure is preferable: the user sees apps stop, takes action.
+    /// New flows that arrive while no interface is resolvable get
+    /// rejected by `handleNewFlow`.
     private func handleInterfaceChange(_ interface: NWInterface?) {
         if let interface {
             logger.log("interface resolved: \(interface.name) (\(interface.type))")
             return
         }
-        logger.log("interface unavailable — new bypass flows will be declined")
+        logger.log("interface unavailable — closing active bypass flows (strict)")
+        forceCloseActiveRelays()
     }
 }
