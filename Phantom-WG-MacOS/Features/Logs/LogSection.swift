@@ -64,7 +64,7 @@ struct LogView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
+        ToolbarItemGroup(placement: .primaryAction) {
             Button {
                 saveLog()
             } label: {
@@ -72,6 +72,14 @@ struct LogView: View {
             }
             .disabled(logStore.entries.isEmpty)
             .accessibilityIdentifier(AXID.LogView.saveButton)
+
+            Button {
+                Task { await logStore.clear() }
+            } label: {
+                Label(loc.t("log_clear"), systemImage: "trash")
+            }
+            .disabled(logStore.entries.isEmpty)
+            .accessibilityIdentifier(AXID.LogView.clearButton)
         }
     }
 

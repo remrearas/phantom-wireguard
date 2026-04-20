@@ -48,4 +48,13 @@ enum TunnelLogger {
         lock.unlock()
         return try? JSONEncoder().encode(snapshot)
     }
+
+    /// Wipes the buffer without tearing down the tunnel. Auto-purge at
+    /// `maxEntries` still applies — this is a manual flush on top of
+    /// the existing ring semantics.
+    static func clear() {
+        lock.lock()
+        buffer.removeAll(keepingCapacity: true)
+        lock.unlock()
+    }
 }

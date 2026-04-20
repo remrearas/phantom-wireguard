@@ -127,6 +127,26 @@ class SplitTunnelProviderManager {
         }
     }
 
+    /// Opcode `0x02` — flush the extension's log ring buffer. No-op if
+    /// the session isn't connected; the next `startProxy` starts with
+    /// a fresh buffer regardless.
+    func clearLogs() async {
+        guard let manager,
+              let session = manager.connection as? NETunnelProviderSession,
+              session.status == .connected else {
+            return
+        }
+        _ = try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data?, Error>) in
+            do {
+                try session.sendProviderMessage(Data([0x02])) { ack in
+                    continuation.resume(returning: ack)
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
     /// Opcode `0x01` — log snapshot. Returns the newline-joined buffer
     /// shipped by the extension, or nil if the session isn't up.
     /// Used by the Logs view inside the Split-Tunneling sheet.

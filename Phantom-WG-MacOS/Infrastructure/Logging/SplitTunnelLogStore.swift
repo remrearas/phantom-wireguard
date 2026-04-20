@@ -41,6 +41,14 @@ final class SplitTunnelLogStore: LogEntryProvider {
         pollingTask = nil
     }
 
+    /// Flushes the extension's ring buffer + drops local entries.
+    /// Matches `LogStore.clear()` shape so both satisfy
+    /// `LogEntryProvider.clear()`.
+    func clear() async {
+        await providerManager?.clearLogs()
+        entries.removeAll()
+    }
+
     // MARK: - Private
 
     private func fetchLogs() async {

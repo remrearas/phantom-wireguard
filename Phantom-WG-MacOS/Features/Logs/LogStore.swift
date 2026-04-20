@@ -18,6 +18,10 @@ protocol LogEntryProvider: AnyObject, Observable {
     var entries: [LogEntry] { get }
     func startPolling()
     func stopPolling()
+    /// Flushes both the in-extension ring buffer (via opcode message)
+    /// and the main-app's mirror array. Re-emits existing polling —
+    /// new lines from the extension continue streaming normally.
+    func clear() async
 }
 
 /// Fetches logs from the tunnel extension via handleAppMessage.
@@ -51,6 +55,16 @@ final class LogStore: LogEntryProvider {
     func stopPolling() {
         pollingTask?.cancel()
         pollingTask = nil
+    }
+
+    /// Opcode `2` — wipe the extension's ring buffer, then drop local
+    /// entries. Polling keeps running; fresh emissions reappear as the
+    /// tunnel continues to run.
+    func clear() async {
+        if tunnel?.status == .active || tunnel?.status == .activating {
+            _ = try? await sendMessage(Data([2]))
+        }
+        entries.removeAll()
     }
 
     // MARK: - Private

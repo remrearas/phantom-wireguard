@@ -144,6 +144,12 @@ final class TransparentProxyProvider: NETransparentProxyProvider {
             let payload = logger.snapshot().data(using: .utf8) ?? Data()
             completionHandler?(payload)
 
+        case 0x02:
+            // Flush the in-extension log buffer. Auto-purge at the
+            // logger's capacity still applies; this is a manual flush.
+            logger.clear()
+            completionHandler?(Data([0x02]))
+
         default:
             os_log("Unknown opcode: 0x%02x", log: log, type: .error, opcode)
             completionHandler?(nil)

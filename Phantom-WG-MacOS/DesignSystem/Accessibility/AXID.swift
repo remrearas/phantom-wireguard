@@ -68,6 +68,9 @@ enum AXID {
         static let removeConfirm     = "split-tunneling.remove-confirm.confirm"
         static let removeCancel      = "split-tunneling.remove-confirm.cancel"
         static let logsLink          = "split-tunneling.logs-link"
+        static let logsCount         = "split-tunneling.logs-count"
+        static let logsSave          = "split-tunneling.logs-save"
+        static let logsClear         = "split-tunneling.logs-clear"
         static let interfaceUnavailableBanner = "split-tunneling.interface-unavailable-banner"
 
         static func appRow(_ bundleID: String) -> String { "split-tunneling.app-row.\(bundleID)" }
@@ -139,6 +142,7 @@ enum AXID {
 
     enum LogView {
         static let saveButton  = "log-view.save-button"
+        static let clearButton = "log-view.clear-button"
         static let emptyState  = "log-view.empty-state"
         static let list        = "log-view.list"
         static let saveErrorOK = "log-view.save-error.ok"

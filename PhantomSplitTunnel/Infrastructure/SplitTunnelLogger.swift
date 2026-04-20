@@ -47,4 +47,14 @@ final class SplitTunnelLogger {
         defer { lock.unlock() }
         return buffer.joined(separator: "\n")
     }
+
+    /// Manual flush on top of the ring's auto-purge. Triggered by the
+    /// main app via opcode 0x02 when the user taps "Clear" in the Logs
+    /// section — the extension keeps running; new lines stream back
+    /// into the freshly empty buffer.
+    func clear() {
+        lock.lock()
+        buffer.removeAll(keepingCapacity: true)
+        lock.unlock()
+    }
 }

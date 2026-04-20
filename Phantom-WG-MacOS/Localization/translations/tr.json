@@ -58,6 +58,8 @@
   "detail_actions": "Eylemler",
   "log_empty_description": "Tünel aktif olduğunda günlükler burada görünecektir.",
   "log_save": "Günlüğü Kaydet",
+  "log_clear": "Günlüğü Temizle",
+  "log_entry_count": "%d satır",
 
   "time_just_now": "az önce",
   "time_seconds_ago": "%ds önce",

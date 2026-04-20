@@ -58,6 +58,8 @@
   "detail_actions": "Actions",
   "log_empty_description": "Logs will appear here when the tunnel is active.",
   "log_save": "Save Log",
+  "log_clear": "Clear Log",
+  "log_entry_count": "%d entries",
 
   "time_just_now": "just now",
   "time_seconds_ago": "%ds ago",

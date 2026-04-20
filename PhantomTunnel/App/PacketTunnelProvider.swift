@@ -141,6 +141,11 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         case 1:
             // Log entries (in-memory buffer)
             completionHandler(TunnelLogger.allEntriesAsData())
+        case 2:
+            // Flush the in-extension log buffer. Auto-purge at
+            // maxEntries still applies; this is a manual flush.
+            TunnelLogger.clear()
+            completionHandler(Data([2]))
         default:
             completionHandler(nil)
         }
