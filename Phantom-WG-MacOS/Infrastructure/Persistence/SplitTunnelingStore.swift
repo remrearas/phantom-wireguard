@@ -2,14 +2,20 @@ import Foundation
 import AppKit
 import Observation
 
-/// Single source of truth for the app-wide split tunneling configuration.
+/// Single source of truth for the app-wide split tunneling configuration
+/// in the **main app process**.
 ///
 /// Persists the config as a JSON blob on disk inside the shared App
-/// Group container. File-based storage instead of UserDefaults
-/// because `cfprefsd` caches per-process and detaches when the
-/// extension (sandboxed) can't talk to the daemon — we saw
-/// "reload: 0 app(s)" even after the main app wrote new entries.
-/// The file path is known to both processes via `SharedConstants`.
+/// Group container. File-based storage instead of UserDefaults because
+/// `cfprefsd` caches per-process and detaches when the extension
+/// (sandboxed) can't talk to the daemon — we saw "reload: 0 app(s)"
+/// even after the main app wrote new entries.
+///
+/// The App Group path lives in `SharedConstants` and is technically
+/// visible to both processes, but only the main app reads or writes
+/// this file. The extension receives the configuration through
+/// `providerConfiguration["split_config"]` at `startProxy` and via
+/// opcode `0x00` live-reload messages afterwards — not via this file.
 @Observable
 @MainActor
 final class SplitTunnelingStore {

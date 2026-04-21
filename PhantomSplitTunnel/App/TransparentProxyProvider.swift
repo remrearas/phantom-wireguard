@@ -26,8 +26,10 @@ final class TransparentProxyProvider: NETransparentProxyProvider, ActiveFlowRela
     /// We store the full `AppEntry` rather than just signing IDs so the
     /// flow dispatcher can match both the exact signing identifier and
     /// the bundle-ID namespace — the latter is what catches child
-    /// processes like `com.brave.Browser.helper` (network service) which
-    /// generate flows distinct from the main app.
+    /// processes like `com.vendor.Browser.helper` (network service) that
+    /// Chromium-based browsers spawn with differing team prefixes, which
+    /// would otherwise generate flows the OS treats as distinct from
+    /// the main app.
     private var excludedApps: [AppEntry] = []
 
     /// Live relay registry — each `TCPFlowRelay` / `UDPFlowRelay`
@@ -62,7 +64,9 @@ final class TransparentProxyProvider: NETransparentProxyProvider, ActiveFlowRela
 
         // Initial config comes from providerConfiguration — the OS
         // hands us whatever the main app packed via saveToPreferences.
-        // No cross-process file or UserDefaults dependency.
+        // Live updates after this point arrive as opcode 0x00 messages
+        // with an inline JSON payload. The extension never reads the
+        // App Group file directly.
         let initialConfig = loadConfigurationFromProviderProtocol() ?? .default
         applyConfiguration(initialConfig)
 

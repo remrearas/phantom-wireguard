@@ -2,9 +2,13 @@ import Foundation
 import Network
 
 /// Extension-local interface watcher. Runs in the PhantomSplitTunnel
-/// process, tracks the currently available non-tunnel interfaces,
-/// resolves the user's `InterfaceSelection`, and signals when the
-/// selected interface vanishes so the proxy can cancel itself.
+/// process, uses `NWPathMonitor` to track physically available
+/// interfaces (filtering out `.other` and `.loopback` types so the
+/// tunnel's `utun` and synthetic interfaces never become bypass
+/// candidates), resolves the user's `InterfaceSelection` (auto vs.
+/// explicit BSD name), and signals when the currently resolved
+/// interface vanishes so the proxy can reject new flows and close
+/// active relays (strict mode).
 final class InterfaceMonitor {
 
     /// Called whenever the currently-resolved interface changes. `nil`

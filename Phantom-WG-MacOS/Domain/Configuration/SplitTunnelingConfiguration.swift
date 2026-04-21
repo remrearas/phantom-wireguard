@@ -2,9 +2,18 @@ import Foundation
 
 // MARK: - Split Tunneling Configuration
 
-/// App-wide split tunneling configuration. Shared between the main app
-/// and the PhantomSplitTunnel system extension via App Group UserDefaults —
-/// both processes decode this single object from one JSON blob.
+/// App-wide split tunneling configuration. Persisted as JSON
+/// (`split-tunneling.json`) in the shared App Group container by the
+/// main app's `SplitTunnelingStore`. File-based persistence sidesteps
+/// `cfprefsd` cross-process caching issues that UserDefaults would
+/// otherwise expose when a sandboxed extension reads values written
+/// by the main app under a different security context.
+///
+/// Delivery to the extension does **not** go through the file: the
+/// main app packs this blob into `providerConfiguration["split_config"]`
+/// at save-time (initial boot path) and sends it via opcode `0x00`
+/// messages for live reloads afterwards. The extension decodes the
+/// JSON handed to it and never touches the App Group file directly.
 ///
 /// The gate is `isEnabled`: when false the whole feature is inert and
 /// the tunnel behaves as if split tunneling didn't exist, yet the user's
@@ -92,9 +101,13 @@ enum InterfaceSelection: Codable, Equatable, Hashable {
 /// **code signing identifier** exactly as reported by the Security
 /// framework — for Developer ID apps this is `<teamID>.<bundleID>`,
 /// for Apple platform-signed apps it's just `<bundleID>` (e.g.
-/// `com.apple.Safari`). This string is fed verbatim to
-/// `NENetworkRule(signingIdentifier:)`, so parsing/prefix logic stays
-/// in the OS where Apple does natural helper-process matching.
+/// `com.apple.Safari`). At runtime the extension matches this string
+/// against each flow's `sourceAppSigningIdentifier` via
+/// `FlowDecisionEngine.matches` — the OS performs no filtering based
+/// on this value. The match matrix covers both exact signing IDs and
+/// bundle-ID namespace prefixes, so a single entry for a Chromium-based
+/// browser (`TEAM.com.vendor.Browser`) also captures its helper
+/// processes (`com.vendor.Browser.helper`) without user intervention.
 ///
 /// `bundleIdentifier`, `displayName`, `teamName` and `lastKnownPath`
 /// are UI metadata — no runtime logic depends on them.

@@ -8,12 +8,15 @@ import NetworkExtension
 /// flips the enable toggle, stop on disable, and clear the entry
 /// entirely when the user uninstalls the extension.
 ///
-/// Config is handed to the extension through the OS-managed
+/// Config is handed to the extension through two OS-managed channels:
 /// `providerConfiguration` dict at save time (initial boot path) and
-/// through an inline `sendProviderMessage` payload afterwards (live
-/// reload path). This avoids any cross-process file / UserDefaults
-/// sync — both channels survive sandbox user-context mismatches that
-/// App Group storage does not.
+/// inline `sendProviderMessage` payload afterwards (live reload path).
+/// Both channels are delivered by the OS and survive sandbox user-context
+/// mismatches (root vs. user) that cross-process App Group file sharing
+/// cannot always handle reliably. Main-app-only persistence still uses
+/// the App Group container (`split-tunneling.json` via
+/// `SplitTunnelingStore`), but the extension itself never reads that
+/// file — it only consumes the OS-delivered JSON.
 @Observable
 @MainActor
 class SplitTunnelProviderManager {

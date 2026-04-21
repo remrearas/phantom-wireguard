@@ -2,14 +2,22 @@ import Foundation
 
 // MARK: - Flow Decision Engine
 
-/// Collapsed to a single helper in the signing-identifier-based
-/// architecture: the OS now filters flows via
-/// `NENetworkRule(signingIdentifier:)` before we ever see them, so
-/// every flow that reaches `handleNewFlow` is a bypass candidate by
-/// construction. This utility exists only for the self-bypass guard
-/// — a belt-and-suspenders check that keeps our own extension /
-/// tunnel traffic out of the bypass path in case the rule matrix ever
-/// accidentally includes it (user-error, misconfigured import, etc.).
+/// Flow decision helpers used by PhantomSplitTunnel's `handleNewFlow`.
+/// The OS delivers every outbound TCP/UDP flow to our extension without
+/// any signing-identifier filtering — the `NENetworkRule` we install
+/// specifies only `protocol: .any, direction: .outbound`. Filtering is
+/// runtime-only and happens here:
+///
+/// - `isOwnProcess` — self-bypass guard. Flows from our own processes
+///   (main app, PhantomTunnel, PhantomSplitTunnel) are declined back
+///   to the OS default route so the extension never loops its own
+///   upstream traffic through itself.
+/// - `matches` — user-app matching. Two-pass matrix (exact signing ID
+///   + bundle-ID namespace) so a single entry captures both the main
+///   process and its helper / service children.
+///
+/// Lives in Domain (not the extension) so main-app tests can exercise
+/// the matrix without having to run the proxy provider.
 enum FlowDecisionEngine {
 
     /// Anything signed by our own team + bundle prefix must bypass
@@ -32,19 +40,16 @@ enum FlowDecisionEngine {
 
     /// Two-pass match: first against the exact signing identifier (with
     /// team prefix when applicable), then against the bundle-ID
-    /// namespace. The namespace pass is what captures browser helpers —
-    /// Brave's main app signs as `TEAM.com.brave.Browser` while its
-    /// network service appears as `com.brave.Browser.helper` (or
-    /// `*.com.brave.Browser.helper` on some Chromium builds). The user
-    /// adds the browser once; both the main process and every child of
-    /// `com.brave.Browser.*` route through bypass.
-    ///
-    /// Lives in Domain (not the extension) so main-app tests can
-    /// exercise the matrix without having to run the proxy provider.
+    /// namespace. The namespace pass catches helper processes and
+    /// services signed with different team identifiers — e.g. a
+    /// Chromium-based browser's main app might be `TEAM.com.vendor.Browser`
+    /// while its network service is `com.vendor.Browser.helper` (or
+    /// signed with a different team prefix). Adding the main app once
+    /// routes all children of that bundle-ID namespace through bypass.
     static func matches(signingID: String, against app: AppEntry) -> Bool {
         // Exact signing identifier, plus subordinate-namespace prefix
-        // (e.g. entry "TEAM.com.brave.Browser" matches flow
-        // "TEAM.com.brave.Browser.helper").
+        // (e.g. entry "TEAM.com.vendor.Browser" matches flow
+        // "TEAM.com.vendor.Browser.helper").
         if signingID == app.signingIdentifier
             || signingID.hasPrefix(app.signingIdentifier + ".") {
             return true
@@ -53,10 +58,10 @@ enum FlowDecisionEngine {
         // Bundle-ID namespace — covers helpers signed with a different
         // team prefix, or no prefix at all. Checks every position the
         // bundle ID could appear at:
-        //   head:     "com.brave.Browser"
-        //   head.*:   "com.brave.Browser.helper"
-        //   *.tail:   "TEAM.com.brave.Browser"
-        //   *.mid.*:  "TEAM.com.brave.Browser.helper"
+        //   head:     "com.vendor.Browser"
+        //   head.*:   "com.vendor.Browser.helper"
+        //   *.tail:   "TEAM.com.vendor.Browser"
+        //   *.mid.*:  "TEAM.com.vendor.Browser.helper"
         let bundleID = app.bundleIdentifier
         if signingID == bundleID
             || signingID.hasPrefix(bundleID + ".")
