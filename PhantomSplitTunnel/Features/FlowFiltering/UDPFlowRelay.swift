@@ -107,6 +107,14 @@ final class UDPFlowRelay {
         connections[endpoint] = conn
         lock.unlock()
 
+        // First datagram to this destination — surface host:port so
+        // per-endpoint diagnostics (DNS leaks, QUIC targets) are
+        // observable. TCP gets this for free at flow open; UDP only
+        // learns endpoints datagram-by-datagram.
+        SplitTunnelLogger.shared.log(
+            "\(appName) → \(interface.name)  UDP  \(Self.describe(endpoint))"
+        )
+
         conn.stateUpdateHandler = { [weak self] state in
             switch state {
             case .failed, .cancelled:
@@ -154,6 +162,18 @@ final class UDPFlowRelay {
             host: NWEndpoint.Host(host.hostname),
             port: port
         )
+    }
+
+    private static func describe(_ endpoint: Network.NWEndpoint) -> String {
+        guard case let .hostPort(host, port) = endpoint else { return "?" }
+        let hostname: String
+        switch host {
+        case .name(let name, _): hostname = name
+        case .ipv4(let ipv4):    hostname = "\(ipv4)"
+        case .ipv6(let ipv6):    hostname = "\(ipv6)"
+        @unknown default:        hostname = "?"
+        }
+        return "\(hostname):\(port.rawValue)"
     }
 
     private static func convertBack(_ endpoint: Network.NWEndpoint) -> NWHostEndpoint? {
