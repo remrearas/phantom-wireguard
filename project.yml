@@ -16,6 +16,7 @@ schemes:
       targets:
         Phantom-WG-MacOS: all
         PhantomSplitTunnel: all
+        PhantomDNSProxy: all
     run:
       config: Debug
     test:
@@ -45,6 +46,9 @@ targets:
         embed: true
         codeSign: true
       - target: PhantomSplitTunnel
+        embed: true
+        codeSign: true
+      - target: PhantomDNSProxy
         embed: true
         codeSign: true
       - framework: Libraries/WstunnelKit/libwstunnel_mac.a
@@ -243,6 +247,63 @@ targets:
       properties:
         com.apple.developer.networking.networkextension:
           - app-proxy-provider-systemextension
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - group.com.remrearas.phantom-wg-macos
+        com.apple.security.network.client: true
+        com.apple.security.network.server: true
+
+  # ── DNS Proxy Helper (System Extension) ──────────────────
+
+  PhantomDNSProxy:
+    type: system-extension
+    platform: macOS
+    sources:
+      - path: PhantomDNSProxy
+        excludes:
+          - "**/.DS_Store"
+      # Shared config model so the helper reads the same exclude
+      # list the SplitTunnel relay reads (single source of truth).
+      - path: Phantom-WG-MacOS/Domain/Configuration/SplitTunnelingConfiguration.swift
+      - path: Phantom-WG-MacOS/Domain/Configuration/FlowDecisionEngine.swift
+      - path: Phantom-WG-MacOS/Shared/SharedConstants.swift
+    dependencies:
+      - sdk: NetworkExtension.framework
+    settings:
+      base:
+        ARCHS: "$(ARCHS_STANDARD)"
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        PRODUCT_NAME: com.remrearas.Phantom-WG-MacOS.PhantomDNSProxy
+        PRODUCT_MODULE_NAME: PhantomDNSProxy
+        PRODUCT_BUNDLE_IDENTIFIER: com.remrearas.Phantom-WG-MacOS.PhantomDNSProxy
+        INFOPLIST_FILE: PhantomDNSProxy/Info.plist
+        CODE_SIGN_ENTITLEMENTS: PhantomDNSProxy/PhantomDNSProxy.entitlements
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "Developer ID Application"
+        DEVELOPMENT_TEAM: 9C5SL5H7CM
+        PROVISIONING_PROFILE_SPECIFIER: Phantom-WG Mac DNSProxy DeveloperID
+        ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: YES
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "1.2.1"
+        CURRENT_PROJECT_VERSION: 2
+    info:
+      path: PhantomDNSProxy/Info.plist
+      properties:
+        CFBundlePackageType: SYSX
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleDisplayName: PhantomDNSProxy
+        NSSystemExtensionUsageDescription: "Phantom-WG Mac needs to install a system extension that protects Split-Tunneling against DNS leaks."
+        NetworkExtension:
+          NEProviderClasses:
+            com.apple.networkextension.dns-proxy: $(PRODUCT_MODULE_NAME).DNSProxyProvider
+    entitlements:
+      path: PhantomDNSProxy/PhantomDNSProxy.entitlements
+      properties:
+        com.apple.developer.networking.networkextension:
+          - dns-proxy-systemextension
         com.apple.security.app-sandbox: true
         com.apple.security.application-groups:
           - group.com.remrearas.phantom-wg-macos
