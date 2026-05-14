@@ -62,10 +62,10 @@ final class ToastCenter {
         }
     }
 
-    func info(_ message: String)    { show(Toast(kind: .info,    message: message)) }
+    func info(_ message: String) { show(Toast(kind: .info, message: message)) }
     func success(_ message: String) { show(Toast(kind: .success, message: message)) }
     func warning(_ message: String) { show(Toast(kind: .warning, message: message)) }
-    func error(_ message: String)   { show(Toast(kind: .error,   message: message)) }
+    func error(_ message: String) { show(Toast(kind: .error, message: message)) }
 
     func dismiss() {
         dismissTask?.cancel()

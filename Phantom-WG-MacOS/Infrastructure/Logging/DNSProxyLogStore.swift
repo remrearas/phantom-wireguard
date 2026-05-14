@@ -1,19 +1,19 @@
 import Foundation
 import Observation
 
-/// Polls the SplitTunnel extension's log ring buffer (opcode 0x01)
-/// on a 1-second cadence and exposes the lines as `LogEntry` rows.
+/// Polls the DNSProxy daemon's log ring buffer over XPC on a
+/// 1-second cadence and exposes the lines as `LogEntry` rows.
 @Observable
 @MainActor
-final class SplitTunnelLogStore: LogEntryProvider {
+final class DNSProxyLogStore: LogEntryProvider {
 
     var entries: [LogEntry] = []
 
-    @ObservationIgnored private weak var providerManager: SplitTunnelProviderManager?
+    @ObservationIgnored private weak var daemonClient: DNSProxyDaemonClient?
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
 
-    init(providerManager: SplitTunnelProviderManager) {
-        self.providerManager = providerManager
+    init(daemonClient: DNSProxyDaemonClient) {
+        self.daemonClient = daemonClient
     }
 
     func startPolling() {
@@ -35,17 +35,17 @@ final class SplitTunnelLogStore: LogEntryProvider {
         pollingTask = nil
     }
 
-    /// Flushes the extension's ring buffer and drops local entries.
+    /// Flushes the daemon's ring buffer and drops local entries.
     func clear() async {
-        await providerManager?.clearLogs()
+        await daemonClient?.clearLogs()
         entries.removeAll()
     }
 
     // MARK: - Private
 
     private func fetchLogs() async {
-        guard let providerManager,
-              let dump = await providerManager.fetchLogs(),
+        guard let daemonClient,
+              let dump = await daemonClient.fetchLogs(),
               !dump.isEmpty else {
             if !entries.isEmpty { entries.removeAll() }
             return
@@ -57,7 +57,7 @@ final class SplitTunnelLogStore: LogEntryProvider {
             .map { index, line in
                 LogEntry(
                     id: index,
-                    tag: "SPL",
+                    tag: "DNS",
                     timestamp: "",
                     text: String(line)
                 )

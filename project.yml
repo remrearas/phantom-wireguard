@@ -5,26 +5,31 @@ options:
     macOS: "14.0"
   xcodeVersion: "16.0"
   generateEmptyDirectories: true
+  # Restore the manually-maintained Run scheme after every regen.
+  # xcodegen 2.x cannot express `<PathRunnable>` in the spec, so the
+  # canonical scheme XML lives at `Tools/Phantom-WG-MacOS.xcscheme`
+  # and gets copied into the Xcode project here.
+  #
+  # The scheme references targets via `BlueprintIdentifier` UUIDs
+  # that xcodegen produces deterministically from each target's
+  # name. Renaming a target invalidates the corresponding UUID in
+  # the template; pull the fresh values with:
+  #   grep -B1 "isa = PBXNativeTarget;" \
+  #     Phantom-WG-MacOS.xcodeproj/project.pbxproj | grep '/\*'
+  # and update `Tools/Phantom-WG-MacOS.xcscheme` to match.
+  postGenCommand: mkdir -p Phantom-WG-MacOS.xcodeproj/xcshareddata/xcschemes && cp Tools/Phantom-WG-MacOS.xcscheme Phantom-WG-MacOS.xcodeproj/xcshareddata/xcschemes/Phantom-WG-MacOS.xcscheme
 
 packages:
   WireGuardKit:
     path: Libraries/WireGuardKit
 
-schemes:
-  Phantom-WG-MacOS:
-    build:
-      targets:
-        Phantom-WG-MacOS: all
-        PhantomSplitTunnel: all
-        PhantomDNSProxy: all
-    run:
-      config: Debug
-    test:
-      config: Debug
-      targets:
-        - PhantomTests
-    archive:
-      config: Release
+# Scheme is manually maintained at
+# `Phantom-WG-MacOS.xcodeproj/xcshareddata/xcschemes/Phantom-WG-MacOS.xcscheme`
+# so the Run action can use a `PathRunnable` pointing at the
+# `/Applications/Phantom-WG Mac.app` copy refreshed by the Debug
+# postBuild script. xcodegen 2.x doesn't expose `PathRunnable` in
+# the YAML schema, so leaving `schemes:` undefined keeps xcodegen
+# from regenerating (and clobbering) the file on every run.
 
 targets:
 
@@ -102,11 +107,19 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
         com.apple.security.files.user-selected.read-write: true
+        # Two app-groups: the conventional `group.<id>` shared
+        # container, plus the TeamID-prefixed wildcard `9C5SL5H7CM.*`
+        # that authorizes this sandboxed app to look up Mach services
+        # whose name starts with the team identifier — needed for
+        # `NSXPCConnection` to the DNSProxy sysex's daemon (registered
+        # as `9C5SL5H7CM.com.remrearas.Phantom-WG-MacOS.PhantomDNSProxy`).
         com.apple.security.application-groups:
           - group.com.remrearas.phantom-wg-macos
+          - 9C5SL5H7CM.*
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider-systemextension
           - app-proxy-provider-systemextension
+          - dns-proxy-systemextension
         com.apple.developer.system-extension.install: true
 
   # ── Network Extension (System Extension) ─────────────────
@@ -118,14 +131,16 @@ targets:
       - path: PhantomTunnel
         excludes:
           - "**/.DS_Store"
-      # Shared files from main app
+      # App↔extension shared interface — config models, persistence
+      # bridge, group ID, wstunnel bridge.
       - path: Phantom-WG-MacOS/Domain/Configuration/TunnelConfig.swift
       - path: Phantom-WG-MacOS/Domain/Configuration/ConfigTypes.swift
       - path: Phantom-WG-MacOS/Domain/Configuration/SplitTunnelingConfiguration.swift
-      - path: Phantom-WG-MacOS/Domain/Configuration/FlowDecisionEngine.swift
       - path: Phantom-WG-MacOS/Infrastructure/Persistence/NETunnelProviderProtocol+Config.swift
       - path: Phantom-WG-MacOS/Shared/SharedConstants.swift
       - path: Phantom-WG-MacOS/Shared/WstunnelBridge.swift
+      # Extension-only shared domain — flow matching engine.
+      - path: Extensions/Domain/Matching/FlowDecisionEngine.swift
     dependencies:
       - package: WireGuardKit
         product: WireGuardKit
@@ -191,8 +206,14 @@ targets:
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider-systemextension
         com.apple.security.app-sandbox: true
+        # Wildcard claim mirrors the main app and the DNSProxy
+        # sibling — Apple validates entitlement consistency across
+        # an app's embedded sysex bundles, so all three must claim
+        # the same group set the embedded provisioning profile
+        # authorizes.
         com.apple.security.application-groups:
           - group.com.remrearas.phantom-wg-macos
+          - 9C5SL5H7CM.*
         com.apple.security.network.client: true
         com.apple.security.network.server: true
 
@@ -205,11 +226,17 @@ targets:
       - path: PhantomSplitTunnel
         excludes:
           - "**/.DS_Store"
-      # Shared config model so the extension can read the same
-      # JSON blob the main app writes into App Group UserDefaults.
+      # App↔extension shared interface — model + Mach service
+      # contract + group ID. Lives under the App tree because it
+      # crosses the App/extension boundary.
       - path: Phantom-WG-MacOS/Domain/Configuration/SplitTunnelingConfiguration.swift
-      - path: Phantom-WG-MacOS/Domain/Configuration/FlowDecisionEngine.swift
+      - path: Phantom-WG-MacOS/Domain/IPC/DNSProxyDaemonProtocol.swift
       - path: Phantom-WG-MacOS/Shared/SharedConstants.swift
+      # Extension-only shared domain — ring-buffer logger, matching
+      # engine, interface watcher.
+      - path: Extensions/Domain/Logging/RingBufferLogger.swift
+      - path: Extensions/Domain/Matching/FlowDecisionEngine.swift
+      - path: Extensions/Domain/Networking/InterfaceMonitor.swift
     dependencies:
       - sdk: NetworkExtension.framework
     settings:
@@ -230,7 +257,7 @@ targets:
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: YES
         SWIFT_VERSION: "5.0"
         MARKETING_VERSION: "1.2.1"
-        CURRENT_PROJECT_VERSION: 2
+        CURRENT_PROJECT_VERSION: 1
     info:
       path: PhantomSplitTunnel/Info.plist
       properties:
@@ -248,8 +275,11 @@ targets:
         com.apple.developer.networking.networkextension:
           - app-proxy-provider-systemextension
         com.apple.security.app-sandbox: true
+        # Wildcard claim mirrors the main app and the DNSProxy
+        # sibling — see PhantomTunnel comment.
         com.apple.security.application-groups:
           - group.com.remrearas.phantom-wg-macos
+          - 9C5SL5H7CM.*
         com.apple.security.network.client: true
         com.apple.security.network.server: true
 
@@ -262,13 +292,20 @@ targets:
       - path: PhantomDNSProxy
         excludes:
           - "**/.DS_Store"
-      # Shared config model so the helper reads the same exclude
-      # list the SplitTunnel relay reads (single source of truth).
+      # App↔extension shared interface — model + Mach service
+      # contract + group ID. DNSProxy absorbs the port 53 flows
+      # SplitTunnel carves out via excludedNetworkRules.
       - path: Phantom-WG-MacOS/Domain/Configuration/SplitTunnelingConfiguration.swift
-      - path: Phantom-WG-MacOS/Domain/Configuration/FlowDecisionEngine.swift
+      - path: Phantom-WG-MacOS/Domain/IPC/DNSProxyDaemonProtocol.swift
       - path: Phantom-WG-MacOS/Shared/SharedConstants.swift
+      # Extension-only shared domain — ring-buffer logger, matching
+      # engine, interface watcher.
+      - path: Extensions/Domain/Logging/RingBufferLogger.swift
+      - path: Extensions/Domain/Matching/FlowDecisionEngine.swift
+      - path: Extensions/Domain/Networking/InterfaceMonitor.swift
     dependencies:
       - sdk: NetworkExtension.framework
+      - sdk: SystemConfiguration.framework
     settings:
       base:
         ARCHS: "$(ARCHS_STANDARD)"
@@ -287,7 +324,7 @@ targets:
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: YES
         SWIFT_VERSION: "5.0"
         MARKETING_VERSION: "1.2.1"
-        CURRENT_PROJECT_VERSION: 2
+        CURRENT_PROJECT_VERSION: 1
     info:
       path: PhantomDNSProxy/Info.plist
       properties:
@@ -297,6 +334,18 @@ targets:
         CFBundleDisplayName: PhantomDNSProxy
         NSSystemExtensionUsageDescription: "Phantom-WG Mac needs to install a system extension that protects Split-Tunneling against DNS leaks."
         NetworkExtension:
+          # NEMachServiceName must be prefixed by one of the literal
+          # strings in `com.apple.security.application-groups`
+          # entitlement (Apple DTS DevForums #654765, #128550).
+          # `group.com.remrearas.phantom-wg-macos` is the literal
+          # App Group on both the container app and this sysex; the
+          # `.dnsproxy` suffix disambiguates from the App Group.
+          # NE framework publishes this Mach service to launchd at
+          # sysex activation, bridging the user-namespace ↔
+          # system-namespace bootstrap split. The constant on the
+          # Swift side (`DNSProxyDaemonConfig.machServiceName`)
+          # carries the byte-identical string.
+          NEMachServiceName: group.com.remrearas.phantom-wg-macos.dnsproxy
           NEProviderClasses:
             com.apple.networkextension.dns-proxy: $(PRODUCT_MODULE_NAME).DNSProxyProvider
     entitlements:
@@ -305,36 +354,18 @@ targets:
         com.apple.developer.networking.networkextension:
           - dns-proxy-systemextension
         com.apple.security.app-sandbox: true
+        # Two app-groups: the conventional `group.<id>` one for the
+        # shared container, plus the TeamID-prefixed wildcard
+        # `9C5SL5H7CM.*` that authorizes this sandboxed sysex to
+        # register a Mach service whose name starts with the team
+        # identifier (per the embedded provisioning profile, which
+        # already permits this wildcard). Without the wildcard
+        # claim the sysex declares a Mach service in Info.plist
+        # that its entitlements aren't authorized for, and OS sysex
+        # validation rejects activation with `validationFailed`.
         com.apple.security.application-groups:
           - group.com.remrearas.phantom-wg-macos
+          - 9C5SL5H7CM.*
         com.apple.security.network.client: true
         com.apple.security.network.server: true
 
-  # ── Unit Tests ───────────────────────────────────────────
-
-  PhantomTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources:
-      - path: PhantomTests
-        excludes:
-          - "**/.DS_Store"
-    dependencies:
-      - target: Phantom-WG-MacOS
-    settings:
-      base:
-        PRODUCT_NAME: PhantomTests
-        PRODUCT_BUNDLE_IDENTIFIER: com.remrearas.Phantom-WG-MacOS.PhantomTests
-        SWIFT_VERSION: "5.0"
-        GENERATE_INFOPLIST_FILE: YES
-        CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_IDENTITY: "-"
-        SWIFT_OBJC_BRIDGING_HEADER: Phantom-WG-MacOS/BridgingHeader.h
-        HEADER_SEARCH_PATHS:
-          - "$(PROJECT_DIR)/Libraries/WstunnelKit/include"
-        LIBRARY_SEARCH_PATHS:
-          - "$(PROJECT_DIR)/Libraries/WstunnelKit"
-        BUNDLE_LOADER: "$(TEST_HOST)"
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Phantom-WG Mac.app/Contents/MacOS/Phantom-WG Mac"
-        MARKETING_VERSION: "1.2.1"
-        CURRENT_PROJECT_VERSION: 1

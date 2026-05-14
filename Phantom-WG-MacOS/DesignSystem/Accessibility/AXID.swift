@@ -16,13 +16,18 @@ enum AXID {
     // MARK: Extension Gate
 
     enum ExtensionGate {
-        static let approvalOpenSettings = "extension-gate.approval.open-settings"
-        static let approvalCheckAgain   = "extension-gate.approval.check-again"
-        static let deactivatedReinstall = "extension-gate.deactivated.reinstall"
-        static let deactivatedQuit      = "extension-gate.deactivated.quit"
-        static let failedRetry          = "extension-gate.failed.retry"
-        static let failedMessage        = "extension-gate.failed.message"
-        static let tunnelLoadError      = "extension-gate.tunnel-load.error"
+        static let checkAgain      = "extension-gate.check-again"
+        static let tunnelLoadError = "extension-gate.tunnel-load.error"
+
+        static func rowActivate(_ bundleID: String) -> String {
+            "extension-gate.row.\(bundleID).activate"
+        }
+        static func rowOpenSettings(_ bundleID: String) -> String {
+            "extension-gate.row.\(bundleID).open-settings"
+        }
+        static func rowRetry(_ bundleID: String) -> String {
+            "extension-gate.row.\(bundleID).retry"
+        }
     }
 
     // MARK: Tunnel List
@@ -59,18 +64,14 @@ enum AXID {
         static let resetCancel       = "split-tunneling.reset-confirm.cancel"
         static let errorAlertOK      = "split-tunneling.error-alert.ok"
 
-        // Extension lifecycle gates
-        static let installButton     = "split-tunneling.install-button"
-        static let openSettings      = "split-tunneling.approval.open-settings"
-        static let checkAgain        = "split-tunneling.approval.check-again"
-        static let retryButton       = "split-tunneling.failed.retry"
-        static let removeExtension   = "split-tunneling.remove-extension"
-        static let removeConfirm     = "split-tunneling.remove-confirm.confirm"
-        static let removeCancel      = "split-tunneling.remove-confirm.cancel"
         static let logsLink          = "split-tunneling.logs-link"
         static let logsCount         = "split-tunneling.logs-count"
         static let logsSave          = "split-tunneling.logs-save"
         static let logsClear         = "split-tunneling.logs-clear"
+        static let logsTab           = "split-tunneling.logs.tab"
+        static let logsTabSplit      = "split-tunneling.logs.tab.split"
+        static let logsTabDns        = "split-tunneling.logs.tab.dns"
+        static let mdnsToggle        = "split-tunneling.mdns-toggle"
         static let interfaceUnavailableBanner = "split-tunneling.interface-unavailable-banner"
 
         static func appRow(_ bundleID: String) -> String { "split-tunneling.app-row.\(bundleID)" }
@@ -148,6 +149,7 @@ enum AXID {
         static let list        = "log-view.list"
         static let saveErrorOK = "log-view.save-error.ok"
     }
+
 }
 
 // swiftlint:enable nesting

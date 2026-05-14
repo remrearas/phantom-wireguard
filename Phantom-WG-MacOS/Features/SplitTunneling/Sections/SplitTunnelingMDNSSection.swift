@@ -1,0 +1,23 @@
+import SwiftUI
+
+/// "System DNS Resolver" toggle section. Binds to the synthetic
+/// `mDNSResponder` pair's presence in `configuration.apps` — list
+/// membership IS the toggle state.
+struct SplitTunnelingMDNSSection: View {
+    @Binding var isEnabled: Bool
+    @Environment(LocalizationManager.self) private var loc
+
+    var body: some View {
+        Section {
+            Toggle(loc.t("mdns_toggle_label"), isOn: $isEnabled)
+                .accessibilityIdentifier(AXID.SplitTunneling.mdnsToggle)
+            Text(loc.t("mdns_toggle_description"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } header: {
+            Label(loc.t("mdns_section_title"), systemImage: "network.badge.shield.half.filled")
+                .padding(.leading, 4)
+        }
+    }
+}

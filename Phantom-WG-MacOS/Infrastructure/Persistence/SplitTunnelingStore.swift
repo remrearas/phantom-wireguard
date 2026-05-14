@@ -2,20 +2,10 @@ import Foundation
 import AppKit
 import Observation
 
-/// Single source of truth for the app-wide split tunneling configuration
-/// in the **main app process**.
-///
-/// Persists the config as a JSON blob on disk inside the shared App
-/// Group container. File-based storage instead of UserDefaults because
-/// `cfprefsd` caches per-process and detaches when the extension
-/// (sandboxed) can't talk to the daemon — we saw "reload: 0 app(s)"
-/// even after the main app wrote new entries.
-///
-/// The App Group path lives in `SharedConstants` and is technically
-/// visible to both processes, but only the main app reads or writes
-/// this file. The extension receives the configuration through
-/// `providerConfiguration["split_config"]` at `startProxy` and via
-/// opcode `0x00` live-reload messages afterwards — not via this file.
+/// Main-app source of truth for the split-tunnelling configuration.
+/// Persists as JSON inside the App Group container; the extensions
+/// receive the same blob through `providerConfiguration["split_config"]`
+/// and never read this file directly.
 @Observable
 @MainActor
 final class SplitTunnelingStore {
@@ -24,21 +14,14 @@ final class SplitTunnelingStore {
 
     private(set) var configuration: SplitTunnelingConfiguration
 
-    /// Wired at app startup. Every configuration mutation asks the
-    /// provider manager to fire a live reload on the extension if the
-    /// session is currently up; a no-op otherwise. Weak to avoid the
-    /// manager → store cycle since the manager doesn't need the store.
-    @ObservationIgnored weak var providerManager: SplitTunnelProviderManager?
+    /// Wired at app startup. Every lifecycle and config mutation is
+    /// delegated through the coordinator. Weak to avoid cycle.
+    @ObservationIgnored weak var sessionCoordinator: SplitTunnelingSessionCoordinator?
 
     // MARK: - Init
 
-    /// Production: no argument — persists to the App Group container
-    /// via `SharedConstants.splitTunnelingConfigurationFileURL`.
-    ///
-    /// Tests: pass an isolated `fileURL` so the persist/load cycle
-    /// stays out of the user's real container. The resolver fallback
-    /// remains `SharedConstants` so callers that don't care about
-    /// injection get the production path without noise.
+    /// Production: no argument — persists to the App Group container.
+    /// Tests: pass `fileURL` to isolate the persist/load cycle.
     init(fileURL: URL? = nil) {
         self.fileURLOverride = fileURL
         self.configuration = Self.loadFromDisk(fileURL: fileURL) ?? .default
@@ -52,23 +35,30 @@ final class SplitTunnelingStore {
 
     // MARK: - Mutation
 
-    /// Flip the master gate. The app list is preserved so that
-    /// re-enabling restores the user's last configuration exactly.
+    /// Master gate. Persists immediately and delegates the lifecycle
+    /// transition to the coordinator. The app list survives both
+    /// directions so re-enabling restores the previous state.
     func setEnabled(_ enabled: Bool) {
         configuration.isEnabled = enabled
         persist()
+        let snapshot = configuration
+        Task { [weak sessionCoordinator] in
+            if enabled {
+                try? await sessionCoordinator?.start(with: snapshot)
+            } else {
+                await sessionCoordinator?.stop()
+            }
+        }
     }
 
-    /// User picked a specific physical interface (or auto).
     func setInterfaceSelection(_ selection: InterfaceSelection) {
         configuration.interfaceSelection = selection
         persist()
         scheduleReload()
     }
 
-    /// Append a validated entry. Duplicates (by bundle identifier) are
-    /// rejected at the validator layer; this method assumes the caller
-    /// has already deduped and returns false if the dedup slipped through.
+    /// Append a validated entry. Caller is expected to dedupe; any
+    /// duplicate that slips through returns `false`.
     @discardableResult
     func addApp(_ entry: AppEntry) -> Bool {
         guard !configuration.apps.contains(where: { $0.bundleIdentifier == entry.bundleIdentifier }) else {
@@ -86,38 +76,67 @@ final class SplitTunnelingStore {
         scheduleReload()
     }
 
-    /// Destructive: clears every field back to the first-run baseline.
-    /// Called from the Reset action (confirmed via alert in the UI).
+    /// Clear every field back to first-run baseline.
     func reset() {
         configuration = .default
         persist()
         scheduleReload()
     }
 
+    // MARK: - System DNS Resolver Toggle
+
+    /// `true` when the synthetic mDNSResponder pair is in the app
+    /// list. List membership IS the toggle state.
+    var isMDNSResponderEnabled: Bool {
+        configuration.apps.contains(where: \.isSyntheticMDNS)
+    }
+
+    func setMDNSResponderEnabled(_ enabled: Bool) {
+        guard enabled != isMDNSResponderEnabled else { return }
+        if enabled {
+            if !configuration.apps.contains(where: { $0.signingIdentifier == AppEntry.mDNSResponder.signingIdentifier }) {
+                configuration.apps.append(.mDNSResponder)
+            }
+            if !configuration.apps.contains(where: { $0.signingIdentifier == AppEntry.mDNSResponderHelper.signingIdentifier }) {
+                configuration.apps.append(.mDNSResponderHelper)
+            }
+        } else {
+            configuration.apps.removeAll { $0.isSyntheticMDNS }
+        }
+        persist()
+        scheduleReload()
+    }
+
     // MARK: - Private
 
-    /// Ask the extension to re-read the JSON blob. Safe to call when
-    /// the session isn't up — the manager short-circuits and the
-    /// extension picks up the fresh blob on its next `startProxy`.
+    /// Routes config changes through the coordinator's
+    /// `reconfigure(with:)`. SplitTunnel reloads via opcode 0x00 and
+    /// pushes the same payload to DNSProxy via XPC. No-op when
+    /// stopped — edits stick in storage and apply on next start.
     private func scheduleReload() {
-        guard let providerManager else { return }
         let snapshot = configuration
-        Task { await providerManager.reloadExtensionConfig(with: snapshot) }
+        Task { [weak sessionCoordinator] in
+            await sessionCoordinator?.reconfigure(with: snapshot)
+        }
     }
 
     // MARK: - Reconcile
 
     /// Drops entries whose bundle identifier no longer resolves via
-    /// LaunchServices, and refreshes `lastKnownPath` + `displayName`
-    /// for survivors (handles app reinstall paths).
-    ///
-    /// Runs on every tunnel activation and whenever the Split-Tunneling
-    /// view is shown, so the tunnel layer never sees stale entries.
+    /// LaunchServices; refreshes `lastKnownPath` + `displayName` for
+    /// survivors. Synthetic entries (mDNSResponder pair) bypass the
+    /// LaunchServices check — they identify system daemons that
+    /// LaunchServices does not catalog as applications. Called on
+    /// every sheet open.
     func reconcile() {
         guard !configuration.apps.isEmpty else { return }
 
         var survivors: [AppEntry] = []
         for entry in configuration.apps {
+            if entry.isSyntheticMDNS {
+                survivors.append(entry)
+                continue
+            }
             guard let url = NSWorkspace.shared.urlForApplication(
                 withBundleIdentifier: entry.bundleIdentifier
             ) else {

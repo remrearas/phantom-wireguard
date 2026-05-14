@@ -1,22 +1,15 @@
 import SwiftUI
 import Network
 
-/// Sheet-hosted editor for the app-wide split tunneling configuration.
-///
-/// The sheet owns two lifecycles: the **PhantomSplitTunnel system
-/// extension** (install → approve → activated → remove) and the
-/// **feature state** (enabled/disabled + app list + reset). The full
-/// form only appears once the extension is activated — earlier states
-/// show install / approval / failure gates and hide the inner form
-/// entirely so the user follows a linear path.
-///
-/// Every feature-level mutation is persisted eagerly to
-/// `SplitTunnelingStore` (macOS System Settings pattern — no draft,
-/// no explicit Save).
+/// Sheet-hosted editor for the split-tunneling configuration. Opens
+/// only after the extension gate has cleared. Eager persistence —
+/// every mutation hits `SplitTunnelingStore` immediately.
 struct SplitTunnelingView: View {
     @Environment(SplitTunnelingStore.self) private var store
-    @Environment(SplitTunnelExtensionState.self) private var extensionState
+    @Environment(SplitTunnelingSessionCoordinator.self) private var sessionCoordinator
     @Environment(SplitTunnelProviderManager.self) private var providerManager
+    @Environment(DNSProxyProviderManager.self) private var dnsProviderManager
+    @Environment(DNSProxyDaemonClient.self) private var dnsDaemonClient
     @Environment(PhysicalInterfaceResolver.self) private var interfaceResolver
     @Environment(ToastCenter.self) private var toasts
     @Environment(LocalizationManager.self) private var loc
@@ -26,14 +19,11 @@ struct SplitTunnelingView: View {
     @State private var duplicateError = false
     @State private var showingValidationError = false
     @State private var showingResetConfirm = false
-    @State private var showingRemoveExtensionConfirm = false
-    @State private var removingExtension = false
-    @State private var showingRemoveError = false
-    @State private var removeErrorMessage: String?
     @State private var logStore: SplitTunnelLogStore?
+    @State private var dnsLogStore: DNSProxyLogStore?
 
     var body: some View {
-        content
+        activatedContent
             .frame(minWidth: 520, minHeight: 600)
             .navigationTitle(loc.t("split_tunneling_title"))
             .toolbar {
@@ -45,19 +35,11 @@ struct SplitTunnelingView: View {
             .accessibilityIdentifier(AXID.SplitTunneling.sheet)
             .onAppear(perform: onSheetAppear)
             .onDisappear(perform: onSheetDisappear)
-            .disabled(removingExtension)
             .onChange(of: store.configuration.interfaceSelection) { _, newSelection in
                 toasts.info(interfaceChangeToastMessage(newSelection))
             }
-            .onChange(of: store.configuration.isEnabled) { oldValue, newValue in
-                // Each enable/disable cycle starts with a fresh log
-                // surface. The extension's buffer is new per-session
-                // on enable; on disable we drop client-side entries
-                // explicitly so the sheet doesn't display stale lines
-                // from the previous session.
-                if oldValue != newValue {
-                    Task { await logStore?.clear() }
-                }
+            .onChange(of: store.configuration.isEnabled) { _, _ in
+                Task { await logStore?.clear() }
             }
             .toastOverlay()
             .modifier(ValidationAlert(
@@ -68,41 +50,9 @@ struct SplitTunnelingView: View {
                 showingResetConfirm: $showingResetConfirm,
                 onReset: { store.reset() }
             ))
-            .modifier(RemoveExtensionAlert(
-                showingRemoveConfirm: $showingRemoveExtensionConfirm,
-                showingRemoveError: $showingRemoveError,
-                errorMessage: $removeErrorMessage,
-                onConfirm: runRemoveExtension
-            ))
     }
 
-    // MARK: - State Machine
-
-    @ViewBuilder
-    private var content: some View {
-        switch extensionState.status {
-        case .unknown, .activating:
-            SplitTunnelingActivatingGate()
-
-        case .notInstalled:
-            SplitTunnelingInstallGate(onInstall: extensionState.activate)
-
-        case .needsApproval:
-            SplitTunnelingApprovalGate(
-                onOpenSettings: openSystemSettings,
-                onCheckAgain: extensionState.activate
-            )
-
-        case .failed(let message):
-            SplitTunnelingFailedGate(
-                message: message,
-                onRetry: extensionState.activate
-            )
-
-        case .activated:
-            activatedContent
-        }
-    }
+    // MARK: - Content
 
     private var activatedContent: some View {
         Form {
@@ -118,9 +68,11 @@ struct SplitTunnelingView: View {
                 }
             }
 
+            // Toggle = mirror of coordinator state; flips delegate
+            // through the store to the coordinator's lifecycle.
             SplitTunnelingEnableSection(
                 isEnabled: Binding(
-                    get: { store.configuration.isEnabled },
+                    get: { sessionCoordinator.state.isUserVisiblyActive },
                     set: { store.setEnabled($0) }
                 )
             )
@@ -135,31 +87,39 @@ struct SplitTunnelingView: View {
             )
 
             SplitTunnelingAppListSection(
-                apps: store.configuration.apps,
+                apps: store.configuration.apps.filter { !$0.isSyntheticMDNS },
                 isDisabled: !store.configuration.isEnabled,
                 resolvedInterfaceLabel: resolvedInterfaceLabel,
                 onAddApp: handleAddApp,
                 onRemoveApp: { store.removeApp(bundleIdentifier: $0) }
             )
 
-            if let logStore {
-                SplitTunnelingLogSection(logStore: logStore)
+            SplitTunnelingMDNSSection(
+                isEnabled: Binding(
+                    get: { store.isMDNSResponderEnabled },
+                    set: { store.setMDNSResponderEnabled($0) }
+                )
+            )
+
+            if let logStore, let dnsLogStore {
+                LogTabsSection(splitLogStore: logStore, dnsLogStore: dnsLogStore)
             }
 
-            SplitTunnelingDestructiveActionsSection(
-                showingResetConfirm: $showingResetConfirm,
-                showingRemoveConfirm: $showingRemoveExtensionConfirm,
-                isRemoving: removingExtension
-            )
+            Section {
+                Button(role: .destructive) {
+                    showingResetConfirm = true
+                } label: {
+                    Label(loc.t("split_tunneling_reset"), systemImage: "arrow.counterclockwise")
+                        .foregroundStyle(.red)
+                }
+                .accessibilityIdentifier(AXID.SplitTunneling.resetButton)
+            }
         }
         .formStyle(.grouped)
     }
 
     // MARK: - Interface Resolution (UI layer)
 
-    /// The NWInterface that actually satisfies the current selection —
-    /// nil when the picker's name is no longer present in the resolver's
-    /// list (e.g. user chose Ethernet, then pulled the cable).
     private var resolvedInterface: NWInterface? {
         switch store.configuration.interfaceSelection {
         case .auto:
@@ -171,26 +131,17 @@ struct SplitTunnelingView: View {
         }
     }
 
-    /// Human-readable label for the currently resolved interface, e.g.
-    /// "Wi-Fi (en0)". Nil when unresolved; sections fall back to generic
-    /// copy in that case.
     private var resolvedInterfaceLabel: String? {
         resolvedInterface?.displayLabel
     }
 
-    /// True when the feature is enabled and the user's selection can't
-    /// be satisfied right now — either `.auto` with zero available
-    /// physical interfaces or `.explicit(name)` with no matching NIC.
-    /// Banner only appears in this state.
+    /// True when the feature is enabled and the chosen interface
+    /// can't be satisfied. Surfaces the banner.
     private var interfaceUnavailable: Bool {
         guard store.configuration.isEnabled else { return false }
         return resolvedInterface == nil
     }
 
-    /// Label describing what the user *picked*, used in the warning
-    /// banner message. Differs from `resolvedInterfaceLabel`: the
-    /// banner runs precisely when resolution failed, so we show the
-    /// picker's intent instead.
     private var interfaceSelectionLabel: String {
         switch store.configuration.interfaceSelection {
         case .auto:
@@ -200,9 +151,6 @@ struct SplitTunnelingView: View {
         }
     }
 
-    /// Toast text fired on `interfaceSelection` change. Describes the
-    /// new selection so the user gets immediate confirmation the picker
-    /// was applied (the routing change itself only affects new flows).
     private func interfaceChangeToastMessage(_ selection: InterfaceSelection) -> String {
         switch selection {
         case .auto:
@@ -218,33 +166,23 @@ struct SplitTunnelingView: View {
 
     // MARK: - Lifecycle
 
-    /// Kick off an activation check only on the very first time the
-    /// sheet appears (state still `.unknown`). After the user explicitly
-    /// removes the extension (status `.notInstalled`) they must click
-    /// Install to trigger a new request — otherwise re-opening the
-    /// sheet would silently reinstall something they just uninstalled.
     private func onSheetAppear() {
         store.reconcile()
-        if extensionState.status == .unknown {
-            extensionState.activate()
-        }
         if logStore == nil {
             let newStore = SplitTunnelLogStore(providerManager: providerManager)
             logStore = newStore
+            newStore.startPolling()
+        }
+        if dnsLogStore == nil {
+            let newStore = DNSProxyLogStore(daemonClient: dnsDaemonClient)
+            dnsLogStore = newStore
             newStore.startPolling()
         }
     }
 
     private func onSheetDisappear() {
         logStore?.stopPolling()
-    }
-
-    private func openSystemSettings() {
-        if #available(macOS 15.0, *) {
-            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
-        } else {
-            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
-        }
+        dnsLogStore?.stopPolling()
     }
 
     // MARK: - Add App Flow
@@ -287,29 +225,6 @@ struct SplitTunnelingView: View {
         case .notSigned:          return loc.t("split_tunneling_err_not_signed")
         }
     }
-
-    // MARK: - Remove Extension Flow
-
-    private func runRemoveExtension() {
-        removingExtension = true
-        Task {
-            do {
-                try await extensionState.deactivate()
-                // Persist the feature toggle as off alongside the removal.
-                // The extension process is gone on success; flipping the
-                // stored `isEnabled` means the next reinstall starts from
-                // an explicitly-off state instead of silently auto-arming
-                // a session the user just tore down.
-                if store.configuration.isEnabled {
-                    store.setEnabled(false)
-                }
-            } catch {
-                removeErrorMessage = error.localizedDescription
-                showingRemoveError = true
-            }
-            removingExtension = false
-        }
-    }
 }
 
 // MARK: - Alert Modifiers
@@ -344,32 +259,5 @@ private struct ResetAlert: ViewModifier {
         } message: {
             Text(loc.t("split_tunneling_reset_confirm_message"))
         }
-    }
-}
-
-private struct RemoveExtensionAlert: ViewModifier {
-    @Binding var showingRemoveConfirm: Bool
-    @Binding var showingRemoveError: Bool
-    @Binding var errorMessage: String?
-    let onConfirm: () -> Void
-    @Environment(LocalizationManager.self) private var loc
-
-    func body(content: Content) -> some View {
-        content
-            .alert(loc.t("split_tunneling_remove_confirm_title"),
-                   isPresented: $showingRemoveConfirm) {
-                Button(loc.t("cancel"), role: .cancel) {}
-                    .accessibilityIdentifier(AXID.SplitTunneling.removeCancel)
-                Button(loc.t("split_tunneling_remove_extension"),
-                       role: .destructive, action: onConfirm)
-                    .accessibilityIdentifier(AXID.SplitTunneling.removeConfirm)
-            } message: {
-                Text(loc.t("split_tunneling_remove_confirm_message"))
-            }
-            .alert(loc.t("error"), isPresented: $showingRemoveError) {
-                Button(loc.t("ok")) {}
-            } message: {
-                Text(errorMessage ?? "")
-            }
     }
 }

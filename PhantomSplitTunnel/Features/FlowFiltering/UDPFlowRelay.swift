@@ -111,7 +111,7 @@ final class UDPFlowRelay {
         // per-endpoint diagnostics (DNS leaks, QUIC targets) are
         // observable. TCP gets this for free at flow open; UDP only
         // learns endpoints datagram-by-datagram.
-        SplitTunnelLogger.shared.log(
+        RingBufferLogger.shared.log(
             "\(appName) → \(interface.name)  UDP  \(Self.describe(endpoint))"
         )
 
@@ -208,7 +208,7 @@ final class UDPFlowRelay {
         lock.unlock()
 
         if let error {
-            SplitTunnelLogger.shared.log(
+            RingBufferLogger.shared.log(
                 "\(appName)  UDP  flow failed: \(error.localizedDescription)"
             )
         }

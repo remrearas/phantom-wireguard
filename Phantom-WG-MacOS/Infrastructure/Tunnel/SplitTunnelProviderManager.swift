@@ -1,22 +1,9 @@
 import Foundation
 import NetworkExtension
 
-// MARK: - Split Tunnel Provider Manager
-
-/// Thin wrapper around `NETransparentProxyManager`. Owns the
-/// preference entry lifecycle: load, save-and-start when the user
-/// flips the enable toggle, stop on disable, and clear the entry
-/// entirely when the user uninstalls the extension.
-///
-/// Config is handed to the extension through two OS-managed channels:
-/// `providerConfiguration` dict at save time (initial boot path) and
-/// inline `sendProviderMessage` payload afterwards (live reload path).
-/// Both channels are delivered by the OS and survive sandbox user-context
-/// mismatches (root vs. user) that cross-process App Group file sharing
-/// cannot always handle reliably. Main-app-only persistence still uses
-/// the App Group container (`split-tunneling.json` via
-/// `SplitTunnelingStore`), but the extension itself never reads that
-/// file — it only consumes the OS-delivered JSON.
+/// Wraps `NETransparentProxyManager`. Owns the preference entry
+/// lifecycle and surfaces three opcode RPCs to the running session
+/// (config reload, log fetch, log clear).
 @Observable
 @MainActor
 class SplitTunnelProviderManager {
@@ -30,7 +17,6 @@ class SplitTunnelProviderManager {
     }
 
     var sessionStatus: SessionStatus = .disconnected
-    var lastError: String?
 
     @ObservationIgnored private var manager: NETransparentProxyManager?
     @ObservationIgnored private var statusObserver: NSObjectProtocol?
@@ -40,9 +26,8 @@ class SplitTunnelProviderManager {
 
     // MARK: - Load
 
-    /// Discover or create the preference entry. Called after the system
-    /// extension reports `.activated`; before that `saveToPreferences`
-    /// would fail because the OS has no registered provider.
+    /// Discovers or creates the preference entry. Must be called
+    /// after the system extension reports `.activated`.
     func load() async {
         do {
             let managers = try await NETransparentProxyManager.loadAllFromPreferences()
@@ -50,7 +35,7 @@ class SplitTunnelProviderManager {
             attachStatusObserver()
             refreshSessionStatus()
         } catch {
-            lastError = error.localizedDescription
+            // load is non-fatal — the gate retries via reload.
         }
     }
 
@@ -65,11 +50,6 @@ class SplitTunnelProviderManager {
         proto.providerBundleIdentifier = Self.providerBundleID
         proto.serverAddress = "127.0.0.1"
 
-        // Pack config bytes into providerConfiguration — this is the
-        // OS-managed cross-process channel. Unlike App Group files,
-        // `providerConfiguration` is visible to the extension regardless
-        // of sandbox user context (root vs. user), which is how
-        // PhantomTunnel reliably passes its tunnel config.
         if let data = try? JSONEncoder().encode(configuration) {
             proto.providerConfiguration = ["split_config": data]
         }
@@ -90,83 +70,42 @@ class SplitTunnelProviderManager {
         try? await manager.saveToPreferences()
     }
 
-    // MARK: - Uninstall
-
-    /// Removes the preference entry entirely. Paired with
-    /// `SplitTunnelExtensionState.deactivate()` in the uninstall flow.
-    func removeConfiguration() async throws {
-        guard let manager else { return }
-        try await manager.removeFromPreferences()
-        self.manager = nil
-        sessionStatus = .disconnected
-    }
-
     // MARK: - Provider Messaging
 
-    /// Opcode `0x00` — live config reload. The message payload is the
-    /// opcode byte followed by the JSON-encoded configuration, so the
-    /// extension applies the fresh bytes without touching any shared
-    /// storage. No-op if the session isn't connected; the OS will
-    /// re-read `providerConfiguration` on the next `startProxy`.
+    /// Opcode `0x00` — live reload. Payload = opcode byte + JSON
+    /// configuration. No-op when the session isn't connected.
     func reloadExtensionConfig(with configuration: SplitTunnelingConfiguration) async {
-        guard let manager,
-              let session = manager.connection as? NETunnelProviderSession,
-              session.status == .connected,
-              let configData = try? JSONEncoder().encode(configuration) else {
-            return
-        }
-
+        guard let configData = try? JSONEncoder().encode(configuration) else { return }
         var message = Data([0x00])
         message.append(configData)
-
-        _ = try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data?, Error>) in
-            do {
-                try session.sendProviderMessage(message) { ackData in
-                    continuation.resume(returning: ackData)
-                }
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+        _ = await sendOpcode(message)
     }
 
-    /// Opcode `0x02` — flush the extension's log ring buffer. No-op if
-    /// the session isn't connected; the next `startProxy` starts with
-    /// a fresh buffer regardless.
+    /// Opcode `0x02` — flush the extension's log ring buffer.
     func clearLogs() async {
-        guard let manager,
-              let session = manager.connection as? NETunnelProviderSession,
-              session.status == .connected else {
-            return
-        }
-        _ = try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data?, Error>) in
-            do {
-                try session.sendProviderMessage(Data([0x02])) { ack in
-                    continuation.resume(returning: ack)
-                }
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+        _ = await sendOpcode(Data([0x02]))
     }
 
-    /// Opcode `0x01` — log snapshot. Returns the newline-joined buffer
-    /// shipped by the extension, or nil if the session isn't up.
-    /// Used by the Logs view inside the Split-Tunneling sheet.
+    /// Opcode `0x01` — newline-joined log snapshot, or `nil` if the
+    /// session isn't up.
     func fetchLogs() async -> String? {
+        guard let data = await sendOpcode(Data([0x01])) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    /// Send an opcode (and inline payload) to the running extension.
+    /// Returns the reply bytes, or `nil` if the session isn't
+    /// connected or the call throws.
+    private func sendOpcode(_ message: Data) async -> Data? {
         guard let manager,
               let session = manager.connection as? NETunnelProviderSession,
               session.status == .connected else {
             return nil
         }
-        return await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Data?, Never>) in
             do {
-                try session.sendProviderMessage(Data([0x01])) { data in
-                    guard let data else {
-                        continuation.resume(returning: nil)
-                        return
-                    }
-                    continuation.resume(returning: String(data: data, encoding: .utf8))
+                try session.sendProviderMessage(message) { reply in
+                    continuation.resume(returning: reply)
                 }
             } catch {
                 continuation.resume(returning: nil)

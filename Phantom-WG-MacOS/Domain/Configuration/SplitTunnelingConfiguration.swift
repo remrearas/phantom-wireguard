@@ -2,26 +2,12 @@ import Foundation
 
 // MARK: - Split Tunneling Configuration
 
-/// App-wide split tunneling configuration. Persisted as JSON
-/// (`split-tunneling.json`) in the shared App Group container by the
-/// main app's `SplitTunnelingStore`. File-based persistence sidesteps
-/// `cfprefsd` cross-process caching issues that UserDefaults would
-/// otherwise expose when a sandboxed extension reads values written
-/// by the main app under a different security context.
-///
-/// Delivery to the extension does **not** go through the file: the
-/// main app packs this blob into `providerConfiguration["split_config"]`
-/// at save-time (initial boot path) and sends it via opcode `0x00`
-/// messages for live reloads afterwards. The extension decodes the
-/// JSON handed to it and never touches the App Group file directly.
-///
-/// The gate is `isEnabled`: when false the whole feature is inert and
-/// the tunnel behaves as if split tunneling didn't exist, yet the user's
-/// app list survives for the next activation.
-///
-/// Semantics are exclude-only: applications in `apps` bypass the active
-/// tunnel (routed through the physical interface instead). Every other
-/// flow stays on the default OS route, which normally means the tunnel.
+/// App-wide split tunneling configuration. Exclude semantics: apps
+/// in `apps` bypass the tunnel through the physical interface; every
+/// other flow stays on the OS default route. Persisted as JSON in
+/// the App Group container; delivered to extensions at startup via
+/// `providerConfiguration["split_config"]` and live-updated via
+/// opcode `0x00` (SplitTunnel) / XPC `applyConfig` (DNSProxy).
 struct SplitTunnelingConfiguration: Codable, Equatable {
     var isEnabled: Bool
     var interfaceSelection: InterfaceSelection
@@ -40,14 +26,14 @@ struct SplitTunnelingConfiguration: Codable, Equatable {
         case apps
     }
 
-    /// Forward-compatible decoder — missing `interface_selection` (old
-    /// Phase-2-in-progress blobs) defaults to `.auto`.
     init(isEnabled: Bool, interfaceSelection: InterfaceSelection, apps: [AppEntry]) {
         self.isEnabled = isEnabled
         self.interfaceSelection = interfaceSelection
         self.apps = apps
     }
 
+    /// Forward-compatible decoder — missing `interface_selection`
+    /// defaults to `.auto`.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
@@ -61,13 +47,9 @@ struct SplitTunnelingConfiguration: Codable, Equatable {
 
 // MARK: - Interface Selection
 
-/// Which physical interface bypass relays should bind to. `auto` lets
-/// the extension's `NWPathMonitor` pick the primary non-tunnel path;
-/// `explicit` pins to a specific BSD name (`en0`, `en1`, …) the user
-/// chose from the picker.
-///
-/// Stored verbatim as `"auto"` or `"explicit:en0"` so the serialized
-/// form reads at a glance and migrations stay trivial.
+/// `auto` lets the extension pick the primary non-tunnel path;
+/// `explicit` pins to a specific BSD name. Serialized as `"auto"`
+/// or `"explicit:en0"`.
 enum InterfaceSelection: Codable, Equatable, Hashable {
     case auto
     case explicit(name: String)
@@ -97,20 +79,11 @@ enum InterfaceSelection: Codable, Equatable, Hashable {
 
 // MARK: - App Entry
 
-/// A single application selected for split tunneling. Identity is the
-/// **code signing identifier** exactly as reported by the Security
-/// framework — for Developer ID apps this is `<teamID>.<bundleID>`,
-/// for Apple platform-signed apps it's just `<bundleID>` (e.g.
-/// `com.apple.Safari`). At runtime the extension matches this string
-/// against each flow's `sourceAppSigningIdentifier` via
-/// `FlowDecisionEngine.matches` — the OS performs no filtering based
-/// on this value. The match matrix covers both exact signing IDs and
-/// bundle-ID namespace prefixes, so a single entry for a Chromium-based
-/// browser (`TEAM.com.vendor.Browser`) also captures its helper
-/// processes (`com.vendor.Browser.helper`) without user intervention.
-///
-/// `bundleIdentifier`, `displayName`, `teamName` and `lastKnownPath`
-/// are UI metadata — no runtime logic depends on them.
+/// Identity is the **code signing identifier** as reported by
+/// Security framework — `<teamID>.<bundleID>` for Developer ID,
+/// `<bundleID>` for Apple-signed apps. Matched at runtime against
+/// each flow's `sourceAppSigningIdentifier` via
+/// `FlowDecisionEngine.matches`.
 struct AppEntry: Codable, Equatable, Identifiable {
     var signingIdentifier: String
     var bundleIdentifier: String
@@ -126,7 +99,7 @@ struct AppEntry: Codable, Equatable, Identifiable {
         case displayName = "display_name"
         case teamName = "team_name"
         case lastKnownPath = "last_known_path"
-        // Legacy — still decoded so Phase-2-in-progress configs migrate.
+        // Legacy — still decoded so older configs migrate.
         case teamIdentifier = "team_identifier"
     }
 
@@ -155,7 +128,6 @@ struct AppEntry: Codable, Equatable, Identifiable {
             self.signingIdentifier = value
         } else if let team = try container.decodeIfPresent(String.self, forKey: .teamIdentifier),
                   !team.isEmpty {
-            // Forward-migrate old `team_identifier + bundle_identifier` blobs.
             self.signingIdentifier = "\(team).\(bundleIdentifier)"
         } else {
             throw DecodingError.keyNotFound(
@@ -175,5 +147,35 @@ struct AppEntry: Codable, Equatable, Identifiable {
         try container.encode(displayName, forKey: .displayName)
         try container.encodeIfPresent(teamName, forKey: .teamName)
         try container.encodeIfPresent(lastKnownPath, forKey: .lastKnownPath)
+    }
+}
+
+// MARK: - Synthetic mDNSResponder Pair
+
+/// Adds the system DNS resolver process pair to the matched-app
+/// list so apps using `Network.framework` / libresolv (which reach
+/// DNSProxy as `com.apple.mDNSResponder`, not as the originating
+/// app) get pinned to the physical interface. Membership is
+/// user-controlled via the "System DNS Resolver" toggle — list
+/// membership IS the toggle state.
+extension AppEntry {
+
+    static let mDNSResponder = AppEntry(
+        signingIdentifier: "com.apple.mDNSResponder",
+        bundleIdentifier: "com.apple.mDNSResponder",
+        displayName: "System DNS (mDNSResponder)"
+    )
+
+    static let mDNSResponderHelper = AppEntry(
+        signingIdentifier: "com.apple.mDNSResponderHelper",
+        bundleIdentifier: "com.apple.mDNSResponderHelper",
+        displayName: "System DNS (mDNSResponderHelper)"
+    )
+
+    /// True for the synthetic mDNSResponder pair. The app list UI
+    /// filters these out so users manage them via the toggle.
+    var isSyntheticMDNS: Bool {
+        signingIdentifier == AppEntry.mDNSResponder.signingIdentifier ||
+        signingIdentifier == AppEntry.mDNSResponderHelper.signingIdentifier
     }
 }

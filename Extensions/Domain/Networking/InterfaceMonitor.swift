@@ -1,19 +1,17 @@
 import Foundation
 import Network
 
-/// Extension-local interface watcher. Runs in the PhantomSplitTunnel
-/// process, uses `NWPathMonitor` to track physically available
-/// interfaces (filtering out `.other` and `.loopback` types so the
-/// tunnel's `utun` and synthetic interfaces never become bypass
-/// candidates), resolves the user's `InterfaceSelection` (auto vs.
-/// explicit BSD name), and signals when the currently resolved
-/// interface vanishes so the proxy can reject new flows and close
-/// active relays (strict mode).
+/// Shared `NWPathMonitor` watcher of physical interfaces. Both system
+/// extensions instantiate their own copy; each binary embeds this
+/// source via the project source-list. Filters `.other` and
+/// `.loopback` so utun and synthetic interfaces never become
+/// candidates; resolves the user's `InterfaceSelection`; fires
+/// `onChange` whenever the resolved interface (including `nil`)
+/// changes.
 final class InterfaceMonitor {
 
-    /// Called whenever the currently-resolved interface changes. `nil`
-    /// means no valid interface is available — e.g. the user's chosen
-    /// Ethernet cable was pulled and there's no Wi-Fi fallback.
+    /// `nil` means no valid interface is available — the caller's
+    /// strict reject path kicks in.
     var onChange: ((NWInterface?) -> Void)?
 
     private(set) var current: NWInterface?
@@ -23,11 +21,11 @@ final class InterfaceMonitor {
 
     private let monitor = NWPathMonitor(prohibitedInterfaceTypes: [.other, .loopback])
     private let queue = DispatchQueue(
-        label: "com.remrearas.Phantom-WG-MacOS.PhantomSplitTunnel.interface-monitor",
+        label: "com.remrearas.Phantom-WG-MacOS.interface-monitor",
         qos: .utility
     )
     private let syncQueue = DispatchQueue(
-        label: "com.remrearas.Phantom-WG-MacOS.PhantomSplitTunnel.interface-monitor.sync"
+        label: "com.remrearas.Phantom-WG-MacOS.interface-monitor.sync"
     )
 
     // MARK: - Lifecycle
@@ -47,7 +45,6 @@ final class InterfaceMonitor {
 
     // MARK: - Selection
 
-    /// Called from `startProxy` and reload (opcode 0x00).
     func setSelection(_ selection: InterfaceSelection) {
         syncQueue.async { [weak self] in
             self?.selection = selection
@@ -58,16 +55,12 @@ final class InterfaceMonitor {
     // MARK: - Private
 
     private func apply(availableInterfaces: [NWInterface]) {
-        // Dedupe — a single NIC often appears across address families.
+        // Dedupe — a NIC can appear across address families.
         var seen = Set<String>()
         available = availableInterfaces.filter { seen.insert($0.name).inserted }
         resolve()
     }
 
-    /// Selects the interface that matches the stored `InterfaceSelection`
-    /// and notifies the delegate. Emits `nil` when the explicit name
-    /// can't be found among available interfaces so the caller can stop
-    /// the session with a useful error.
     private func resolve() {
         let resolved: NWInterface?
         switch selection {

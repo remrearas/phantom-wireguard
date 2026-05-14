@@ -178,7 +178,7 @@ final class TCPFlowRelay {
         lock.unlock()
 
         if let error {
-            SplitTunnelLogger.shared.log(
+            RingBufferLogger.shared.log(
                 "\(appName)  TCP  \(remoteDescription)  failed: \(error.localizedDescription)"
             )
         }

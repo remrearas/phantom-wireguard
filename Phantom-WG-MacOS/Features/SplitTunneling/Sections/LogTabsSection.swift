@@ -2,25 +2,30 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-/// Inline log panel rendered inside the Split-Tunneling sheet. Polls
-/// the extension's in-memory ring buffer as long as the sheet is open
-/// and shows the tail in a bounded scroll view so it doesn't blow out
-/// the sheet's layout. Replaces the earlier NavigationLink push, which
-/// conflicted with the sheet's own toolbar on macOS.
-///
-/// The mini-toolbar row above the scroll surfaces the entry count and
-/// Save/Clear actions — parallel to `LogView`'s toolbar for the packet
-/// tunnel, scaled down to inline form.
-struct SplitTunnelingLogSection: View {
-    let logStore: SplitTunnelLogStore
+/// Active log channel. Tag rawValues double as filename stems for
+/// the Save flow.
+enum LogChannel: String, CaseIterable, Identifiable {
+    case split
+    case dns
+    var id: String { rawValue }
+}
+
+/// Tabbed log panel hosting SplitTunnel relay logs and DNSProxy
+/// daemon logs. Single toolbar retargets count / save / clear to
+/// the active channel.
+struct LogTabsSection: View {
+    let splitLogStore: SplitTunnelLogStore
+    let dnsLogStore: DNSProxyLogStore
     @Environment(LocalizationManager.self) private var loc
 
+    @State private var channel: LogChannel = .split
     @State private var savingError: String?
     @State private var showingSaveError = false
 
     var body: some View {
         Section {
             VStack(spacing: 8) {
+                tabPicker
                 toolbar
                 scrollPanel
             }
@@ -32,6 +37,38 @@ struct SplitTunnelingLogSection: View {
             Button(loc.t("ok")) {}
         } message: {
             Text(savingError ?? "")
+        }
+    }
+
+    // MARK: - Tab Picker
+
+    private var tabPicker: some View {
+        Picker("", selection: $channel) {
+            Text(loc.t("logs_tab_split_tunnel"))
+                .tag(LogChannel.split)
+                .accessibilityIdentifier(AXID.SplitTunneling.logsTabSplit)
+            Text(loc.t("logs_tab_dns_proxy"))
+                .tag(LogChannel.dns)
+                .accessibilityIdentifier(AXID.SplitTunneling.logsTabDns)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .accessibilityIdentifier(AXID.SplitTunneling.logsTab)
+    }
+
+    // MARK: - Active Channel Accessors
+
+    private var entries: [LogEntry] {
+        switch channel {
+        case .split: return splitLogStore.entries
+        case .dns:   return dnsLogStore.entries
+        }
+    }
+
+    private func clearActive() async {
+        switch channel {
+        case .split: await splitLogStore.clear()
+        case .dns:   await dnsLogStore.clear()
         }
     }
 
@@ -59,24 +96,24 @@ struct SplitTunnelingLogSection: View {
             }
             .buttonStyle(.borderless)
             .help(loc.t("log_save"))
-            .disabled(logStore.entries.isEmpty)
+            .disabled(entries.isEmpty)
             .accessibilityIdentifier(AXID.SplitTunneling.logsSave)
 
             Button {
-                Task { await logStore.clear() }
+                Task { await clearActive() }
             } label: {
                 Label(loc.t("log_clear"), systemImage: "trash")
                     .labelStyle(.iconOnly)
             }
             .buttonStyle(.borderless)
             .help(loc.t("log_clear"))
-            .disabled(logStore.entries.isEmpty)
+            .disabled(entries.isEmpty)
             .accessibilityIdentifier(AXID.SplitTunneling.logsClear)
         }
     }
 
     private var entryCountLabel: String {
-        let count = logStore.entries.count
+        let count = entries.count
         return String(format: loc.t("log_entry_count"), count)
     }
 
@@ -86,14 +123,14 @@ struct SplitTunnelingLogSection: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
-                    if logStore.entries.isEmpty {
+                    if entries.isEmpty {
                         Text(loc.t("log_empty_description"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                     } else {
-                        ForEach(logStore.entries) { entry in
+                        ForEach(entries) { entry in
                             entryRow(entry)
                                 .id(entry.id)
                         }
@@ -104,11 +141,16 @@ struct SplitTunnelingLogSection: View {
             .frame(height: 240)
             .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 6))
-            .onChange(of: logStore.entries.count) { _, _ in
-                if let last = logStore.entries.last {
+            .onChange(of: entries.count) { _, _ in
+                if let last = entries.last {
                     withAnimation(.easeOut(duration: 0.15)) {
                         proxy.scrollTo(last.id, anchor: .bottom)
                     }
+                }
+            }
+            .onChange(of: channel) { _, _ in
+                if let last = entries.last {
+                    proxy.scrollTo(last.id, anchor: .bottom)
                 }
             }
         }
@@ -135,7 +177,7 @@ struct SplitTunnelingLogSection: View {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        let contents = logStore.entries.map(\.text).joined(separator: "\n") + "\n"
+        let contents = entries.map(\.text).joined(separator: "\n") + "\n"
 
         do {
             try contents.write(to: url, atomically: true, encoding: .utf8)
@@ -148,6 +190,7 @@ struct SplitTunnelingLogSection: View {
     private func defaultFilename() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd-HHmmss"
-        return "phantom-split-log-\(formatter.string(from: Date())).txt"
+        let stem = channel == .split ? "split" : "dns"
+        return "phantom-\(stem)-log-\(formatter.string(from: Date())).txt"
     }
 }

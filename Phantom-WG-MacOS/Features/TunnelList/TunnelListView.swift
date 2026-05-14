@@ -4,9 +4,7 @@ import AppKit
 struct TunnelListView: View {
     @Environment(TunnelsManager.self) private var tunnelsManager
     @Environment(LocalizationManager.self) private var loc
-    @Environment(SystemExtensionState.self) private var extensionState
-    @Environment(SplitTunnelExtensionState.self) private var splitExtensionState
-    @Environment(SplitTunnelingStore.self) private var splitTunnelingStore
+    @Environment(ExtensionGateCoordinator.self) private var gateCoordinator
 
     @State private var showingImport = false
     @State private var errorMessage: String?
@@ -104,24 +102,19 @@ struct TunnelListView: View {
         uninstalling = true
         Task {
             do {
-                try await tunnelsManager.removeAll()
-
-                // Bring down the split-tunnel extension first when it
-                // exists — it depends on nothing, so it can be removed
-                // independently, and leaving it behind after a full
-                // uninstall would orphan a system extension the user
-                // can no longer reach from the UI.
-                if splitExtensionState.status == .activated
-                    || splitExtensionState.status == .needsApproval {
-                    try await splitExtensionState.deactivate()
-                }
-                splitTunnelingStore.reset()
-
-                try await extensionState.deactivate()
+                // Sequential deactivation of all three system
+                // extensions (Tunnel + Split-Tunnel + DNSProxy).
+                // VPN configurations stored in
+                // NETunnelProviderManager preferences are left in
+                // place: every `removeFromPreferences` triggers an
+                // "Allow VPN Configurations" consent prompt with no
+                // API to batch them; without the system extensions
+                // the configurations are inert. On success every
+                // controller settles to `.notInstalled`,
+                // `coordinator.allReady` flips to false and
+                // `PhantomApp` falls back to `ExtensionGateView`.
+                try await gateCoordinator.uninstallAll()
                 uninstalling = false
-                // On success, extensionState.status transitions to .deactivated
-                // and PhantomApp swaps the root view to ExtensionGate's
-                // DeactivatedView; no further work is needed here.
             } catch {
                 uninstalling = false
                 errorMessage = error.localizedDescription
