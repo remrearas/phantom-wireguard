@@ -5,6 +5,20 @@ passwords, TOTP MFA, RBAC, audit log, authenticated reverse proxy
 to the daemon UDS.
 
 
+v1.1.2 - 2026-05-16
+-------------------
+
+  Security maintenance release. Patches the bundled click runtime
+  for CVE-2026-7246 (command injection via untrusted shell-quoted
+  argument handling on Windows). click is pulled in transitively
+  by uvicorn; the bump is surgical (8.3.1 -> 8.3.3) with no source
+  or runtime behavior change. Lockfile regenerated via
+  `uv pip compile --upgrade-package click`; requirements.in is
+  untouched.
+
+  No API, schema, or migration impact.
+
+
 v1.1.1 - 2026-03-16
 -------------------
 
